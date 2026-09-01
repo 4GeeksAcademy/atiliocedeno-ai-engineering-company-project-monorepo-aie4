@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealthCore — Domain Models Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #f4f7fa;
+      color: #1a1a2e;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    h1 { color: #0f3460; margin-bottom: 0.25rem; }
+    h2 { color: #16213e; margin: 2rem 0 1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+    h3 { color: #0f3460; margin: 1.5rem 0 0.75rem; }
+    .subtitle { color: #64748b; margin-bottom: 2rem; }
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+    }
+    .card h3 { margin-top: 0; margin-bottom: 1rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .metric:last-child { border-bottom: none; }
+    .metric .label { color: #475569; font-size: 0.875rem; }
+    .metric .value { font-weight: 600; color: #0f3460; }
+    .metric .value.high { color: #dc2626; }
+    .metric .value.ok { color: #16a34a; }
+    .metric .value.warn { color: #d97706; }
+    .badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.high { background: #fef2f2; color: #dc2626; }
+    .badge.ok { background: #f0fdf4; color: #16a34a; }
+    .badge.warn { background: #fffbeb; color: #d97706; }
+    .entity-list {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .entity-list li {
+      background: #eef2ff;
+      color: #4338ca;
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      margin-top: 1rem;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .summary-item {
+      text-align: center;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    .summary-item .number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #0f3460;
+    }
+    .summary-item .desc {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏥 HealthCore</h1>
+  <p class="subtitle">Domain Models — Test &amp; Visualization</p>
+
+  <div class="summary-grid" id="summary">
+    <div class="summary-item">
+      <div class="number" id="entityCount">0</div>
+      <div class="desc">Entidades definidas</div>
+    </div>
+    <div class="summary-item">
+      <div class="number" id="deptCount">0</div>
+      <div class="desc">Departamentos</div>
+    </div>
+    <div class="summary-item">
+      <div class="number" id="systemCount">0</div>
+      <div class="desc">Sistemas legado</div>
+    </div>
+    <div class="summary-item">
+      <div class="number" id="constantCount">0</div>
+      <div class="desc">Constantes de negocio</div>
+    </div>
+  </div>
+
+  <h2>🏛️ Departamentos</h2>
+  <div class="dashboard" id="departments"></div>
+
+  <h2>📊 Constantes del Negocio</h2>
+  <div class="card" id="constants"></div>
+
+  <h2>💻 Sistemas Legado</h2>
+  <div class="dashboard" id="legacySystems"></div>
+
+  <h2>🧩 Entidades del Modelo</h2>
+  <div class="card">
+    <h3>Interfaces y Tipos</h3>
+    <ul class="entity-list" id="entityList"></ul>
+  </div>
+
+  <script type="module">
+    // Importamos los modelos
+    import {
+      DEPARTMENTS,
+      LEGACY_SYSTEMS,
+      BUSINESS_CONSTANTS,
+    } from './types/models.js';
+
+    // Contadores
+    const entities = [
+      'Company', 'Clinic', 'Patient', 'Appointment', 'Staff',
+      'ClinicalNote', 'Claim', 'Payer', 'ComplianceRecord',
+      'Recruitment', 'TrainingRecord', 'Metric', 'Notification',
+      'ExecutiveReport', 'DepartmentInfo', 'LegacySystem',
+    ];
+
+    document.getElementById('entityCount').textContent = entities.length;
+    document.getElementById('deptCount').textContent = Object.keys(DEPARTMENTS).length;
+    document.getElementById('systemCount').textContent = LEGACY_SYSTEMS.length;
+    document.getElementById('constantCount').textContent = Object.keys(BUSINESS_CONSTANTS).length;
+
+    // Lista de entidades
+    const entityList = document.getElementById('entityList');
+    entities.forEach((name) => {
+      const li = document.createElement('li');
+      li.textContent = name;
+      entityList.appendChild(li);
+    });
+
+    // Departamentos
+    const deptContainer = document.getElementById('departments');
+    Object.values(DEPARTMENTS).forEach((dept) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${dept.name}</h3>
+        <div class="metric"><span class="label">Responsable</span><span class="value">${dept.headName}</span></div>
+        <div class="metric"><span class="label">Cargo</span><span class="value">${dept.headTitle}</span></div>
+        <div class="metric"><span class="label">Ubicación</span><span class="value">${dept.headLocation}</span></div>
+        ${dept.staffCount ? `<div class="metric"><span class="label">Personal</span><span class="value">${dept.staffCount}</span></div>` : ''}
+        <div style="margin-top: 0.75rem;">
+          <strong style="font-size: 0.8rem; color: #64748b;">Necesidades:</strong>
+          <ul style="margin-top: 0.5rem; padding-left: 1.25rem; font-size: 0.8rem; color: #475569;">
+            ${dept.needs.map((n) => `<li>${n}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+      deptContainer.appendChild(card);
+    });
+
+    // Constantes de negocio
+    const constantsContainer = document.getElementById('constants');
+    const constantHtml = Object.entries(BUSINESS_CONSTANTS)
+      .map(([key, value]) => {
+        const label = key.replace(/_/g, ' ').toLowerCase();
+        let displayValue = value;
+        let badge = '';
+        if (key.includes('RATE') || key === 'NO_SHOW_RATE') {
+          displayValue = `${(value * 100).toFixed(1)}%`;
+          badge = value > 0.2 ? 'badge high' : 'badge ok';
+        } else if (key === 'CLAIM_DENIAL_RATE') {
+          displayValue = `${(value * 100).toFixed(1)}%`;
+          badge = value > 0.1 ? 'badge high' : 'badge ok';
+        } else if (key.includes('ANNUAL') || key.includes('LOSS') || key === 'ANNUAL_REVENUE') {
+          displayValue = `$${(value / 1_000_000).toFixed(2)}M`;
+        } else if (key.includes('TIME') || key === 'CLINIC_DOCUMENTATION_TIME_MIN') {
+          displayValue = `${value} min/día`;
+        } else if (key.includes('DAYS')) {
+          displayValue = `${value} días`;
+        }
+        return `<div class="metric">
+          <span class="label">${label}</span>
+          <span class="value ${badge}">${displayValue}</span>
+        </div>`;
+      })
+      .join('');
+    constantsContainer.innerHTML = `<h3>📋 Valores Clave</h3>${constantHtml}`;
+
+    // Sistemas Legado
+    const systemsContainer = document.getElementById('legacySystems');
+    LEGACY_SYSTEMS.forEach((sys) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${sys.name}</h3>
+        <div class="metric"><span class="label">Propósito</span><span class="value">${sys.purpose}</span></div>
+        <div class="metric"><span class="label">País</span><span class="value">${sys.country === 'US' ? '🇺🇸' : '🇬🇧'} ${sys.country}</span></div>
+        <div class="metric"><span class="label">Tipo</span><span class="value">${sys.type}</span></div>
+      `;
+      systemsContainer.appendChild(card);
+    });
+  </script>
+</body>
+</html>

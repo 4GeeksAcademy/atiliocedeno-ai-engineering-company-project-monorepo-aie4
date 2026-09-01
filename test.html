@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HealthCore — Transformaciones y Validaciones</title>
+</head>
+<body>
+  <h2>📐 Transformaciones y Agregaciones</h2>
+  <pre id="aggr"></pre>
+
+  <h2>🛡️ Validaciones de Negocio</h2>
+  <pre id="valid"></pre>
+
+  <script>
+  "use strict";
+
+  // ── TIPOS ──
+  /** @typedef {{id:string,name:string,country:'US'|'UK',revenue:number}} Clinic */
+
+  // ── 1. TRANSFORMACIONES Y AGREGACIONES ──
+
+  /** @template T @param {T[]} items @param {(item:T)=>string} keyFn @returns {Record<string,number>} */
+  function countBy(items, keyFn) {
+    const r = {};
+    for (const item of items) { const k = keyFn(item); r[k] = (r[k]??0)+1; }
+    return r;
+  }
+  /** @template T @param {T[]} items @param {(item:T)=>number} fn @returns {number} */
+  function sum(items, fn) { return items.reduce((a,i)=>a+fn(i),0); }
+  /** @template T @param {T[]} items @param {(item:T)=>number} fn @returns {T|undefined} */
+  function minBy(items, fn) { return items.length ? items.reduce((b,i)=>fn(i)<fn(b)?i:b) : undefined; }
+  /** @template T @param {T[]} items @param {(item:T)=>number} fn @returns {T|undefined} */
+  function maxBy(items, fn) { return items.length ? items.reduce((b,i)=>fn(i)>fn(b)?i:b) : undefined; }
+  /** @template T @param {T[]} items @param {(item:T)=>number} fn @returns {number} */
+  function average(items, fn) { return items.length ? sum(items,fn)/items.length : 0; }
+
+  // ── 2. VALIDACIONES DE NEGOCIO ──
+
+  /**
+   * @typedef {Object} Issue
+   * @property {string} field
+   * @property {string} code
+   * @property {string} msg
+   * @typedef {{valid:boolean,errors:Issue[],warnings:Issue[]}} Result
+   */
+
+  /** @param {string} f @param {*} v @param {string} lbl @param {Issue[]} e */
+  function checkRequired(f, v, lbl, e) {
+    if (v===undefined||v===null||String(v).trim()==='')
+      e.push({field:f,code:'REQUIRED',msg:lbl+' es obligatorio'});
+  }
+  /** @param {string} f @param {number} v @param {number} mn @param {number} mx @param {string} lbl @param {Issue[]} e */
+  function checkRange(f, v, mn, mx, lbl, e) {
+    if (v<mn||v>mx) e.push({field:f,code:'OUT_OF_RANGE',msg:lbl+' debe estar entre '+mn+' y '+mx+' (recibido: '+v+')'});
+  }
+  /** @param {string} f @param {string} v @param {string} lbl @param {Issue[]} e @param {boolean} [past=false] */
+  function checkDate(f, v, lbl, e, past) {
+    const d=new Date(v);
+    if (isNaN(d.getTime())) { e.push({field:f,code:'INVALID_DATE',msg:lbl+' no es fecha válida'}); return; }
+    if (past&&d>new Date()) e.push({field:f,code:'FUTURE_DATE',msg:lbl+' no puede estar en el futuro'});
+    if (!past&&d<new Date()) e.push({field:f,code:'PAST_DATE',msg:lbl+' no puede estar en el pasado'});
+  }
+
+  // ── DEMO ──
+  /** @type {Clinic[]} */
+  const clinics = [
+    {id:'c1',name:'Austin',country:'US',revenue:4200000},
+    {id:'c2',name:'Dallas',country:'US',revenue:3100000},
+    {id:'c3',name:'London',country:'UK',revenue:2100000},
+    {id:'c4',name:'Manchester',country:'UK',revenue:1500000},
+  ];
+
+  const o = [];
+  o.push('── countBy ──');
+  o.push(JSON.stringify(countBy(clinics,c=>c.country),null,2));
+  o.push('── sum (revenue) ──');
+  o.push('$'+sum(clinics,c=>c.revenue).toLocaleString());
+  o.push('── minBy (revenue) ──');
+  o.push(minBy(clinics,c=>c.revenue)?.name??'n/a');
+  o.push('── maxBy (revenue) ──');
+  o.push(maxBy(clinics,c=>c.revenue)?.name??'n/a');
+  o.push('── average (revenue) ──');
+  o.push('$'+Math.round(average(clinics,c=>c.revenue)).toLocaleString());
+  document.getElementById('aggr').textContent = o.join('\n');
+
+  const v = [];
+  function test(label, fn) {
+    const r = fn();
+    v.push(label+' → '+(r.valid?'✅':'❌'));
+    r.errors.forEach(e=>v.push('  ERROR: ['+e.code+'] '+e.msg));
+    r.warnings.forEach(w=>v.push('  WARN:  ['+w.code+'] '+w.msg));
+  }
+  const e=[]; checkRequired('name',null,'Nombre',e);
+  test('checkRequired (null)',()=>({valid:e.length===0,errors:e,warnings:[]}));
+  const e2=[]; checkRange('rate',1.5,0,1,'Tasa no-show',e2);
+  test('checkRange (1.5 fuera de [0,1])',()=>({valid:e2.length===0,errors:e2,warnings:[]}));
+  const e3=[]; checkDate('dateTime','2023-01-01','Fecha cita',e3,false);
+  test('checkDate (pasada, debe ser futura)',()=>({valid:e3.length===0,errors:e3,warnings:[]}));
+  const e4=[]; checkDate('submittedAt','2030-01-01','Fecha envío',e4,true);
+  test('checkDate (futura, debe ser pasada)',()=>({valid:e4.length===0,errors:e4,warnings:[]}));
+  document.getElementById('valid').textContent = v.join('\n');
+  </script>
+</body>
+</html>
