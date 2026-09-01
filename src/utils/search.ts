@@ -107,6 +107,45 @@ export function binarySearch<T>(
 }
 
 /**
+ * Búsqueda binaria que retorna el ÍNDICE del elemento encontrado, o -1 si no existe.
+ *
+ * Complejidad: O(log n)
+ * REQUISITO: El array debe estar ordenado ascendentemente según la keyFn.
+ *
+ * Difiere de binarySearch() en que retorna un número (índice / -1) en lugar del elemento.
+ *
+ * @param items - Array ordenado de elementos
+ * @param target - Valor a buscar
+ * @param keyFn - Función que extrae la clave numérica o string de cada elemento
+ * @returns El índice del elemento si se encuentra, o -1 si no
+ */
+export function binarySearchIndex<T>(
+  items: T[],
+  target: number | string,
+  keyFn: (item: T) => number | string,
+): number {
+  let left = 0;
+  let right = items.length - 1;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const midValue = keyFn(items[mid]);
+
+    if (midValue === target) {
+      return mid;
+    }
+
+    if (midValue < target) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  return -1;
+}
+
+/**
  * Búsqueda binaria que retorna el índice de inserción (dónde debería ir un elemento
  * para mantener el orden). Útil para mantener arrays ordenados al insertar.
  */
