@@ -23,12 +23,17 @@ import type {
   Metric,
   MetricCategory,
   Department,
-  Payer,
-  PayerType,
   DepartmentInfo,
   LegacySystem,
   ExecutiveReport,
+  Payer,
+  PayerType,
+  PatientInquiry,
+  PreferredLanguage,
+  PreferredTimeSlot,
+  ServiceType,
 } from '../types/models.js';
+import { US_CLINICS, hasEveningHours } from '../types/models.js';
 
 // ───────────────────────── FUNCIONES AYUDANTES ─────────────────────────
 // Estas funciones se usan como "predicados" en .filter(), .find() y .some()
@@ -747,4 +752,317 @@ export function validateNotificationRecipient(
   }
 
   return { valid: errors.length === 0, errors, warnings: [] };
+}
+
+// ───────────────────────── VALIDACIONES DEL FORMULARIO DE CONSULTA (HITO 1) ─────────────────────────
+// Basado estrictamente en CONTEXT.es.md — Campos del formulario de consulta para pacientes.
+
+// ───────────────────── FUNCIONES AYUDANTES ─────────────────────
+
+/** Regex: solo letras (incluyendo acentos: áéíóúñü) y espacios */
+const LETTERS_ONLY_RE = /^[A-Za-záéíóúñüÁÉÍÓÚÑÜ\s]+$/;
+
+/** Regex: formato de teléfono internacional: +{código país} {número} */
+const PHONE_RE = /^\+\d{1,3}\s?\d{1,4}\s?\d{3,4}\s?\d{3,4}$/;
+
+/** Regex: ID de paciente recurrente: HC- seguido de 6 alfanuméricos */
+const PATIENT_ID_RE = /^HC-[A-Za-z0-9]{6}$/;
+
+/** Regex: ID de afiliado: 6-20 caracteres alfanuméricos */
+const INSURANCE_MEMBER_ID_RE = /^[A-Za-z0-9]{6,20}$/;
+
+/** Regex: email básico */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Regex: solo alfanumérico con espacios (para insurance_provider — máximo 100 chars) */
+const ALPHANUMERIC_MAX_100_RE = /^[A-Za-z0-9\s]{1,100}$/;
+
+const VALID_SERVICE_TYPES: string[] = [
+  'Primary Care',
+  'Chronic Disease Management',
+  'Specialist Consultation',
+  'Preventive Health',
+  "Women's Health",
+  'Paediatric Care',
+  'Mental Health',
+];
+
+const VALID_TIME_SLOTS: string[] = ['Morning', 'Afternoon', 'Evening'];
+const VALID_LANGUAGES: string[] = ['English', 'Spanish'];
+const MAX_HEALTH_CONCERN_CHARS = 500;
+const MIN_HEALTH_CONCERN_CHARS = 20;
+
+/** Indica si una fecha es un día hábil (lunes a viernes) */
+function isWeekday(date: Date): boolean {
+  const day = date.getDay();
+  return day >= 1 && day <= 5;
+}
+
+/** Calcula el próximo día hábil desde una fecha dada */
+function nextWeekday(from: Date): Date {
+  const d = new Date(from);
+  d.setDate(d.getDate() + 1);
+  while (!isWeekday(d)) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+/** Calcula la edad en años a partir de una fecha de nacimiento */
+function calculateAge(dob: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+// ───────────────────── FUNCIÓN PRINCIPAL DE VALIDACIÓN ─────────────────────
+
+export function validatePatientInquiry(inquiry: PatientInquiry): ValidationResult {
+  const errors: ValidationError[] = [];
+
+  // 1. Nombre: solo letras, 2-50 caracteres
+  if (!inquiry.firstName || inquiry.firstName.trim().length < 2) {
+    errors.push({ field: 'firstName', code: 'TOO_SHORT', message: 'El nombre debe contener solo letras y tener al menos 2 caracteres' });
+  } else if (!LETTERS_ONLY_RE.test(inquiry.firstName.trim())) {
+    errors.push({ field: 'firstName', code: 'INVALID_CHARS', message: 'El nombre debe contener solo letras y tener al menos 2 caracteres' });
+  } else if (inquiry.firstName.trim().length > 50) {
+    errors.push({ field: 'firstName', code: 'TOO_LONG', message: 'El nombre debe contener solo letras y tener al menos 2 caracteres' });
+  }
+
+  // 2. Apellido: solo letras, 2-50 caracteres
+  if (!inquiry.lastName || inquiry.lastName.trim().length < 2) {
+    errors.push({ field: 'lastName', code: 'TOO_SHORT', message: 'El apellido debe contener solo letras y tener al menos 2 caracteres' });
+  } else if (!LETTERS_ONLY_RE.test(inquiry.lastName.trim())) {
+    errors.push({ field: 'lastName', code: 'INVALID_CHARS', message: 'El apellido debe contener solo letras y tener al menos 2 caracteres' });
+  } else if (inquiry.lastName.trim().length > 50) {
+    errors.push({ field: 'lastName', code: 'TOO_LONG', message: 'El apellido debe contener solo letras y tener al menos 2 caracteres' });
+  }
+
+  // 3. Fecha de nacimiento: no futura, 0-120 años
+  if (!inquiry.dateOfBirth) {
+    errors.push({ field: 'dateOfBirth', code: 'REQUIRED', message: 'Ingresa una fecha de nacimiento válida. El paciente debe tener entre 0 y 120 años' });
+  } else {
+    const dob = new Date(inquiry.dateOfBirth);
+    if (isNaN(dob.getTime())) {
+      errors.push({ field: 'dateOfBirth', code: 'INVALID_DATE', message: 'Ingresa una fecha de nacimiento válida. El paciente debe tener entre 0 y 120 años' });
+    } else {
+      const age = calculateAge(dob);
+      if (age < 0) {
+        errors.push({ field: 'dateOfBirth', code: 'FUTURE_DATE', message: 'Ingresa una fecha de nacimiento válida. El paciente debe tener entre 0 y 120 años' });
+      }
+      if (age > 120) {
+        errors.push({ field: 'dateOfBirth', code: 'TOO_OLD', message: 'Ingresa una fecha de nacimiento válida. El paciente debe tener entre 0 y 120 años' });
+      }
+    }
+  }
+
+  // 4. Email: formato válido
+  if (!inquiry.email || !EMAIL_RE.test(inquiry.email.trim())) {
+    errors.push({ field: 'email', code: 'INVALID_EMAIL', message: 'Ingresa un correo electrónico válido (ejemplo: nombre@proveedor.com)' });
+  }
+
+  // 5. Teléfono: debe comenzar con código de país
+  if (!inquiry.phone || !PHONE_RE.test(inquiry.phone.trim())) {
+    errors.push({ field: 'phone', code: 'INVALID_PHONE', message: 'El teléfono debe incluir un código de país (ejemplo: +1 305 555 0191)' });
+  }
+
+  // 6. Idioma preferido
+  if (!inquiry.preferredLanguage || !VALID_LANGUAGES.includes(inquiry.preferredLanguage)) {
+    errors.push({ field: 'preferredLanguage', code: 'REQUIRED', message: 'Selecciona tu idioma preferido' });
+  }
+
+  // 7. Clínica preferida
+  const clinicNames = US_CLINICS.map(function (c: Clinic): string { return c.name; });
+  if (!inquiry.preferredClinic || !clinicNames.includes(inquiry.preferredClinic)) {
+    errors.push({ field: 'preferredClinic', code: 'REQUIRED', message: 'Selecciona la clínica que te gustaría visitar' });
+  }
+
+  // 8. Fecha preferida: al menos 1 día hábil desde hoy, no más de 60 días
+  if (!inquiry.preferredDate) {
+    errors.push({ field: 'preferredDate', code: 'REQUIRED', message: 'Selecciona una fecha de al menos 1 día hábil desde hoy y no más de 60 días hacia adelante' });
+  } else {
+    const prefDate = new Date(inquiry.preferredDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    prefDate.setHours(0, 0, 0, 0);
+
+    if (isNaN(prefDate.getTime())) {
+      errors.push({ field: 'preferredDate', code: 'INVALID_DATE', message: 'Selecciona una fecha de al menos 1 día hábil desde hoy y no más de 60 días hacia adelante' });
+    } else {
+      // Calcular el próximo día hábil desde hoy
+      const minDate = nextWeekday(today);
+      const maxDate = new Date(today);
+      maxDate.setDate(maxDate.getDate() + 60);
+
+      if (prefDate < minDate) {
+        errors.push({ field: 'preferredDate', code: 'TOO_SOON', message: 'Selecciona una fecha de al menos 1 día hábil desde hoy y no más de 60 días hacia adelante' });
+      }
+      if (prefDate > maxDate) {
+        errors.push({ field: 'preferredDate', code: 'TOO_FAR', message: 'Selecciona una fecha de al menos 1 día hábil desde hoy y no más de 60 días hacia adelante' });
+      }
+    }
+  }
+
+  // 9. Franja horaria preferida
+  if (!inquiry.preferredTime || !VALID_TIME_SLOTS.includes(inquiry.preferredTime)) {
+    errors.push({ field: 'preferredTime', code: 'REQUIRED', message: 'Selecciona tu franja horaria preferida' });
+  }
+
+  // 10. Tipo de servicio
+  if (!inquiry.serviceType || !VALID_SERVICE_TYPES.includes(inquiry.serviceType)) {
+    errors.push({ field: 'serviceType', code: 'REQUIRED', message: 'Selecciona el tipo de atención que estás buscando' });
+  }
+
+  // 11. Paediatric Care + fecha de nacimiento (validación cruzada)
+  if (inquiry.serviceType === 'Paediatric Care' && inquiry.dateOfBirth) {
+    const dob = new Date(inquiry.dateOfBirth);
+    if (!isNaN(dob.getTime())) {
+      const age = calculateAge(dob);
+      if (age >= 18) {
+        errors.push({ field: 'serviceType', code: 'PAEDIATRIC_AGE_MISMATCH', message: 'Paediatric Care está disponible para pacientes menores de 18 años. Revisa la fecha de nacimiento o selecciona un servicio diferente.' });
+      }
+    }
+  }
+
+  // 12. Franja horaria + horario de clínica (validación cruzada)
+  if (inquiry.preferredTime === 'Evening' && inquiry.preferredClinic) {
+    const selectedClinic = US_CLINICS.find(function (c: Clinic): boolean {
+      return c.name === inquiry.preferredClinic;
+    });
+    if (selectedClinic && !hasEveningHours(selectedClinic)) {
+      errors.push({ field: 'preferredTime', code: 'CLINIC_HOURS_MISMATCH', message: 'La clínica seleccionada no tiene disponibilidad en horario evening (5pm–8pm). Revisa la clínica o selecciona otra franja horaria.' });
+    }
+  }
+
+  // 13. ¿Es tu primera visita?
+  if (inquiry.newPatient === undefined || inquiry.newPatient === null) {
+    errors.push({ field: 'newPatient', code: 'REQUIRED', message: 'Indica si esta es tu primera visita a HealthCore' });
+  }
+
+  // 14. ¿Tienes seguro médico?
+  if (inquiry.hasInsurance === undefined || inquiry.hasInsurance === null) {
+    errors.push({ field: 'hasInsurance', code: 'REQUIRED', message: 'Indica si tienes seguro médico' });
+  }
+
+  // 15-16. Campos de seguro condicionales
+  if (inquiry.hasInsurance === true) {
+    // 15. Aseguradora
+    if (!inquiry.insuranceProvider || !inquiry.insuranceProvider.trim()) {
+      errors.push({ field: 'insuranceProvider', code: 'REQUIRED', message: 'Ingresa el nombre de tu aseguradora' });
+    } else if (inquiry.insuranceProvider.trim().length > 100) {
+      errors.push({ field: 'insuranceProvider', code: 'TOO_LONG', message: 'Ingresa el nombre de tu aseguradora' });
+    }
+
+    // 16. ID de afiliado
+    if (!inquiry.insuranceMemberId || !INSURANCE_MEMBER_ID_RE.test(inquiry.insuranceMemberId.trim())) {
+      errors.push({ field: 'insuranceMemberId', code: 'INVALID_MEMBER_ID', message: 'El ID de afiliado debe tener entre 6 y 20 caracteres alfanuméricos' });
+    }
+  }
+
+  // 17. Descripción de la consulta médica: 20-500 caracteres
+  if (!inquiry.healthConcern || !inquiry.healthConcern.trim()) {
+    errors.push({ field: 'healthConcern', code: 'REQUIRED', message: 'Describe tu consulta médica en al menos 20 caracteres (faltan 20 caracteres)' });
+  } else {
+    const trimmed = inquiry.healthConcern.trim();
+    if (trimmed.length < MIN_HEALTH_CONCERN_CHARS) {
+      const missing = MIN_HEALTH_CONCERN_CHARS - trimmed.length;
+      errors.push({ field: 'healthConcern', code: 'TOO_SHORT', message: `Describe tu consulta médica en al menos 20 caracteres (faltan ${missing} caracteres)` });
+    }
+    if (trimmed.length > MAX_HEALTH_CONCERN_CHARS) {
+      errors.push({ field: 'healthConcern', code: 'TOO_LONG', message: 'La descripción no debe exceder los 500 caracteres' });
+    }
+  }
+
+  // 18. Consentimiento de contacto
+  if (inquiry.contactConsent !== true) {
+    errors.push({ field: 'contactConsent', code: 'REQUIRED', message: 'Debes dar tu consentimiento para ser contactado antes de enviar este formulario' });
+  }
+
+  // 19. Patient ID (solo si new_patient = No)
+  if (inquiry.newPatient === false && inquiry.patientId) {
+    if (!PATIENT_ID_RE.test(inquiry.patientId.trim())) {
+      errors.push({ field: 'patientId', code: 'INVALID_FORMAT', message: 'El ID de paciente debe tener formato HC- seguido de 6 caracteres alfanuméricos (ejemplo: HC-A3F291)' });
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings: [] };
+}
+
+// ───────────────────── VALIDACIONES INDIVIDUALES POR CAMPO ─────────────────────
+// Útiles para validación en tiempo real (on blur / on input) en el formulario.
+
+export function validateFirstName(value: string): ValidationError | null {
+  if (!value || value.trim().length < 2 || !LETTERS_ONLY_RE.test(value.trim()) || value.trim().length > 50) {
+    return { field: 'firstName', code: 'INVALID', message: 'El nombre debe contener solo letras y tener al menos 2 caracteres' };
+  }
+  return null;
+}
+
+export function validateLastName(value: string): ValidationError | null {
+  if (!value || value.trim().length < 2 || !LETTERS_ONLY_RE.test(value.trim()) || value.trim().length > 50) {
+    return { field: 'lastName', code: 'INVALID', message: 'El apellido debe contener solo letras y tener al menos 2 caracteres' };
+  }
+  return null;
+}
+
+export function validateInquiryDateOfBirth(value: string): ValidationError | null {
+  if (!value) {
+    return { field: 'dateOfBirth', code: 'REQUIRED', message: 'Ingresa una fecha de nacimiento válida. El paciente debe tener entre 0 y 120 años' };
+  }
+  const dob = new Date(value);
+  if (isNaN(dob.getTime())) {
+    return { field: 'dateOfBirth', code: 'INVALID_DATE', message: 'Ingresa una fecha de nacimiento válida. El paciente debe tener entre 0 y 120 años' };
+  }
+  const age = calculateAge(dob);
+  if (age < 0 || age > 120) {
+    return { field: 'dateOfBirth', code: 'INVALID_AGE', message: 'Ingresa una fecha de nacimiento válida. El paciente debe tener entre 0 y 120 años' };
+  }
+  return null;
+}
+
+export function validateInquiryEmail(value: string): ValidationError | null {
+  if (!value || !EMAIL_RE.test(value.trim())) {
+    return { field: 'email', code: 'INVALID_EMAIL', message: 'Ingresa un correo electrónico válido (ejemplo: nombre@proveedor.com)' };
+  }
+  return null;
+}
+
+export function validateInquiryPhone(value: string): ValidationError | null {
+  if (!value || !PHONE_RE.test(value.trim())) {
+    return { field: 'phone', code: 'INVALID_PHONE', message: 'El teléfono debe incluir un código de país (ejemplo: +1 305 555 0191)' };
+  }
+  return null;
+}
+
+export function validateHealthConcern(value: string): ValidationError | null {
+  if (!value || !value.trim()) {
+    return { field: 'healthConcern', code: 'REQUIRED', message: 'Describe tu consulta médica en al menos 20 caracteres (faltan 20 caracteres)' };
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < MIN_HEALTH_CONCERN_CHARS) {
+    const missing = MIN_HEALTH_CONCERN_CHARS - trimmed.length;
+    return { field: 'healthConcern', code: 'TOO_SHORT', message: `Describe tu consulta médica en al menos 20 caracteres (faltan ${missing} caracteres)` };
+  }
+  if (trimmed.length > MAX_HEALTH_CONCERN_CHARS) {
+    return { field: 'healthConcern', code: 'TOO_LONG', message: 'La descripción no debe exceder los 500 caracteres' };
+  }
+  return null;
+}
+
+export function validateInsuranceMemberId(value: string): ValidationError | null {
+  if (!value || !INSURANCE_MEMBER_ID_RE.test(value.trim())) {
+    return { field: 'insuranceMemberId', code: 'INVALID_MEMBER_ID', message: 'El ID de afiliado debe tener entre 6 y 20 caracteres alfanuméricos' };
+  }
+  return null;
+}
+
+export function validatePatientId(value: string): ValidationError | null {
+  if (value && !PATIENT_ID_RE.test(value.trim())) {
+    return { field: 'patientId', code: 'INVALID_FORMAT', message: 'El ID de paciente debe tener formato HC- seguido de 6 caracteres alfanuméricos (ejemplo: HC-A3F291)' };
+  }
+  return null;
 }

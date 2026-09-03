@@ -39,7 +39,10 @@ export interface Clinic {
   id: Id;
   name: string;
   location: string;
+  city: string;           // Ciudad (ej: "Austin")
+  state: string;          // Estado (ej: "TX")
   country: Country;
+  openingHours: string;   // Horario de atención (ej: "Lun–Vie 7am–8pm · Sáb 9am–3pm")
   ehrSystem: EHRSystem;
   phone: string;
   bilingualStaff: boolean;
@@ -74,6 +77,41 @@ export interface Patient {
   dataAccessRequests?: DataAccessRequest[];
   createdAt: string;
   updatedAt: string;
+}
+
+// ───────────────────────── 3b. CONSULTA DE PACIENTE (FORMULARIO WEB) ─────────────────────────
+// Basado en CONTEXT.es.md — Hito 1: formulario de consulta para pacientes
+
+export type PreferredLanguage = 'English' | 'Spanish';
+export type PreferredTimeSlot = 'Morning' | 'Afternoon' | 'Evening';
+
+export type ServiceType =
+  | 'Primary Care'
+  | 'Chronic Disease Management'
+  | 'Specialist Consultation'
+  | 'Preventive Health'
+  | 'Women\'s Health'
+  | 'Paediatric Care'
+  | 'Mental Health';
+
+export interface PatientInquiry {
+  firstName: string;              // first_name — 2-50 chars, solo letras
+  lastName: string;               // last_name — 2-50 chars, solo letras
+  dateOfBirth: string;            // date_of_birth — no futura, 0-120 años
+  email: string;                  // email — formato válido
+  phone: string;                  // phone — debe comenzar con + y código de país
+  preferredLanguage: PreferredLanguage;  // preferred_language — English | Spanish
+  preferredClinic: string;        // preferred_clinic — nombre exacto de la tabla de ubicaciones
+  preferredDate: string;          // preferred_date — ≥1 día hábil, ≤60 días
+  preferredTime: PreferredTimeSlot;      // preferred_time — Morning | Afternoon | Evening
+  serviceType: ServiceType;       // service_type — 7 opciones exactas
+  newPatient: boolean;            // new_patient — Yes | No
+  hasInsurance: boolean;          // has_insurance — Yes | No
+  insuranceProvider?: string;     // insurance_provider — obligatorio si has_insurance=Yes, máx 100 chars
+  insuranceMemberId?: string;     // insurance_member_id — obligatorio si has_insurance=Yes, 6-20 alfanumérico
+  healthConcern: string;          // health_concern — 20-500 chars
+  contactConsent: boolean;        // contact_consent — debe marcarse
+  patientId?: string;             // patient_id — solo si new_patient=No, formato HC-XXXXXX
 }
 
 // ───────────────────────── 4. CITA ─────────────────────────
@@ -513,6 +551,32 @@ export const LEGACY_SYSTEMS: LegacySystem[] = [
   { id: 'us_phone_scheduling', name: 'Sistema de programación telefónica US', purpose: 'Reserva de citas', country: 'US', type: 'scheduling', description: 'Reserva de citas por teléfono en EE.UU.' },
   { id: 'uk_manual_agenda', name: 'Agenda manual UK', purpose: 'Reserva de citas', country: 'UK', type: 'manual', description: 'Agenda manual en el Reino Unido' },
 ];
+
+// ───────────────────────── CLÍNICAS DE EE. UU. (HITO 1) ─────────────────────────
+// Extraído de la tabla de Ubicaciones en CONTEXT.es.md
+// Las clínicas del Reino Unido atienden un mercado independiente y no se incluyen.
+
+export const US_CLINICS: Clinic[] = [
+  { id: 'clinic-austin-central', name: 'HealthCore Austin Central', location: 'Austin', city: 'Austin', state: 'TX', country: 'US', openingHours: 'Lun–Vie 7am–8pm · Sáb 9am–3pm', ehrSystem: 'US_EHR', phone: '(512) 340-8800', bilingualStaff: true, services: ['primary_care', 'specialist', 'chronic_management', 'preventive'] },
+  { id: 'clinic-austin-north', name: 'HealthCore Austin North', location: 'Austin', city: 'Austin', state: 'TX', country: 'US', openingHours: 'Lun–Vie 8am–7pm', ehrSystem: 'US_EHR', phone: '(512) 340-8810', bilingualStaff: true, services: ['primary_care', 'chronic_management', 'preventive'] },
+  { id: 'clinic-san-antonio', name: 'HealthCore San Antonio', location: 'San Antonio', city: 'San Antonio', state: 'TX', country: 'US', openingHours: 'Lun–Vie 8am–6pm · Sáb 9am–1pm', ehrSystem: 'US_EHR', phone: '(210) 720-4400', bilingualStaff: true, services: ['primary_care', 'specialist', 'chronic_management', 'preventive'] },
+  { id: 'clinic-miami', name: 'HealthCore Miami', location: 'Miami', city: 'Miami', state: 'FL', country: 'US', openingHours: 'Lun–Vie 7am–8pm · Sáb 9am–4pm', ehrSystem: 'US_EHR', phone: '(305) 510-7700', bilingualStaff: true, services: ['primary_care', 'specialist', 'chronic_management', 'preventive'] },
+  { id: 'clinic-orlando', name: 'HealthCore Orlando', location: 'Orlando', city: 'Orlando', state: 'FL', country: 'US', openingHours: 'Lun–Vie 8am–6pm', ehrSystem: 'US_EHR', phone: '(407) 892-6600', bilingualStaff: true, services: ['primary_care', 'chronic_management', 'preventive'] },
+  { id: 'clinic-atlanta', name: 'HealthCore Atlanta', location: 'Atlanta', city: 'Atlanta', state: 'GA', country: 'US', openingHours: 'Lun–Vie 8am–7pm', ehrSystem: 'US_EHR', phone: '(404) 330-9900', bilingualStaff: true, services: ['primary_care', 'specialist', 'chronic_management', 'preventive'] },
+];
+
+/** Retorna los nombres de clínicas US para usar como opciones en el formulario */
+export function getUSClinicNames(): string[] {
+  return US_CLINICS.map(function (c: Clinic): string { return c.name; });
+}
+
+/**
+ * Determina si una clínica ofrece horario extendido (abre después de las 5pm).
+ * Útil para la validación de franja horaria "Evening (5pm–8pm)".
+ */
+export function hasEveningHours(clinic: Clinic): boolean {
+  return clinic.openingHours.includes('8pm');
+}
 
 // ───────────────────────── CONSTANTES DEL NEGOCIO ─────────────────────────
 

@@ -127,7 +127,7 @@ function hasExpiringCME(s: Staff): boolean {
 
 /** Indica si una métrica tiene alerta activada */
 function hasAlertTriggered(m: Metric): boolean {
-  return m.alertTriggered;
+  return m.alertTriggered === true;
 }
 
 /** Convierte una métrica con alerta en una MetricAlert */
