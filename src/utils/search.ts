@@ -48,12 +48,15 @@ export function searchPatientsByName<T extends { firstName: string; lastName: st
   query: string,
 ): T[] {
   const lowerQuery = query.toLowerCase();
-  return linearFilter(
-    patients,
-    (p) =>
+
+  function matchesName(p: T): boolean {
+    return (
       p.firstName.toLowerCase().includes(lowerQuery) ||
-      p.lastName.toLowerCase().includes(lowerQuery),
-  );
+      p.lastName.toLowerCase().includes(lowerQuery)
+    );
+  }
+
+  return linearFilter(patients, matchesName);
 }
 
 /**
@@ -63,7 +66,11 @@ export function searchAppointmentsByStatus<T extends { status: string }>(
   appointments: T[],
   status: string,
 ): T[] {
-  return linearFilter(appointments, (a) => a.status === status);
+  function matchesStatus(a: T): boolean {
+    return a.status === status;
+  }
+
+  return linearFilter(appointments, matchesStatus);
 }
 
 // ───────────────────────── BÚSQUEDA BINARIA ─────────────────────────
@@ -221,15 +228,26 @@ export function searchAppointmentsByDateRange<T extends { dateTime: string }>(
   startDate: string,
   endDate: string,
 ): T[] {
-  const toTimestamp = (dateStr: string) => new Date(dateStr).getTime();
+  function toTimestamp(dateStr: string): number {
+    return new Date(dateStr).getTime();
+  }
+
+  function sortByDate(a: T, b: T): number {
+    return toTimestamp(a.dateTime) - toTimestamp(b.dateTime);
+  }
+
+  function keyFn(a: T): number {
+    return toTimestamp(a.dateTime);
+  }
+
   const startTs = toTimestamp(startDate);
   const endTs = toTimestamp(endDate);
 
   return binarySearchRange(
-    appointments.sort((a, b) => toTimestamp(a.dateTime) - toTimestamp(b.dateTime)),
+    appointments.sort(sortByDate),
     startTs,
     endTs,
-    (a) => toTimestamp(a.dateTime),
+    keyFn,
   );
 }
 
@@ -241,6 +259,16 @@ export function searchClaimByAmount<T extends { amount: number }>(
   claims: T[],
   amount: number,
 ): T | undefined {
-  const sorted = [...claims].sort((a, b) => a.amount - b.amount);
-  return binarySearch(sorted, amount, (c) => c.amount);
+  // Función para comparar dos reclamaciones por monto (ascendente)
+  function compareByAmount(a: T, b: T): number {
+    return a.amount - b.amount;
+  }
+
+  // Función para extraer el monto de una reclamación
+  function getAmount(c: T): number {
+    return c.amount;
+  }
+
+  const sorted = [...claims].sort(compareByAmount);
+  return binarySearch(sorted, amount, getAmount);
 }

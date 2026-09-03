@@ -20,12 +20,15 @@ export function groupBy<T>(items: T[], keyFn: (item: T) => string): Record<strin
 /** Filtra elementos duplicados basándose en una clave */
 export function uniqueBy<T>(items: T[], keyFn: (item: T) => string): T[] {
   const seen = new Set<string>();
-  return items.filter((item) => {
+
+  function isUnique(item: T): boolean {
     const key = keyFn(item);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  });
+  }
+
+  return items.filter(isUnique);
 }
 
 /** Particiona un array en dos: los que cumplen y los que no cumplen el predicado */
@@ -41,12 +44,14 @@ export function partition<T>(items: T[], predicate: (item: T) => boolean): [T[],
 
 /** Ordena un array de forma segura (sin mutar el original) */
 export function sortBy<T>(items: T[], keyFn: (item: T) => number | string, ascending = true): T[] {
-  return [...items].sort((a, b) => {
+  function compare(a: T, b: T): number {
     const ka = keyFn(a);
     const kb = keyFn(b);
     const cmp = ka < kb ? -1 : ka > kb ? 1 : 0;
     return ascending ? cmp : -cmp;
-  });
+  }
+
+  return [...items].sort(compare);
 }
 
 /** Cuenta ocurrencias agrupadas por una clave */
@@ -63,7 +68,11 @@ export function countBy<T>(items: T[], keyFn: (item: T) => string): Record<strin
 
 /** Suma de una propiedad numérica */
 export function sum<T>(items: T[], valueFn: (item: T) => number): number {
-  return items.reduce((acc, item) => acc + valueFn(item), 0);
+  let total = 0;
+  for (const item of items) {
+    total += valueFn(item);
+  }
+  return total;
 }
 
 /** Promedio de una propiedad numérica */
@@ -75,13 +84,27 @@ export function average<T>(items: T[], valueFn: (item: T) => number): number {
 /** Valor mínimo de una propiedad */
 export function minBy<T>(items: T[], valueFn: (item: T) => number): T | undefined {
   if (items.length === 0) return undefined;
-  return items.reduce((best, item) => (valueFn(item) < valueFn(best) ? item : best));
+
+  let best = items[0];
+  for (let i = 1; i < items.length; i++) {
+    if (valueFn(items[i]) < valueFn(best)) {
+      best = items[i];
+    }
+  }
+  return best;
 }
 
 /** Valor máximo de una propiedad */
 export function maxBy<T>(items: T[], valueFn: (item: T) => number): T | undefined {
   if (items.length === 0) return undefined;
-  return items.reduce((best, item) => (valueFn(item) > valueFn(best) ? item : best));
+
+  let best = items[0];
+  for (let i = 1; i < items.length; i++) {
+    if (valueFn(items[i]) > valueFn(best)) {
+      best = items[i];
+    }
+  }
+  return best;
 }
 
 // ───────────────────────── TRANSFORMACIÓN ─────────────────────────

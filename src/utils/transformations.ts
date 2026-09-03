@@ -1,8 +1,18 @@
 /**
  * HealthCore — Transformations
  *
- * Funciones de agregación y generación de reportes para datos de HealthCore.
+ * Funciones de agregación y generación de dashboards/reportes para HealthCore.
+ * Cada dashboard está alineado con los nombres del CONTEXT.md:
+ *   - ClinicalOperationsDashboard  → dashboard de operaciones clínicas
+ *   - RevenueDashboard             → dashboard de facturación unificado
+ *   - PatientExperienceDashboard   → dashboard de experiencia del paciente
+ *   - HRDashboard                  → dashboard de KPIs de RR.HH.
+ *   - ExecutiveReport              → informe semanal ejecutivo
+ *
  * Trabaja sobre los modelos definidos en types/models.ts.
+ *
+ * NOTA: Este archivo usa funciones tradicionales (function) y bucles for
+ * en lugar de arrow functions, para que sea más fácil de entender.
  */
 
 import type {
@@ -11,17 +21,169 @@ import type {
   Clinic,
   Staff,
   Metric,
+  ComplianceRecord,
   ExecutiveReport,
   MetricAlert,
   Id,
   Department,
   CurrencyAmount,
+  RiskLevel,
 } from '../types/models.js';
 import { groupBy, sum, average, countBy } from './collections.js';
 
-// ───────────────────────── AGREGACIONES CLÍNICAS ─────────────────────────
+// ───────────────────────── FUNCIONES AYUDANTES ─────────────────────────
+// Estas funciones pequeñas se usan como "predicados" o "callbacks"
+// en los filtros y transformaciones de más abajo.
 
-export interface ClinicalSummary {
+/** Indica si una cita tiene cierto estado */
+function appointmentHasStatus(status: string): (a: Appointment) => boolean {
+  return function (appointment: Appointment): boolean {
+    return appointment.status === status;
+  };
+}
+
+/** Indica si una reclamación tiene cierto estado */
+function claimHasStatus(status: string): (c: Claim) => boolean {
+  return function (claim: Claim): boolean {
+    return claim.status === status;
+  };
+}
+
+/** Extrae el tipo de una cita (para countBy) */
+function getAppointmentType(a: Appointment): string {
+  return a.type;
+}
+
+/** Extrae el clinicId de una cita (para countBy) */
+function getAppointmentClinicId(a: Appointment): string {
+  return a.clinicId;
+}
+
+/** Extrae el motivo de rechazo de una reclamación (para groupBy) */
+function getDenialReason(c: Claim): string {
+  return c.denialReason ?? 'unknown';
+}
+
+/** Extrae el pagador de una reclamación (para groupBy) */
+function getClaimPayer(c: Claim): string {
+  return c.payer;
+}
+
+/** Extrae el clinicId de una reclamación (para groupBy) */
+function getClaimClinicId(c: Claim): string {
+  return c.clinicId;
+}
+
+/** Extrae el monto de una reclamación */
+function getClaimAmount(c: Claim): number {
+  return c.amount;
+}
+
+/** Indica si una cita se reservó por cierto método */
+function bookingMethodIs(method: string): (a: Appointment) => boolean {
+  return function (appointment: Appointment): boolean {
+    return appointment.bookingMethod === method;
+  };
+}
+
+/** Indica si una cita tiene recordatorio enviado */
+function hasReminderSent(a: Appointment): boolean {
+  return a.reminderSent;
+}
+
+/** Extrae el rol de un miembro del staff */
+function getStaffRole(s: Staff): string {
+  return s.role;
+}
+
+/** Extrae el clinicId de un miembro del staff */
+function getStaffClinicId(s: Staff): string {
+  return s.clinicId;
+}
+
+/** Extrae los días para contratar */
+function getDaysToHire(s: Staff): number {
+  return s.daysToHire;
+}
+
+/** Indica si un número es mayor a 0 */
+function isGreaterThanZero(d: number): boolean {
+  return d > 0;
+}
+
+/** Indica si un staff está de licencia */
+function isOnLeave(s: Staff): boolean {
+  return s.employmentStatus === 'on_leave';
+}
+
+/** Indica si un staff tiene CME por vencer */
+function hasExpiringCME(s: Staff): boolean {
+  // También convertimos el some() interno a función tradicional
+  function cmeIsExpiring(c: { status: string }): boolean {
+    return c.status === 'expiring_soon';
+  }
+  return s.cmeHours.some(cmeIsExpiring);
+}
+
+/** Indica si una métrica tiene alerta activada */
+function hasAlertTriggered(m: Metric): boolean {
+  return m.alertTriggered;
+}
+
+/** Convierte una métrica con alerta en una MetricAlert */
+function metricToAlert(m: Metric): MetricAlert {
+  return {
+    metricName: m.name,
+    currentValue: m.value,
+    threshold: m.thresholdAlert ?? m.target,
+    severity: m.value > (m.thresholdAlert ?? m.target) ? 'critical' : 'warning',
+    department: m.department,
+    message: `[${m.department}] ${m.name} = ${m.value}${m.unit} (umbral: ${m.thresholdAlert ?? m.target}${m.unit})`,
+  };
+}
+
+/** Indica si una métrica superó su umbral */
+function hasExceededThreshold(m: Metric): boolean {
+  return m.thresholdAlert !== undefined && m.value > m.thresholdAlert;
+}
+
+/** Convierte una métrica que excedió el umbral en una MetricAlert (para getTriggeredAlerts) */
+function metricExceededToAlert(m: Metric): MetricAlert {
+  return {
+    metricName: m.name,
+    currentValue: m.value,
+    threshold: m.thresholdAlert!,
+    department: m.department,
+    severity: m.value > m.thresholdAlert! * 1.25 ? 'critical' : 'warning',
+    message: `${m.name} ha superado el umbral: ${m.value}${m.unit} > ${m.thresholdAlert}${m.unit}`,
+  };
+}
+
+/** Ordena denial reasons de mayor a menor cantidad */
+function sortByCountDesc(a: { count: number }, b: { count: number }): number {
+  return b.count - a.count;
+}
+
+/** Convierte una entrada [reason, items] en un objeto de denial reason */
+function entryToDenialReason(entry: [string, Claim[]]): {
+  reason: string;
+  count: number;
+  amount: CurrencyAmount;
+} {
+  const reason = entry[0];
+  const items = entry[1];
+  return {
+    reason: reason,
+    count: items.length,
+    amount: sum(items, getClaimAmount),
+  };
+}
+
+// ───────────────────────── DASHBOARD DE OPERACIONES CLÍNICAS ─────────────────────────
+// Alineado con CONTEXT.md: "dashboard de operaciones clínicas que muestre
+// volumen de citas, flujo de pacientes y tiempo de documentación por sede"
+
+export interface ClinicalOperationsDashboard {
   totalAppointments: number;
   completedAppointments: number;
   noShows: number;
@@ -33,13 +195,15 @@ export interface ClinicalSummary {
 }
 
 /** Genera un resumen clínico a partir de citas y clínicas */
-export function buildClinicalSummary(
+export function buildClinicalOperationsDashboard(
   appointments: Appointment[],
-): ClinicalSummary {
+): ClinicalOperationsDashboard {
   const total = appointments.length;
-  const noShows = appointments.filter((a) => a.status === 'no_show').length;
-  const completed = appointments.filter((a) => a.status === 'completed').length;
-  const cancelled = appointments.filter((a) => a.status === 'cancelled').length;
+
+  // Filtramos usando funciones tradicionales en lugar de arrow functions
+  const noShows = appointments.filter(appointmentHasStatus('no_show')).length;
+  const completed = appointments.filter(appointmentHasStatus('completed')).length;
+  const cancelled = appointments.filter(appointmentHasStatus('cancelled')).length;
 
   return {
     totalAppointments: total,
@@ -47,15 +211,17 @@ export function buildClinicalSummary(
     noShows,
     noShowRate: total > 0 ? noShows / total : 0,
     cancelled,
-    appointmentsByType: countBy(appointments, (a) => a.type),
-    appointmentsByClinic: countBy(appointments, (a) => a.clinicId),
+    appointmentsByType: countBy(appointments, getAppointmentType),
+    appointmentsByClinic: countBy(appointments, getAppointmentClinicId),
     avgDocumentationTimeMin: 0, // se completa con datos de notas clínicas
   };
 }
 
-// ───────────────────────── AGREGACIONES DE FACTURACIÓN ─────────────────────────
+// ───────────────────────── DASHBOARD DE FACTURACIÓN ─────────────────────────
+// Alineado con CONTEXT.md: "dashboard de facturación unificado que muestre
+// las corrientes de ingresos de EE.UU. y Reino Unido en tiempo real"
 
-export interface RevenueSummary {
+export interface RevenueDashboard {
   totalClaimed: CurrencyAmount;
   totalPaid: CurrencyAmount;
   totalDenied: CurrencyAmount;
@@ -67,41 +233,58 @@ export interface RevenueSummary {
 }
 
 /** Genera un resumen de ingresos y facturación */
-export function buildRevenueSummary(claims: Claim[]): RevenueSummary {
-  const denied = claims.filter((c) => c.status === 'denied');
-  const paid = claims.filter((c) => c.status === 'paid');
-  const unpaid = claims.filter((c) => c.status === 'unpaid');
+export function buildRevenueDashboard(claims: Claim[]): RevenueDashboard {
+  // Filtramos reclamaciones por estado usando funciones tradicionales
+  const denied = claims.filter(claimHasStatus('denied'));
+  const paid = claims.filter(claimHasStatus('paid'));
+  const unpaid = claims.filter(claimHasStatus('unpaid'));
 
   // Agrupar denial reasons
-  const denialGroups = groupBy(denied, (c) => c.denialReason ?? 'unknown');
-  const topDenialReasons = Object.entries(denialGroups)
-    .map(([reason, items]) => ({
-      reason,
-      count: items.length,
-      amount: sum(items, (c) => c.amount),
-    }))
-    .sort((a, b) => b.count - a.count);
+  const denialGroups = groupBy(denied, getDenialReason);
 
-  // Tasa de rechazo por pagador
-  const byPayer = groupBy(claims, (c) => c.payer);
+  // Convertimos el objeto denialGroups en un array ordenado usando funciones tradicionales
+  const denialEntries: [string, Claim[]][] = Object.entries(denialGroups);
+  const topDenialReasons = denialEntries
+    .map(entryToDenialReason)
+    .sort(sortByCountDesc);
+
+  // Tasa de rechazo por pagador — usamos bucles for explícitos
+  const byPayer = groupBy(claims, getClaimPayer);
   const denialRateByPayer: Record<string, number> = {};
-  for (const [payer, items] of Object.entries(byPayer)) {
-    const deniedCount = items.filter((c) => c.status === 'denied').length;
+
+  const payerEntries = Object.entries(byPayer);
+  for (let i = 0; i < payerEntries.length; i++) {
+    const payer = payerEntries[i][0];
+    const items = payerEntries[i][1];
+
+    // Contamos los denegados con un bucle for
+    let deniedCount = 0;
+    for (let j = 0; j < items.length; j++) {
+      if (items[j].status === 'denied') {
+        deniedCount++;
+      }
+    }
+
     denialRateByPayer[payer] = items.length > 0 ? deniedCount / items.length : 0;
   }
 
-  // Agrupar por clínica y sumar montos pagados
-  const paidByClinic = groupBy(paid, (c) => c.clinicId);
+  // Agrupar por clínica y sumar montos pagados — con bucle for tradicional
+  const paidByClinic = groupBy(paid, getClaimClinicId);
   const revenueByClinic: Record<string, number> = {};
-  for (const [clinicId, claimList] of Object.entries(paidByClinic)) {
-    revenueByClinic[clinicId] = sum(claimList, (c) => c.amount);
+
+  const clinicEntries = Object.entries(paidByClinic);
+  for (let i = 0; i < clinicEntries.length; i++) {
+    const clinicId = clinicEntries[i][0];
+    const claimList = clinicEntries[i][1];
+    revenueByClinic[clinicId] = sum(claimList, getClaimAmount);
   }
 
+  // Sumamos usando la función getClaimAmount como callback
   return {
-    totalClaimed: sum(claims, (c) => c.amount),
-    totalPaid: sum(paid, (c) => c.amount),
-    totalDenied: sum(denied, (c) => c.amount),
-    totalUnpaid: sum(unpaid, (c) => c.amount),
+    totalClaimed: sum(claims, getClaimAmount),
+    totalPaid: sum(paid, getClaimAmount),
+    totalDenied: sum(denied, getClaimAmount),
+    totalUnpaid: sum(unpaid, getClaimAmount),
     denialRate: claims.length > 0 ? denied.length / claims.length : 0,
     denialRateByPayer,
     topDenialReasons,
@@ -109,9 +292,11 @@ export function buildRevenueSummary(claims: Claim[]): RevenueSummary {
   };
 }
 
-// ───────────────────────── AGREGACIONES DE EXPERIENCIA DEL PACIENTE ─────────────────────────
+// ───────────────────────── DASHBOARD DE EXPERIENCIA DEL PACIENTE ─────────────────────────
+// Alineado con CONTEXT.md: "dashboard de experiencia del paciente que registre
+// tasas de reserva, no-shows y satisfacción del paciente por sede"
 
-export interface PatientExperienceSummary {
+export interface PatientExperienceDashboard {
   totalAppointments: number;
   noShowRate: number;
   onlineBookingRate: number;
@@ -123,16 +308,38 @@ export interface PatientExperienceSummary {
 }
 
 /** Genera un resumen de experiencia del paciente */
-export function buildPatientExperienceSummary(
+export function buildPatientExperienceDashboard(
   appointments: Appointment[],
   estimatedLossPerNoShow: number = 150, // valor estimado por cita perdida
-): PatientExperienceSummary {
+): PatientExperienceDashboard {
   const total = appointments.length;
-  const noShows = appointments.filter((a) => a.status === 'no_show').length;
-  const onlineBookings = appointments.filter((a) => a.bookingMethod === 'online').length;
-  const phoneBookings = appointments.filter((a) => a.bookingMethod === 'phone').length;
-  const receptionBookings = appointments.filter((a) => a.bookingMethod === 'reception').length;
-  const withReminder = appointments.filter((a) => a.reminderSent).length;
+
+  // En lugar de usar .filter() con arrow functions, usamos bucles for tradicionales
+  let noShows = 0;
+  let onlineBookings = 0;
+  let phoneBookings = 0;
+  let receptionBookings = 0;
+  let withReminder = 0;
+
+  for (let i = 0; i < appointments.length; i++) {
+    const a = appointments[i];
+
+    if (a.status === 'no_show') {
+      noShows++;
+    }
+    if (a.bookingMethod === 'online') {
+      onlineBookings++;
+    }
+    if (a.bookingMethod === 'phone') {
+      phoneBookings++;
+    }
+    if (a.bookingMethod === 'reception') {
+      receptionBookings++;
+    }
+    if (a.reminderSent) {
+      withReminder++;
+    }
+  }
 
   return {
     totalAppointments: total,
@@ -146,9 +353,11 @@ export function buildPatientExperienceSummary(
   };
 }
 
-// ───────────────────────── AGREGACIONES DE RR.HH. ─────────────────────────
+// ───────────────────────── DASHBOARD DE RR.HH. ─────────────────────────
+// Alineado con CONTEXT.md: "dashboard de KPIs de RR.HH. que registre
+// tiempo de contratación, rotación y absentismo por sede y perfil"
 
-export interface HRSummary {
+export interface HRDashboard {
   totalStaff: number;
   staffByRole: Record<string, number>;
   staffByClinic: Record<string, number>;
@@ -159,26 +368,29 @@ export interface HRSummary {
 }
 
 /** Genera un resumen de recursos humanos */
-export function buildHRSummary(staff: Staff[]): HRSummary {
-  const byRole = countBy(staff, (s) => s.role);
-  const byClinic = countBy(staff, (s) => s.clinicId);
+export function buildHRDashboard(staff: Staff[]): HRDashboard {
+  // Usamos countBy con funciones tradicionales
+  const byRole = countBy(staff, getStaffRole);
+  const byClinic = countBy(staff, getStaffClinicId);
 
-  const daysToHire = staff
-    .map((s) => s.daysToHire)
-    .filter((d) => d > 0);
+  // Extraemos días para contratar usando .map() con función tradicional
+  // y filtramos usando la función isGreaterThanZero
+  const daysToHire = staff.map(getDaysToHire).filter(isGreaterThanZero);
 
-  const onLeave = staff.filter((s) => s.employmentStatus === 'on_leave');
+  // Filtramos staff en licencia
+  const onLeave = staff.filter(isOnLeave);
+
+  // Filtramos staff con CME por vencer
+  const staffWithExpiringCME = staff.filter(hasExpiringCME);
 
   return {
     totalStaff: staff.length,
     staffByRole: byRole,
     staffByClinic: byClinic,
     openPositions: 0, // se completa con datos de recruitment
-    avgDaysToHire: daysToHire.length > 0 ? average(daysToHire, (d) => d) : 0,
+    avgDaysToHire: daysToHire.length > 0 ? average(daysToHire, averageIdentity) : 0,
     avgAbsenteeismRate: staff.length > 0 ? onLeave.length / staff.length : 0,
-    staffWithExpiringCME: staff.filter(
-      (s) => s.cmeHours.some((c) => c.status === 'expiring_soon'),
-    ),
+    staffWithExpiringCME: staffWithExpiringCME,
   };
 }
 
@@ -210,17 +422,9 @@ export function buildExecutiveReport(
   const weekStart = monday.toISOString().split('T')[0];
   const generatedAt = `${weekStart}T07:00:00.000Z`;
 
-  // Alertas de umbral
-  const thresholdAlerts: MetricAlert[] = departmentMetrics
-    .filter((m) => m.alertTriggered)
-    .map((m) => ({
-      metricName: m.name,
-      currentValue: m.value,
-      threshold: m.thresholdAlert ?? m.target,
-      severity: m.value > (m.thresholdAlert ?? m.target) ? 'critical' : 'warning',
-      department: m.department,
-      message: `[${m.department}] ${m.name} = ${m.value}${m.unit} (umbral: ${m.thresholdAlert ?? m.target}${m.unit})`,
-    }));
+  // Alertas de umbral — usamos funciones tradicionales en lugar de arrow functions
+  const metricsWithAlert = departmentMetrics.filter(hasAlertTriggered);
+  const thresholdAlerts: MetricAlert[] = metricsWithAlert.map(metricToAlert);
 
   return {
     id: `report-${weekStart}`,
@@ -280,14 +484,83 @@ export function formatRate(rate: number, decimals: number = 1): string {
 
 /** Filtra métricas que han superado su umbral de alerta */
 export function getTriggeredAlerts(metrics: Metric[]): MetricAlert[] {
-  return metrics
-    .filter((m) => m.thresholdAlert !== undefined && m.value > m.thresholdAlert)
-    .map((m) => ({
-      metricName: m.name,
-      currentValue: m.value,
-      threshold: m.thresholdAlert!,
-      department: m.department,
-      severity: m.value > m.thresholdAlert! * 1.25 ? 'critical' : 'warning',
-      message: `${m.name} ha superado el umbral: ${m.value}${m.unit} > ${m.thresholdAlert}${m.unit}`,
-    }));
+  const exceededMetrics = metrics.filter(hasExceededThreshold);
+  return exceededMetrics.map(metricExceededToAlert);
+}
+
+// ───────────────────────── FUNCIÓN AYUDANTE EXTRA ─────────────────────────
+
+/** Función identidad para usar con average (devuelve el mismo número) */
+function averageIdentity(d: number): number {
+  return d;
+}
+
+// ───────────────────────── DASHBOARD DE CUMPLIMIENTO ─────────────────────────
+// Alineado con CONTEXT.md: "dashboard centralizado de monitorización del cumplimiento
+// que muestre patrones de acceso a datos en ambas jurisdicciones"
+
+export interface ComplianceDashboard {
+  totalRecords: number;
+  recordsByJurisdiction: { HIPAA: number; UK_GDPR: number };
+  pendingDSARs: number;
+  criticalViolations: number;
+  unresolvedViolations: number;
+  overallRiskScore: number;
+  overallRiskLevel: RiskLevel;
+  averageRiskScore: number;
+}
+
+/** Genera un dashboard de cumplimiento normativo */
+export function buildComplianceDashboard(records: ComplianceRecord[]): ComplianceDashboard {
+  let hipaaCount = 0;
+  let ukGdprCount = 0;
+  let totalPendingDSARs = 0;
+  let totalCriticalUnresolved = 0;
+  let totalUnresolved = 0;
+  let riskSum = 0;
+
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+
+    // Contar por jurisdicción
+    if (r.jurisdiction === 'HIPAA') {
+      hipaaCount++;
+    } else if (r.jurisdiction === 'UK_GDPR') {
+      ukGdprCount++;
+    }
+
+    // Solicitudes de datos pendientes
+    for (let j = 0; j < r.dataSubjectRequests.length; j++) {
+      if (r.dataSubjectRequests[j].status === 'pending') {
+        totalPendingDSARs++;
+      }
+    }
+
+    // Violaciones
+    for (let k = 0; k < r.potentialViolations.length; k++) {
+      const v = r.potentialViolations[k];
+      if (!v.resolved) {
+        totalUnresolved++;
+        if (v.severity === 'critical') {
+          totalCriticalUnresolved++;
+        }
+      }
+    }
+
+    riskSum += r.riskScore;
+  }
+
+  const totalRecords = records.length;
+  const avgRiskScore = totalRecords > 0 ? riskSum / totalRecords : 0;
+
+  return {
+    totalRecords,
+    recordsByJurisdiction: { HIPAA: hipaaCount, UK_GDPR: ukGdprCount },
+    pendingDSARs: totalPendingDSARs,
+    criticalViolations: totalCriticalUnresolved,
+    unresolvedViolations: totalUnresolved,
+    overallRiskScore: avgRiskScore,
+    overallRiskLevel: avgRiskScore >= 0.7 ? 'high' : avgRiskScore >= 0.4 ? 'medium' : 'low',
+    averageRiskScore: avgRiskScore,
+  };
 }

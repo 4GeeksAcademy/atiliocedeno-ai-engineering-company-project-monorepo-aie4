@@ -30,6 +30,54 @@ import type {
   ExecutiveReport,
 } from '../types/models.js';
 
+// ───────────────────────── FUNCIONES AYUDANTES ─────────────────────────
+// Estas funciones se usan como "predicados" en .filter(), .find() y .some()
+// para evitar usar arrow functions y hacer el código más legible.
+
+/** Indica si una solicitud de datos (DSAR) está pendiente */
+function isDSARPending(r: { status: string }): boolean {
+  return r.status === 'pending';
+}
+
+/** Indica si una violación no está resuelta */
+function isViolationUnresolved(v: { resolved: boolean }): boolean {
+  return !v.resolved;
+}
+
+/** Indica si una violación es de gravedad crítica */
+function isViolationCritical(v: { severity: string }): boolean {
+  return v.severity === 'critical';
+}
+
+/** Indica si una violación es crítica y no está resuelta */
+function isViolationCriticalAndUnresolved(v: { resolved: boolean; severity: string }): boolean {
+  return !v.resolved && v.severity === 'critical';
+}
+
+/** Indica si una reclamación es duplicada (misma cita y pagador) respecto a una reclamación dada */
+function isDuplicateClaim(claim: Claim): (c: Claim) => boolean {
+  return function (c: Claim): boolean {
+    return (
+      c.appointmentId === claim.appointmentId &&
+      c.payer === claim.payer &&
+      c.id !== claim.id
+    );
+  };
+}
+
+/** Indica si una cita existente entra en conflicto de horario con una cita dada */
+function hasScheduleConflict(appointment: Appointment): (a: Appointment) => boolean {
+  return function (a: Appointment): boolean {
+    return (
+      a.providerId === appointment.providerId &&
+      a.dateTime === appointment.dateTime &&
+      a.status !== 'cancelled' &&
+      a.status !== 'no_show' &&
+      a.id !== appointment.id
+    );
+  };
+}
+
 // ───────────────────────── CONSTANTES DE VALIDACIÓN ─────────────────────────
 
 const VALID_STATUSES: AppointmentStatus[] = ['scheduled', 'confirmed', 'completed', 'no_show', 'cancelled'];
@@ -286,7 +334,7 @@ export function validateComplianceRecord(record: ComplianceRecord): ValidationRe
   }
 
   // Solicitudes de datos de pacientes (DSAR) pendientes
-  const pendingDSARs = record.dataSubjectRequests.filter((r) => r.status === 'pending');
+  const pendingDSARs = record.dataSubjectRequests.filter(isDSARPending);
   if (pendingDSARs.length > 0) {
     warnings.push({
       field: 'dataSubjectRequests',
@@ -296,9 +344,9 @@ export function validateComplianceRecord(record: ComplianceRecord): ValidationRe
   }
 
   // Violaciones sin resolver
-  const unresolved = record.potentialViolations.filter((v) => !v.resolved);
+  const unresolved = record.potentialViolations.filter(isViolationUnresolved);
   if (unresolved.length > 0) {
-    const criticalCount = unresolved.filter((v) => v.severity === 'critical').length;
+    const criticalCount = unresolved.filter(isViolationCritical).length;
     if (criticalCount > 0) {
       errors.push({
         field: 'potentialViolations',
@@ -334,12 +382,7 @@ export function validateNoDuplicateClaims(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  const duplicate = existingClaims.find(
-    (c) =>
-      c.appointmentId === claim.appointmentId &&
-      c.payer === claim.payer &&
-      c.id !== claim.id,
-  );
+  const duplicate = existingClaims.find(isDuplicateClaim(claim));
 
   if (duplicate) {
     errors.push(
@@ -383,14 +426,7 @@ export function validateProviderAvailability(
 ): CrossValidationResult {
   const errors: string[] = [];
 
-  const conflicting = existingAppointments.find(
-    (a) =>
-      a.providerId === appointment.providerId &&
-      a.dateTime === appointment.dateTime &&
-      a.status !== 'cancelled' &&
-      a.status !== 'no_show' &&
-      a.id !== appointment.id,
-  );
+  const conflicting = existingAppointments.find(hasScheduleConflict(appointment));
 
   if (conflicting) {
     errors.push(
@@ -684,7 +720,7 @@ export function validateStaffComplianceByCountry(
     );
   }
 
-  if (complianceRecord && complianceRecord.potentialViolations.some((v) => !v.resolved && v.severity === 'critical')) {
+  if (complianceRecord && complianceRecord.potentialViolations.some(isViolationCriticalAndUnresolved)) {
     warnings.push(
       `${staff.firstName} ${staff.lastName} tiene violaciones críticas de cumplimiento sin resolver`,
     );
