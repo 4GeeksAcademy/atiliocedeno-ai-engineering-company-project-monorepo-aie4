@@ -34,7 +34,7 @@ import {
   sampleClaims,
   sampleClinicians,
   sampleLocations,
-} from "./utils/dummyData";
+} from "./data dummy/dummyData";
 
 const outputEl = document.getElementById("output");
 
