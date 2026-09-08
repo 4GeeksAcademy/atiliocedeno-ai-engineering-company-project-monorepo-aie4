@@ -73,8 +73,8 @@ export interface Clinician {
   lastName: string;
   role: ClinicianRole;
   locationId: string;
-  licenceState: string;
-  licenceExpiryDate: string;
+  licenseState: string;
+  licenseExpiryDate: string;
   cmeHoursRequired: number;
   cmeHoursLogged: number;
   cmeYearStartDate: string;
@@ -101,6 +101,6 @@ export interface CMEReport {
   percentComplete: number;
   daysRemainingInCycle: number;
   complianceStatus: CMEStatus;
-  licenceExpiryDate: string;
-  licenceDaysRemaining: number;
+  licenseExpiryDate: string;
+  licenseDaysRemaining: number;
 }
