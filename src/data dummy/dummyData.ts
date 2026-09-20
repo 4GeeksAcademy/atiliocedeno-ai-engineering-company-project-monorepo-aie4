@@ -3,7 +3,7 @@ import type {
   Claim,
   Clinician,
   Location,
-} from "../types/models";
+} from "../types/models.js";
 
 export const sampleLocations: Location[] = [
   {

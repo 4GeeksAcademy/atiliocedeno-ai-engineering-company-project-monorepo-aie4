@@ -1,4 +1,4 @@
-import type { Claim, Clinician } from "../types/models";
+import type { Claim, Clinician } from "../types/models.js";
 
 const VALID_CLINICIAN_ROLES = [
   "physician",

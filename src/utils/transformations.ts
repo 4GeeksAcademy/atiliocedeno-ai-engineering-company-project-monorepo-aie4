@@ -7,7 +7,7 @@ import type {
   CMEStatus,
   Location,
   ServiceType,
-} from "../types/models";
+} from "../types/models.js";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 

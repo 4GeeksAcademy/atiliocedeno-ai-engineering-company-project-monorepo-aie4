@@ -1,4 +1,4 @@
-import type { Claim, Clinician } from "../types/models";
+import type { Claim, Clinician } from "../types/models.js";
 
 export function findClaimById(claims: Claim[], claimId: string): Claim | null {
   for (const claim of claims) {

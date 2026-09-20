@@ -4,12 +4,12 @@ import {
   groupClaimsBy,
   sortAppointmentsByDate,
   sortClaimsById,
-} from "./utils/collections";
+} from "./utils/collections.js";
 import {
   binarySearchClaimById as binarySearchClaimByIdFromSearch,
   findClaimById,
   findClinicianById,
-} from "./utils/search";
+} from "./utils/search.js";
 import {
   calculateDenialRate,
   calculateNoShowCost,
@@ -21,20 +21,20 @@ import {
   getCliniciansAtRisk,
   getCliniciansWithExpiringLicences,
   noShowRateByLocation,
-} from "./utils/transformations";
+} from "./utils/transformations.js";
 import {
   isDenialRateAboveThreshold,
   isNoShowRateAboveThreshold,
   validateClaim,
   validateClinician,
-} from "./utils/validations";
-import type { Claim } from "./types/models";
+} from "./utils/validations.js";
+import type { Claim } from "./types/models.js";
 import {
   sampleAppointments,
   sampleClaims,
   sampleClinicians,
   sampleLocations,
-} from "./data dummy/dummyData";
+} from "./data dummy/dummyData.js";
 
 const outputEl = document.getElementById("output");
 
@@ -76,7 +76,7 @@ function runAction(action: string): void {
 
   if (action === "filterClaims") {
     const filtered = filterClaims(sampleClaims, {
-      locationId: "loc-001",
+      locationId: "us-fl-001",
       payerName: "Aetna",
     });
     logResult("filterClaims", filtered);
@@ -102,14 +102,13 @@ function runAction(action: string): void {
   }
 
   if (action === "search") {
-    logResult("findClaimById", findClaimById(sampleClaims, "CLM-1002"));
-    logResult("findClinicianById", findClinicianById(sampleClinicians, "CLN-002"));
+    logResult("findClaimById", findClaimById(sampleClaims, "CLM-000002"));
+    logResult("findClinicianById", findClinicianById(sampleClinicians, "CLN-000002"));
   }
 
   if (action === "binarySearch") {
     const sortedClaims = sortClaimsById(sampleClaims, "asc");
-    logResult("binarySearchClaimById found", binarySearchClaimByIdFromSearch(sortedClaims, "CLM-1004"));
-    logResult("binarySearchClaimById missing", binarySearchClaimByIdFromSearch(sortedClaims, "CLM-9999"));
+    logResult("binarySearchClaimById found", binarySearchClaimByIdFromSearch(sortedClaims, "CLM-000004"));
   }
 
   if (action === "denialRate") {

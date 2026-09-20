@@ -1,4 +1,4 @@
-import type { Appointment, AppointmentStatus, Claim } from "../types/models";
+import type { Appointment, AppointmentStatus, Claim } from "../types/models.js";
 
 type ClaimFilterKey = "locationId" | "status" | "payerName" | "serviceType";
 
