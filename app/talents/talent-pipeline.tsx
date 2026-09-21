@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -133,6 +133,25 @@ export default function TalentPipeline() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchInput, setSearchInput] = useState(query);
+  const pendingSearchRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Keep the text the user is typing while the URL navigation catches up.
+    // Without this guard, every debounced router update can briefly restore
+    // the previous query and make the last character appear to disappear.
+    if (pendingSearchRef.current !== null) {
+      if (pendingSearchRef.current === query) pendingSearchRef.current = null;
+      return;
+    }
+    setSearchInput(query);
+  }, [query]);
+
+  useEffect(() => {
+    if (searchInput === query) return;
+    const timeout = window.setTimeout(() => updateFilter("query", searchInput), 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchInput, query]);
 
   function updateFilter(name: "query" | "status" | "stage", value: string): void {
     const nextParams = new URLSearchParams(params.toString());
@@ -234,20 +253,27 @@ export default function TalentPipeline() {
         <label>
           {isEnglish ? "Search" : "Buscar"}
           <input
-            value={query}
-            onChange={(event) => updateFilter("query", event.target.value)}
+            className={styles.searchInput}
+            value={searchInput}
+            onChange={(event) => {
+              pendingSearchRef.current = event.target.value;
+              setSearchInput(event.target.value);
+            }}
             placeholder={isEnglish ? "Name or email" : "Nombre o email"}
             type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            aria-label={isEnglish ? "Search talents by name or email" : "Buscar talentos por nombre o email"}
           />
         </label>
-        <label>
+        <label className={styles.filterField}>
           {isEnglish ? "Status" : "Estado"}
           <select value={status} onChange={(event) => updateFilter("status", event.target.value)}>
             <option value="">{isEnglish ? "All" : "Todos"}</option>
             {statusOptions.map((value) => <option key={value} value={value}>{labelForValue(value, statusLabels)}</option>)}
           </select>
         </label>
-        <label>
+        <label className={styles.filterField}>
           {isEnglish ? "Stage" : "Etapa"}
           <select value={stage} onChange={(event) => updateFilter("stage", event.target.value)}>
             <option value="">{isEnglish ? "All" : "Todas"}</option>

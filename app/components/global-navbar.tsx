@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "./language-context";
 
@@ -13,6 +16,7 @@ export default function GlobalNavbar({ backLabel = false, languageHref }: Global
   const homePage = isEnglish ? "/index.en.html" : "/index.html";
   const talentPath = backLabel ? (isEnglish ? "/talents/en" : "/talents") : "/talents/new";
   const alternateLanguageHref = languageHref ?? (isEnglish ? "/talents" : "/talents/en");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const pipelineLabel = backLabel
     ? (isEnglish ? "Back to pipeline" : "Volver al pipeline")
@@ -44,14 +48,28 @@ export default function GlobalNavbar({ backLabel = false, languageHref }: Global
           <Link className="rounded-lg border border-[#1F2937]/20 px-2.5 py-1.5 text-xs font-semibold text-[#1F2937]/70" href={alternateLanguageHref} lang={isEnglish ? "es" : "en"}>
             🌐 {isEnglish ? "ES" : "EN"}
           </Link>
-          <Link className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/20" href={isEnglish ? "/aplication.en.html" : "/aplication.html"}>
-            {isEnglish ? "Request" : "Solicitar"}
-          </Link>
-          <Link className="rounded-lg border border-[#2563EB]/30 px-3 py-2 text-xs font-semibold text-[#2563EB]" href={talentPath}>
-            {backLabel ? "Pipeline" : (isEnglish ? "Talents" : "Talentos")}
-          </Link>
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#2563EB]/30 text-[#2563EB]"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
+            aria-label={menuOpen ? (isEnglish ? "Close menu" : "Cerrar menú") : (isEnglish ? "Open menu" : "Abrir menú")}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span className="text-xl" aria-hidden="true">{menuOpen ? "×" : "☰"}</span>
+          </button>
         </div>
       </div>
+      {menuOpen && (
+        <nav id="mobile-navigation" className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg md:hidden" aria-label={isEnglish ? "Mobile navigation" : "Navegación móvil"}>
+          <div className="mx-auto grid max-w-7xl gap-2">
+            <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={`${homePage}#features`}>{isEnglish ? "Features" : "Características"}</Link>
+            <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={`${homePage}#contact`}>{isEnglish ? "Contact" : "Contacto"}</Link>
+            <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={talentPath}>{pipelineLabel}</Link>
+            <Link onClick={() => setMenuOpen(false)} className="rounded-lg bg-[#2563EB] px-3 py-3 text-center font-semibold text-white" href={isEnglish ? "/aplication.en.html" : "/aplication.html"}>{isEnglish ? "Request Care" : "Solicitar Atención"}</Link>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

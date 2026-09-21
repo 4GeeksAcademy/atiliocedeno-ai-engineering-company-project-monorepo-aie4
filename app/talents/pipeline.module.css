@@ -170,6 +170,14 @@
   border-radius: 0.75rem;
 }
 
+.toolbar label:first-child {
+  min-width: 0;
+}
+
+.searchInput {
+  min-width: 0;
+}
+
 .toolbar label {
   display: grid;
   gap: 0.4rem;
@@ -499,6 +507,22 @@
 
   .card {
     row-gap: 1rem;
+  }
+
+  .toolbar {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.85rem;
+  }
+
+  .toolbar label {
+    font-size: 0.8125rem;
+  }
+
+  .toolbar input,
+  .toolbar select {
+    min-height: 3rem;
+    font-size: 1rem;
   }
 
   .cardMeta {
