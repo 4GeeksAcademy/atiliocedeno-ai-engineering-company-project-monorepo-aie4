@@ -9,10 +9,9 @@ import { invalidateRecordsCache } from "../talent-pipeline";
 import { STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LABELS_EN } from "../labels";
 import GlobalNavbar from "../../components/global-navbar";
 import { useLanguage } from "../../components/language-context";
+import type { TalentNote, TalentRecord } from "../types";
 
-type RecordValue = string | number | boolean | null;
-type TalentRecord = Record<string, RecordValue>;
-type Note = TalentRecord;
+type Note = TalentNote;
 type TalentForm = {
   full_name: string;
   email: string;
@@ -63,6 +62,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
   const isEnglish = language === "en";
   const statusLabels = isEnglish ? STATUS_LABELS_EN : STATUS_LABELS;
   const stageLabels = isEnglish ? STAGE_LABELS_EN : STAGE_LABELS;
+  const missingValue = isEnglish ? "No information" : "Sin información";
   const router = useRouter();
   const [record, setRecord] = useState<TalentRecord | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -147,7 +147,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
         throw new Error(isEnglish ? "Experience must be a valid number." : "La experiencia debe ser un número válido.");
       }
       const response = await fetch(`${API_URL}/records/${encodeURIComponent(id)}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -248,6 +248,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
         <span className={styles.eyebrow}>{isEnglish ? "Talent detail" : "Detalle del talento"}</span>
         <h1>{String(record.name ?? record.full_name ?? record.fullName ?? `Registro ${id}`)}</h1>
         <p>{String(record.email ?? (isEnglish ? "No email available" : "Sin email disponible"))}</p>
+        <p>{isEnglish ? "Application date" : "Fecha de aplicación"}: {String(record.application_date ?? record.applied_at ?? record.created_at ?? record.createdAt ?? missingValue)}</p>
       </header>
 
       {error && <p className={styles.error} role="alert">{error}</p>}

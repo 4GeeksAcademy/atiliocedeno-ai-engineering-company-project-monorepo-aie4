@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import styles from "./pipeline.module.css";
 import { labelForValue, STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LABELS_EN } from "./labels";
 import GlobalNavbar from "../components/global-navbar";
 import { useLanguage } from "../components/language-context";
-
-type RecordValue = string | number | boolean | null;
-type TalentRecord = Record<string, RecordValue>;
+import type { TalentRecord } from "./types";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
 const RECORDS_PAGE_SIZE = 1000;
@@ -124,12 +123,26 @@ export default function TalentPipeline() {
   const stageLabels = isEnglish ? STAGE_LABELS_EN : STAGE_LABELS;
   const missingValue = isEnglish ? "No information" : "Sin información";
   const [records, setRecords] = useState<TalentRecord[]>([]);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
-  const [stage, setStage] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = searchParams ?? new URLSearchParams();
+  const query = params.get("query") ?? "";
+  const status = params.get("status") ?? "";
+  const stage = params.get("stage") ?? "";
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  function updateFilter(name: "query" | "status" | "stage", value: string): void {
+    const nextParams = new URLSearchParams(params.toString());
+    if (value) nextParams.set(name, value);
+    else nextParams.delete(name);
+    nextParams.delete("page");
+    const nextQuery = nextParams.toString();
+    const nextPath = pathname ?? "/talents";
+    router.replace(nextQuery ? `${nextPath}?${nextQuery}` : nextPath, { scroll: false });
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -202,7 +215,7 @@ export default function TalentPipeline() {
       <GlobalNavbar />
       <header className={styles.header}>
         <div className={styles.titleRow}>
-          <h1>Talent Pipeline Tracker</h1>
+          <h1>{isEnglish ? "Talent Pipeline Tracker" : "Pipeline de talentos"}</h1>
         </div>
       </header>
 
@@ -222,21 +235,21 @@ export default function TalentPipeline() {
           {isEnglish ? "Search" : "Buscar"}
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => updateFilter("query", event.target.value)}
             placeholder={isEnglish ? "Name or email" : "Nombre o email"}
             type="search"
           />
         </label>
         <label>
           {isEnglish ? "Status" : "Estado"}
-          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+          <select value={status} onChange={(event) => updateFilter("status", event.target.value)}>
             <option value="">{isEnglish ? "All" : "Todos"}</option>
             {statusOptions.map((value) => <option key={value} value={value}>{labelForValue(value, statusLabels)}</option>)}
           </select>
         </label>
         <label>
           {isEnglish ? "Stage" : "Etapa"}
-          <select value={stage} onChange={(event) => setStage(event.target.value)}>
+          <select value={stage} onChange={(event) => updateFilter("stage", event.target.value)}>
             <option value="">{isEnglish ? "All" : "Todas"}</option>
             {stageOptions.map((value) => <option key={value} value={value}>{labelForValue(value, stageLabels)}</option>)}
           </select>
