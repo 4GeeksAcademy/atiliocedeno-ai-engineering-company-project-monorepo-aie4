@@ -53,8 +53,11 @@ export default function NewTalent({ languageHref }: { languageHref?: string }) {
 
       const payload = {
         ...form,
-        experience_years: Number(form.experience_years),
+        experience_years: form.experience_years.trim() === "" ? null : Number(form.experience_years),
       };
+      if (payload.experience_years !== null && !Number.isFinite(payload.experience_years)) {
+        throw new Error(isEnglish ? "Experience must be a valid number." : "Los años de experiencia deben ser un número válido.");
+      }
 
       const response = await fetch(`${API_URL}/records`, {
         method: "POST",

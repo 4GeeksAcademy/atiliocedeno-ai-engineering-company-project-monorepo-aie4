@@ -50,6 +50,14 @@ function recordsFromPayload(payload: unknown, key: string): TalentRecord[] {
   return [];
 }
 
+function recordFromPayload(payload: unknown): TalentRecord {
+  if (typeof payload !== "object" || payload === null) return {};
+  if ("data" in payload && typeof payload.data === "object" && payload.data !== null) {
+    return payload.data as TalentRecord;
+  }
+  return payload as TalentRecord;
+}
+
 export default function TalentDetail({ id, languageHref }: { id: string; languageHref?: string }) {
   const { language } = useLanguage();
   const isEnglish = language === "en";
@@ -82,10 +90,10 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
     ]);
 
     if (!recordResponse.ok || !notesResponse.ok) {
-      throw new Error("No se pudo cargar el talento o sus notas.");
+      throw new Error(isEnglish ? "The talent or its notes could not be loaded." : "No se pudo cargar el talento o sus notas.");
     }
 
-    const nextRecord = (await recordResponse.json()) as TalentRecord;
+    const nextRecord = recordFromPayload(await recordResponse.json());
     const nextNotes = recordsFromPayload(await notesResponse.json(), "notes");
     setRecord(nextRecord);
     setForm({
@@ -133,8 +141,11 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
       setMessage("");
       const payload = {
         ...form,
-        experience_years: Number(form.experience_years),
+        experience_years: form.experience_years.trim() === "" ? null : Number(form.experience_years),
       };
+      if (payload.experience_years !== null && !Number.isFinite(payload.experience_years)) {
+        throw new Error(isEnglish ? "Experience must be a valid number." : "La experiencia debe ser un número válido.");
+      }
       const response = await fetch(`${API_URL}/records/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -169,7 +180,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
       if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
 
       invalidateRecordsCache();
-      router.push("/talents");
+      router.push(isEnglish ? "/talents/en" : "/talents");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : (isEnglish ? "The talent could not be deleted." : "No se pudo eliminar el talento."));
       setSaving(false);
@@ -276,7 +287,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
             {notes.length === 0 && <p className={styles.message}>{isEnglish ? "There are no notes." : "No hay notas."}</p>}
             {notes.map((note, index) => (
               <article className={styles.note} key={String(note.id ?? note.note_id ?? index)}>
-                <p>{String(note.content ?? note.text ?? note.note ?? "Sin contenido")}</p>
+                <p>{String(note.content ?? note.text ?? note.note ?? (isEnglish ? "No content" : "Sin contenido"))}</p>
                 {(note.id ?? note.note_id) !== undefined && <button type="button" onClick={() => deleteNote(note)} disabled={saving}>{isEnglish ? "Delete" : "Eliminar"}</button>}
               </article>
             ))}

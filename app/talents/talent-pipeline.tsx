@@ -17,6 +17,7 @@ const DISPLAY_PAGE_SIZE = 20;
 
 let recordsCache: TalentRecord[] | null = null;
 let recordsRequest: Promise<TalentRecord[]> | null = null;
+let recordsCacheVersion = 0;
 
 function parseRecords(payload: unknown): TalentRecord[] {
   if (Array.isArray(payload)) return payload;
@@ -31,6 +32,7 @@ function parseRecords(payload: unknown): TalentRecord[] {
 }
 
 export function invalidateRecordsCache(): void {
+  recordsCacheVersion += 1;
   recordsCache = null;
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("talent-records-invalidated"));
@@ -69,9 +71,10 @@ function fetchRecords(): Promise<TalentRecord[]> {
   if (recordsRequest) return recordsRequest;
 
   const controller = new AbortController();
+  const requestVersion = recordsCacheVersion;
   recordsRequest = fetchAllRecords(controller.signal)
     .then((records) => {
-      recordsCache = records;
+      if (requestVersion === recordsCacheVersion) recordsCache = records;
       return records;
     })
     .finally(() => {
@@ -81,7 +84,7 @@ function fetchRecords(): Promise<TalentRecord[]> {
   return recordsRequest;
 }
 
-function displayValue(record: TalentRecord, keys: string[]): string {
+function displayValue(record: TalentRecord, keys: string[], fallback = "Sin información"): string {
   for (const key of keys) {
     const value = record[key];
     if (value !== undefined && value !== null && value !== "") {
@@ -89,19 +92,19 @@ function displayValue(record: TalentRecord, keys: string[]): string {
     }
   }
 
-  return "Sin información";
+  return fallback;
 }
 
 function displayLabeledValue(record: TalentRecord, keys: string[], labels: Record<string, string>): string {
   return labelForValue(displayValue(record, keys), labels);
 }
 
-function optionValues(records: TalentRecord[], keys: string[]): string[] {
+function optionValues(records: TalentRecord[], keys: string[], fallback: string): string[] {
   return Array.from(
     new Set(
       records
-        .map((record) => displayValue(record, keys))
-        .filter((value) => value !== "Sin información"),
+        .map((record) => displayValue(record, keys, fallback))
+        .filter((value) => value !== fallback),
     ),
   ).sort();
 }
@@ -115,6 +118,7 @@ export default function TalentPipeline() {
   const isEnglish = language === "en";
   const statusLabels = isEnglish ? STATUS_LABELS_EN : STATUS_LABELS;
   const stageLabels = isEnglish ? STAGE_LABELS_EN : STAGE_LABELS;
+  const missingValue = isEnglish ? "No information" : "Sin información";
   const [records, setRecords] = useState<TalentRecord[]>([]);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
@@ -157,16 +161,16 @@ export default function TalentPipeline() {
     };
   }, [isEnglish]);
 
-  const statusOptions = useMemo(() => optionValues(records, ["status"]), [records]);
-  const stageOptions = useMemo(() => optionValues(records, ["stage"]), [records]);
+  const statusOptions = useMemo(() => optionValues(records, ["status"], missingValue), [missingValue, records]);
+  const stageOptions = useMemo(() => optionValues(records, ["stage"], missingValue), [missingValue, records]);
   const filteredRecords = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
     return records.filter((record) => {
-      const name = displayValue(record, ["name", "full_name", "fullName"]).toLowerCase();
-      const email = displayValue(record, ["email"]).toLowerCase();
-      const recordStatus = displayValue(record, ["status"]);
-      const recordStage = displayValue(record, ["stage"]);
+      const name = displayValue(record, ["name", "full_name", "fullName"], missingValue).toLowerCase();
+      const email = displayValue(record, ["email"], missingValue).toLowerCase();
+      const recordStatus = displayValue(record, ["status"], missingValue);
+      const recordStage = displayValue(record, ["stage"], missingValue);
 
       return (
         (!normalizedQuery || name.includes(normalizedQuery) || email.includes(normalizedQuery)) &&
@@ -174,7 +178,7 @@ export default function TalentPipeline() {
         (!stage || recordStage === stage)
       );
     });
-  }, [query, records, stage, status]);
+  }, [missingValue, query, records, stage, status]);
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / DISPLAY_PAGE_SIZE));
   const visibleRecords = useMemo(() => {
     const start = (currentPage - 1) * DISPLAY_PAGE_SIZE;
@@ -241,12 +245,12 @@ export default function TalentPipeline() {
         <p className={styles.message}>{isEnglish ? "No talents match the current filters." : "No hay talentos que coincidan con los filtros actuales."}</p>
       )}
       {!loading && !error && filteredRecords.length > 0 && (
-        <section className={styles.list} aria-label="Listado de talentos">
+        <section className={styles.list} aria-label={isEnglish ? "Talent list" : "Listado de talentos"}>
           {visibleRecords.map((record, index) => (
             <article className={styles.card} key={recordId(record, index)}>
               <div>
-                <h2>{displayValue(record, ["name", "full_name", "fullName"])}</h2>
-                <p>{displayValue(record, ["email"])}</p>
+                <h2>{displayValue(record, ["name", "full_name", "fullName"], missingValue)}</h2>
+                <p>{displayValue(record, ["email"], missingValue)}</p>
               </div>
               <dl className={styles.cardMeta}>
                 <div><dt>{isEnglish ? "Status" : "Estado"}</dt><dd>{displayLabeledValue(record, ["status"], statusLabels)}</dd></div>
