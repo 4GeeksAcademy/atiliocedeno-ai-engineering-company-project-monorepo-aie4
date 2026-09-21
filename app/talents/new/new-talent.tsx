@@ -23,6 +23,14 @@ type TalentForm = {
   stage: string;
 };
 
+function createdRecordFromPayload(payload: unknown): { id?: string | number; _id?: string | number } {
+  if (typeof payload !== "object" || payload === null) return {};
+  if ("data" in payload && typeof payload.data === "object" && payload.data !== null) {
+    return payload.data as { id?: string | number; _id?: string | number };
+  }
+  return payload as { id?: string | number; _id?: string | number };
+}
+
 const initialForm: TalentForm = {
   full_name: "",
   email: "",
@@ -65,7 +73,7 @@ export default function NewTalent({ languageHref }: { languageHref?: string }) {
         body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
-      const created = (await response.json()) as { id?: string | number; _id?: string | number };
+      const created = createdRecordFromPayload(await response.json());
       const createdId = created.id ?? created._id;
       if (createdId === undefined) throw new Error(isEnglish ? "The API did not return the talent identifier." : "La API no devolvió el identificador del talento.");
       invalidateRecordsCache();

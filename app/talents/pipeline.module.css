@@ -248,7 +248,7 @@
 
 .card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px 140px 140px;
+  grid-template-columns: minmax(0, 1fr) 140px 140px 140px 140px;
   align-items: center;
   column-gap: 2rem;
   row-gap: 1.5rem;
@@ -287,8 +287,12 @@
   grid-column: 3;
 }
 
-.detailLink {
+.cardMeta > div:nth-child(3) {
   grid-column: 4;
+}
+
+.detailLink {
+  grid-column: 5;
   justify-self: end;
   color: #2563eb;
   font-weight: 700;
@@ -505,7 +509,8 @@
   }
 
   .cardMeta > div:nth-child(1),
-  .cardMeta > div:nth-child(2) {
+  .cardMeta > div:nth-child(2),
+  .cardMeta > div:nth-child(3) {
     grid-column: auto;
   }
 

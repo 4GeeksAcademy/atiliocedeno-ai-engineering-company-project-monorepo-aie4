@@ -39,7 +39,7 @@ export function invalidateRecordsCache(): void {
   }
 }
 
-async function fetchAllRecords(signal: AbortSignal): Promise<TalentRecord[]> {
+async function fetchAllRecords(signal: AbortSignal, isEnglish: boolean): Promise<TalentRecord[]> {
   const allRecords: TalentRecord[] = [];
   let page = 1;
 
@@ -51,7 +51,11 @@ async function fetchAllRecords(signal: AbortSignal): Promise<TalentRecord[]> {
     const response = await fetch(`${API_URL}/records?${params.toString()}`, { signal });
 
     if (!response.ok) {
-      throw new Error(`La API respondió con estado ${response.status}.`);
+      throw new Error(
+        isEnglish
+          ? `The API returned status ${response.status}.`
+          : `La API respondió con estado ${response.status}.`,
+      );
     }
 
     const pageRecords = parseRecords(await response.json());
@@ -66,13 +70,13 @@ async function fetchAllRecords(signal: AbortSignal): Promise<TalentRecord[]> {
   return allRecords;
 }
 
-function fetchRecords(): Promise<TalentRecord[]> {
+function fetchRecords(isEnglish: boolean): Promise<TalentRecord[]> {
   if (recordsCache) return Promise.resolve(recordsCache);
   if (recordsRequest) return recordsRequest;
 
   const controller = new AbortController();
   const requestVersion = recordsCacheVersion;
-  recordsRequest = fetchAllRecords(controller.signal)
+  recordsRequest = fetchAllRecords(controller.signal, isEnglish)
     .then((records) => {
       if (requestVersion === recordsCacheVersion) recordsCache = records;
       return records;
@@ -134,7 +138,7 @@ export default function TalentPipeline() {
       try {
         setLoading(true);
         setError("");
-        const nextRecords = await fetchRecords();
+        const nextRecords = await fetchRecords(isEnglish);
         if (!controller.signal.aborted) setRecords(nextRecords);
       } catch (requestError) {
         if (controller.signal.aborted || (requestError instanceof DOMException && requestError.name === "AbortError")) {
@@ -253,6 +257,7 @@ export default function TalentPipeline() {
                 <p>{displayValue(record, ["email"], missingValue)}</p>
               </div>
               <dl className={styles.cardMeta}>
+                <div><dt>{isEnglish ? "Position" : "Puesto"}</dt><dd>{displayValue(record, ["position", "role", "job_title"], missingValue)}</dd></div>
                 <div><dt>{isEnglish ? "Status" : "Estado"}</dt><dd>{displayLabeledValue(record, ["status"], statusLabels)}</dd></div>
                 <div><dt>{isEnglish ? "Stage" : "Etapa"}</dt><dd>{displayLabeledValue(record, ["stage"], stageLabels)}</dd></div>
               </dl>
