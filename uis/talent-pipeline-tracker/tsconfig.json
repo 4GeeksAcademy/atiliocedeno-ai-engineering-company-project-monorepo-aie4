@@ -9,7 +9,6 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": false,
-    "outDir": "dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
