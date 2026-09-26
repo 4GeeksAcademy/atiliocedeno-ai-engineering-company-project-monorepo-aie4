@@ -32,7 +32,7 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 - ✅ **Verified initial entry view**.
 - The application now has a dedicated static HealthCore Digital operations overview at `/uis/backoffice/index.html`, with its own responsive layout, internal navigation, company metrics, operational priorities, and HIPAA/UK GDPR context.
-- The view intentionally contains no backend, API, authentication, persistence, or patient data. Talent Pipeline Tracker remains separate and was not assumed to be reusable for this entry view.
+- The view intentionally contains no backend, API, authentication, persistence, or patient data. Talent Pipeline Tracker remains a separate application under `/uis/talent-pipeline-tracker` and was not merged into or duplicated within this entry view.
 - Local verification with `python3 -m http.server 4174 --directory uis/backoffice` returned HTTP 200 for `/`; HealthCore Digital and business-metric content checks passed.
 
 #### `/services`
@@ -51,9 +51,9 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 ## Branches and reusable code
 
 - `feature/agent-memory-bank`: working branch for this documentation.
-- `feature/talent-tracker`: contains the previous Talent Pipeline Tracker implementation, pending integration into `/uis/backoffice`.
+- `feature/talent-tracker`: merged into the current branch; the previous Talent Pipeline Tracker remains under `/uis/talent-pipeline-tracker`.
 - `feature/domain-models`: identified remote branch; its relationship to the current milestone has not been verified.
-- Milestone 1 and Talent Pipeline Tracker should be considered existing reusable implementations, not full completion of the current milestone.
+- Milestone 1, the Talent Pipeline Tracker, and the Milestone 4 static applications are separate deliverables; the tracker is preserved without being treated as the backoffice entry view.
 
 ## Current gaps
 
@@ -75,6 +75,7 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 | `.agents/skills/<skill>/SKILL.md` | ✅ Complete | `delivery-check` skill created. |
 | `/uis/website` | ✅ Verified | Static bilingual public website served successfully at `/`, with English and care-request routes also returning HTTP 200. |
 | `/uis/backoffice` | ✅ Verified | Dedicated static internal entry view served successfully at `/`, with visible HealthCore Digital branding and business metrics. |
+| `/uis/talent-pipeline-tracker` | ✅ Verified | Preserved previous milestone application; package-local typecheck and production build completed successfully after the merge. |
 | `/services` | ✅ Compliant | Implementing a backend service is not required in this milestone; any existing backend must be located there. |
 | TypeScript | ➖ Not configured | No root or package-local TypeScript check applies to the current static website and backoffice applications. |
 | Build | ➖ Not configured | No root or package-local build command applies to the current static website and backoffice applications. |
@@ -84,5 +85,5 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 ## Prioritized next steps
 
-1. Extend `/uis/backoffice` only when a concrete internal workflow is required; evaluate Talent Pipeline Tracker integration separately rather than assuming it is required for the entry view.
+1. Decide separately whether future internal workflows should integrate with `/uis/backoffice`; do not duplicate the preserved Talent Pipeline Tracker application without an explicit architectural decision.
 2. Add application-specific lint, test, or build tooling only if a future milestone requires it.

@@ -76,10 +76,10 @@ The only limitation is that part of the described architecture belongs to the tr
 
 ### Application
 
-- 🟡 Records Milestone 1 as an existing reusable implementation, while indicating that `/uis/website` is not yet organized.
-- ❌ Records that `/uis/backoffice` has not yet been implemented.
+- ✅ Records the organized `/uis/website` and `/uis/backoffice` applications, alongside the preserved Talent Pipeline Tracker.
+- ✅ Records the implemented static `/uis/backoffice` entry view.
 - ✅ Records that implementing a backend service in `/services` is not required; any backend that exists must be located there.
-- ✅ Keeps Talent Pipeline Tracker as a reusable implementation, not as full milestone completion.
+- ✅ Keeps Talent Pipeline Tracker as a preserved separate application, not as a replacement for the Milestone 4 backoffice entry view.
 
 ### Status, gaps, and validations
 
@@ -126,7 +126,7 @@ The file reflects that most of the specific agent infrastructure and application
 ## 7. Contradictions or pending adjustments
 
 - 🟡 The template README recommends a centralized FastAPI API, while the specific milestone scope is not included in the reviewed documents. `techContext.md` and `progress.md` correctly treat it as a conditional recommendation, not a confirmed requirement.
-- 🟡 Reusable Talent Pipeline Tracker content exists on a separate branch, so its integration into `/uis/backoffice` remains pending.
+- ✅ Talent Pipeline Tracker content was merged into `/uis/talent-pipeline-tracker` without duplicating or deleting the Milestone 4 applications.
 - 🟡 The Git state contains untracked items; this is retained as progress information and not mixed into the brief or architecture.
 
 No critical contradictions were found between the final documents and `CONTEXT.md`/`CONTEXT.es.md`.
@@ -137,6 +137,7 @@ No critical contradictions were found between the final documents and `CONTEXT.m
 - 🟡 `uis/AGENTS.md` is missing from the current tree; no historical Git entry for that path was found. UI instructions are provided by `uis/README.md` and the repository rules.
 - ✅ `/uis/website` served `/`, `index.en.html`, and `aplication.html` with HTTP 200 and exposed HealthCore content.
 - ✅ `/uis/backoffice` served `/` with HTTP 200 and exposed HealthCore Digital branding and business metrics.
+- ✅ `/uis/talent-pipeline-tracker` source is present; its package-local typecheck and production build completed successfully.
 - ✅ `/services` contains documentation only; no backend was added outside the required service boundary.
 - ➖ Root build and typecheck scripts are intentionally not configured because the current website and backoffice applications are static and have no package-level build tooling.
 - ❓ No package-local lint or test scripts are configured for the static website or backoffice applications.

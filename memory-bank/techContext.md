@@ -54,7 +54,7 @@ packages/shared/                 # @repo/shared-types — shared types package (
 └── types/index.ts               # Example types only: Id, BaseEntity
 
 services/                        # Template README only; any backend must be located here
-uis/                              # Its README says it should contain website/ and backoffice/ (not yet separate folders)
+uis/                              # Contains website/, backoffice/, and the preserved talent-pipeline-tracker/
 ```
 
 ### Milestone 4 architecture
@@ -63,7 +63,8 @@ According to the root `README.md` and `uis/README.md`, the project should evolve
 
 ```text
 /uis/website        # HealthCore public presence (currently: static Milestone 1 in the root)
-/uis/backoffice     # Internal tools (related to the previous Talent Pipeline Tracker)
+/uis/backoffice     # Internal HealthCore Digital entry view
+/uis/talent-pipeline-tracker # Preserved previous milestone Next.js application
 /services           # Location for any HealthCore backend service (currently: none; an external practice API is used)
 ```
 
@@ -96,7 +97,7 @@ These paths represent the responsibilities of Milestone 4. The implementation st
 ### Development, build, lint, test, and validation scripts
 
 - Monorepo root (`package.json`) currently has no application scripts. This is intentional because `/uis/website` and `/uis/backoffice` are static applications without package-level build or TypeScript tooling.
-- The previous Talent Pipeline Tracker scripts are historical context only and are not current repository validation commands.
+- The previous Talent Pipeline Tracker has package-local scripts and remains independently runnable; root scripts do not delegate to it.
 - In the previous Talent Pipeline Tracker package:
   - `dev`: `next dev`
   - `build`: `next build`
