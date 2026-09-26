@@ -1,10 +1,5 @@
 {
   "name": "atiliocedeno-ai-engineering-company-project-monorepo-aie4",
   "private": true,
-  "scripts": {
-    "dev": "npm --prefix uis/talent-pipeline-tracker run dev",
-    "build": "npm --prefix uis/talent-pipeline-tracker run build",
-    "start": "npm --prefix uis/talent-pipeline-tracker run start",
-    "typecheck": "npm --prefix uis/talent-pipeline-tracker run typecheck"
-  }
+  "scripts": {}
 }

@@ -1,145 +1,159 @@
-# Auditoría del Memory Bank
+# Memory Bank Audit
 
-**Fecha:** 2026-09-24  
-**Rama observada:** `feature/agent-memory-bank`  
-**Archivos auditados:** `projectbrief.md`, `techContext.md`, `progress.md`  
-**Fuente canónica de contexto empresarial para los agentes:** [`CONTEXT.md`](../CONTEXT.md)
-**Versión/origen en español:** [`CONTEXT.es.md`](../CONTEXT.es.md)
+**Date:** 2026-09-26
+**Observed branch:** `feature/agent-memory-bank`
+**Audited files:** `projectbrief.md`, `techContext.md`, `progress.md`
+**Canonical source of business context for agents:** [`CONTEXT.md`](../CONTEXT.md)
+**Spanish version/source:** [`CONTEXT.es.md`](../CONTEXT.es.md)
 
-## Alcance y método
+## Scope and method
 
-Se contrastó el contenido final del Memory Bank contra:
+The final Memory Bank content was compared against:
 
-- el briefing real de `CONTEXT.md`;
-- `CONTEXT.es.md`, como versión/origen en español para contrastar la sincronización;
-- las instrucciones estructurales del `README.md` raíz;
-- la estructura observable del repositorio;
-- el estado Git actual cuando era relevante para documentar progreso.
+- the actual brief in `CONTEXT.md`;
+- `CONTEXT.es.md`, as the Spanish version/source for checking synchronization;
+- the structural instructions in the root `README.md`;
+- the observable repository structure;
+- the current Git state when relevant to documenting progress.
 
-No se modificó código funcional. Los cambios de esta revisión se limitaron a documentación.
+No functional code was modified. The changes in this review were limited to documentation.
 
-## Resultado ejecutivo
+## Executive result
 
-La separación de responsabilidades queda consistente:
+The separation of responsibilities is consistent:
 
-- `projectbrief.md` responde **qué es HealthCore y por qué existe el proyecto**.
-- `techContext.md` responde **cómo está construido o previsto técnicamente**.
-- `progress.md` responde **cuál es el estado actual del hito**.
-- `AUDIT.md` registra esta verificación sin sustituir a los tres documentos principales.
+- `projectbrief.md` answers **what HealthCore is and why the project exists**.
+- `techContext.md` answers **how it is built or technically planned**.
+- `progress.md` answers **what the current milestone status is**.
+- `AUDIT.md` records this verification without replacing the three primary documents.
 
-`CONTEXT.md` sí contiene el briefing real de HealthCore y no el placeholder de la plantilla; es la fuente canónica de contexto empresarial para los agentes. `CONTEXT.es.md` se mantiene como versión/origen en español.
+`CONTEXT.md` contains the actual HealthCore brief rather than the template placeholder; it is the canonical source of business context for agents. `CONTEXT.es.md` is retained as the Spanish version/source.
 
-## 1. Auditoría de `projectbrief.md`
+## 1. Audit of `projectbrief.md`
 
-### Requisitos verificados
+### Verified requirements
 
-- ✅ Describe HealthCore, sus clínicas, áreas y unidad HealthCore Digital.
-- ✅ Explica el problema de sistemas heredados, fragmentación de datos y obligaciones HIPAA/UK GDPR.
-- ✅ Incluye objetivos generales del proyecto.
-- ✅ Identifica usuarios y áreas de negocio.
-- ✅ Explica el propósito general de `/uis/website`, `/uis/backoffice` y `/services`.
-- ✅ Menciona Hito 1 y Talent Pipeline Tracker como contexto previo, sin convertirlos en el foco del documento.
-- ✅ No incluye ramas, commits, `git status`, builds ni merges pendientes.
+- ✅ Describes HealthCore, its clinics, departments, and HealthCore Digital unit.
+- ✅ Explains the problem of legacy systems, data fragmentation, and HIPAA/UK GDPR obligations.
+- ✅ Includes the project's general objectives.
+- ✅ Identifies users and business areas.
+- ✅ Explains the general purpose of `/uis/website`, `/uis/backoffice`, and `/services`.
+- ✅ Mentions Milestone 1 and Talent Pipeline Tracker as prior context without making them the document's focus.
+- ✅ Does not include branches, commits, `git status`, builds, or pending merges.
 
-### Resultado: ✅ Correcto
+### Result: ✅ Correct
 
-No se detectaron duplicaciones relevantes ni contradicciones con `CONTEXT.es.md`.
+No significant duplication or contradictions with `CONTEXT.es.md` were found.
 
-## 2. Auditoría de `techContext.md`
+## 2. Audit of `techContext.md`
 
-### Requisitos verificados
+### Verified requirements
 
-- ✅ Documenta el stack identificado: HTML, JavaScript, Tailwind, Next.js, React, TypeScript y `lucide-react`.
-- ✅ Documenta la arquitectura frontend existente y la arquitectura objetivo del Hito 4.
-- ✅ Incluye la responsabilidad prevista de `/uis/website`, `/uis/backoffice` y `/services`.
-- ✅ Incluye la estructura del monorepo y el rol de `packages/shared`.
-- ✅ Documenta tipos y contratos locales del Talent Pipeline Tracker.
-- ✅ Documenta la API externa de práctica y `NEXT_PUBLIC_API_URL`.
-- ✅ Incluye scripts conocidos y restricciones técnicas.
-- ✅ Distingue la recomendación de FastAPI del requisito confirmado del hito.
-- ✅ No convierte automáticamente backups, observabilidad o monitoreo en requisitos.
-- ✅ La información temporal de ramas, archivos no versionados, merges y validaciones actuales se mantiene fuera del documento técnico.
+- ✅ Documents the identified stack: HTML, JavaScript, Tailwind, Next.js, React, TypeScript, and `lucide-react`.
+- ✅ Documents the existing frontend architecture and the target architecture for Milestone 4.
+- ✅ Includes the planned responsibility of `/uis/website`, `/uis/backoffice`, and `/services`.
+- ✅ Includes the monorepo structure and the role of `packages/shared`.
+- ✅ Documents local Talent Pipeline Tracker types and contracts.
+- ✅ Documents the external practice API and `NEXT_PUBLIC_API_URL`.
+- ✅ Includes known scripts and technical constraints.
+- ✅ Distinguishes the FastAPI recommendation from the confirmed milestone requirement.
+- ✅ Does not automatically turn backups, observability, or monitoring into requirements.
+- ✅ Temporary information about branches, untracked files, merges, and current validations remains outside the technical document.
 
-### Resultado: ✅ Correcto
+### Result: ✅ Correct
 
-La única limitación es que parte de la arquitectura descrita corresponde a la aplicación previa del tracker y no a una estructura ya integrada en `/uis/website` o `/uis/backoffice`; el documento lo indica explícitamente.
+The only limitation is that part of the described architecture belongs to the tracker's previous application rather than to a structure already integrated into `/uis/website` or `/uis/backoffice`; the document states this explicitly.
 
-## 3. Auditoría de `progress.md`
+## 3. Audit of `progress.md`
 
-### Infraestructura de agentes
+### Agent infrastructure
 
-- ✅ Incluye `memory-bank/` y sus documentos.
-- ❌ Registra correctamente que no existe `AGENTS.md` raíz.
-- ❌ Registra correctamente que no existe `.agents/rules/`.
-- ❌ Registra correctamente que no existe `.agents/skills/<skill>/SKILL.md`.
-- 🟡 Distingue la plantilla existente de `skills/_template/SKILL.md` y la documentación base de `agents/`/`mcps/` frente a la infraestructura específica exigida.
+- ✅ Includes `memory-bank/` and its documents.
+- ❌ Correctly records that no root `AGENTS.md` exists.
+- ❌ Correctly records that `.agents/rules/` does not exist.
+- ❌ Correctly records that `.agents/skills/<skill>/SKILL.md` does not exist.
+- 🟡 Distinguishes the existing `skills/_template/SKILL.md` template and the base `agents/`/`mcps/` documentation from the specifically required infrastructure.
 
-### Aplicación
+### Application
 
-- 🟡 Registra el Hito 1 como implementación existente reutilizable, pero indica que `/uis/website` aún no está organizado.
-- ❌ Registra que `/uis/backoffice` todavía no está implementado.
-- ✅ Registra que no se exige implementar un servicio backend en `/services`; cualquier backend que exista debe ubicarse allí.
-- ✅ Mantiene Talent Pipeline Tracker como implementación reutilizable, no como cumplimiento completo del hito.
+- 🟡 Records Milestone 1 as an existing reusable implementation, while indicating that `/uis/website` is not yet organized.
+- ❌ Records that `/uis/backoffice` has not yet been implemented.
+- ✅ Records that implementing a backend service in `/services` is not required; any backend that exists must be located there.
+- ✅ Keeps Talent Pipeline Tracker as a reusable implementation, not as full milestone completion.
 
-### Estado, gaps y validaciones
+### Status, gaps, and validations
 
-- ✅ Incluye estados con los símbolos solicitados: ✅, 🟡, ❌ y ❓.
-- ✅ Incluye estado actual, gaps, validaciones y próximos pasos.
-- ✅ Mueve a este archivo la información temporal sobre ramas y código pendiente de integrar.
-- ✅ No declara ejecutadas validaciones que no se verificaron.
+- ✅ Includes statuses with the requested symbols: ✅, 🟡, ❌, and ❓.
+- ✅ Includes current status, gaps, validations, and next steps.
+- ✅ Moves temporary information about branches and code pending integration into this file.
+- ✅ Does not claim that unverified validations were run.
 
-### Resultado: ✅ Correcto
+### Result: ✅ Correct
 
-El archivo refleja que la mayor parte de la infraestructura específica de agentes y de la estructura de aplicación todavía está pendiente, sin confundir antecedentes reutilizables con entregables terminados.
+The file reflects that most of the specific agent infrastructure and application structure is still pending, without confusing reusable prior work with completed deliverables.
 
-## 4. Verificación de `CONTEXT.md`
+## 4. Verification of `CONTEXT.md`
 
-- ✅ `CONTEXT.md` contiene el briefing real de HealthCore.
-- ✅ Sus datos principales coinciden con `CONTEXT.es.md`: empresa, clínicas, áreas, problemas, necesidades y restricciones regulatorias.
-- ✅ No es el placeholder original de la plantilla.
-- 🟡 `CONTEXT.es.md` se mantiene como versión/origen en español; se recomienda mantener ambos archivos sincronizados en futuras actualizaciones.
+- ✅ `CONTEXT.md` contains the actual HealthCore brief.
+- ✅ Its main data matches `CONTEXT.es.md`: company, clinics, departments, problems, needs, and regulatory constraints.
+- ✅ It is not the original template placeholder.
+- 🟡 `CONTEXT.es.md` is retained as the Spanish version/source; keeping both files synchronized in future updates is recommended.
 
-### Resultado: ✅ Correcto
+### Result: ✅ Correct
 
-## 5. Contraste con la estructura actual del repositorio
+## 5. Comparison with the current repository structure
 
-- ✅ Existe `memory-bank/` con los cuatro documentos auditados.
-- ✅ Existe `skills/_template/SKILL.md`.
-- ✅ Existen directorios de plantilla para `agents/`, `mcps/`, `uis/` y `services/`.
-- ❌ No se observó `AGENTS.md` raíz.
-- ❌ No se observó `.agents/rules/`.
-- ❌ No se observó `.agents/skills/<skill>/SKILL.md`.
-- ❌ No se observó `/uis/website`.
-- ❌ No se observó `/uis/backoffice`.
-- ✅ `services/` no contiene implementación propia, lo cual no incumple el hito; cualquier backend que exista debe ubicarse allí.
-- 🟡 Hay artefactos y directorios no versionados visibles en el estado Git actual; esto pertenece a `progress.md`, no a `projectbrief.md` ni a `techContext.md`.
+- ✅ `memory-bank/` exists with the four audited documents.
+- ✅ `skills/_template/SKILL.md` exists.
+- ✅ Template directories exist for `agents/`, `mcps/`, `uis/`, and `services/`.
+- ✅ Root `AGENTS.md` is present in the working tree.
+- ❌ `.agents/rules/` was not observed.
+- ❌ `.agents/skills/<skill>/SKILL.md` was not observed.
+- ✅ `/uis/website` is present with its static application files.
+- ✅ `/uis/backoffice` is present with its static application files.
+- ✅ `services/` contains no custom implementation, which does not violate the milestone; any backend that exists must be located there.
+- 🟡 Untracked artifacts and directories are visible in the current Git state; this belongs in `progress.md`, not `projectbrief.md` or `techContext.md`.
 
-## 6. Hallazgos resueltos
+## 6. Resolved findings
 
-- ✅ Separación entre contexto empresarial, contexto técnico y progreso actual.
-- ✅ Uso de `CONTEXT.md` como fuente canónica para los agentes, con `CONTEXT.es.md` como versión/origen en español.
-- ✅ Confirmación de que `CONTEXT.md` contiene el briefing real.
-- ✅ Inclusión de la infraestructura de agentes requerida en `progress.md`, aunque marcada como pendiente cuando no existe.
-- ✅ Eliminación de conclusiones obsoletas de auditorías anteriores.
-- ✅ FastAPI, backups, observabilidad y monitoreo ya no se presentan automáticamente como requisitos del hito.
+- ✅ Separation between business context, technical context, and current progress.
+- ✅ Use of `CONTEXT.md` as the canonical source for agents, with `CONTEXT.es.md` as the Spanish version/source.
+- ✅ Confirmation that `CONTEXT.md` contains the actual brief.
+- ✅ Inclusion of the required agent infrastructure in `progress.md`, marked as pending when absent.
+- ✅ Removal of obsolete conclusions from previous audits.
+- ✅ FastAPI, backups, observability, and monitoring are no longer automatically presented as milestone requirements.
 
-## 7. Contradicciones o ajustes pendientes
+## 7. Contradictions or pending adjustments
 
-- 🟡 El README de la plantilla recomienda una API centralizada FastAPI, mientras que el alcance concreto del hito no está incluido en los documentos revisados. `techContext.md` y `progress.md` lo tratan correctamente como recomendación condicionada, no como requisito confirmado.
-- 🟡 El contenido reutilizable del Talent Pipeline Tracker existe en una rama separada, por lo que su integración en `/uis/backoffice` sigue pendiente.
-- 🟡 El estado Git contiene elementos no versionados; se conserva como información de progreso y no se mezcla con el brief ni con la arquitectura.
+- 🟡 The template README recommends a centralized FastAPI API, while the specific milestone scope is not included in the reviewed documents. `techContext.md` and `progress.md` correctly treat it as a conditional recommendation, not a confirmed requirement.
+- 🟡 Reusable Talent Pipeline Tracker content exists on a separate branch, so its integration into `/uis/backoffice` remains pending.
+- 🟡 The Git state contains untracked items; this is retained as progress information and not mixed into the brief or architecture.
 
-No se detectaron contradicciones críticas entre los documentos finales y `CONTEXT.md`/`CONTEXT.es.md`.
+No critical contradictions were found between the final documents and `CONTEXT.md`/`CONTEXT.es.md`.
 
-## Estado final por archivo
+## 8. Milestone 4 final validation
 
-| Archivo | Estado | Veredicto |
+- ✅ Agent infrastructure is present: root `AGENTS.md`, two scoped rules, and the `delivery-check` skill were verified.
+- 🟡 `uis/AGENTS.md` is missing from the current tree; no historical Git entry for that path was found. UI instructions are provided by `uis/README.md` and the repository rules.
+- ✅ `/uis/website` served `/`, `index.en.html`, and `aplication.html` with HTTP 200 and exposed HealthCore content.
+- ✅ `/uis/backoffice` served `/` with HTTP 200 and exposed HealthCore Digital branding and business metrics.
+- ✅ `/services` contains documentation only; no backend was added outside the required service boundary.
+- ➖ Root build and typecheck scripts are intentionally not configured because the current website and backoffice applications are static and have no package-level build tooling.
+- ❓ No package-local lint or test scripts are configured for the static website or backoffice applications.
+
+### Final milestone verdict
+
+The requested static website and backoffice entry views are verified. Repository validation blockers are resolved; readiness is **READY** for the current static scope.
+
+## Final status by file
+
+| File | Status | Verdict |
 |---|---|---|
-| `projectbrief.md` | ✅ | **Correcto** — qué y por qué, sin estado temporal. |
-| `techContext.md` | ✅ | **Correcto** — cómo, stack, arquitectura y restricciones. |
-| `progress.md` | ✅ | **Correcto** — estado actual del hito, agentes, aplicación, gaps y validaciones. |
-| `AUDIT.md` | ✅ | **Correcto** — contrasta el contenido final y registra hallazgos actuales. |
+| `projectbrief.md` | ✅ | **Correct** — what and why, without temporary status. |
+| `techContext.md` | ✅ | **Correct** — how, stack, architecture, and constraints. |
+| `progress.md` | ✅ | **Correct** — current milestone status, agents, application, gaps, and validations. |
+| `AUDIT.md` | ✅ | **Correct** — compares the final content and records current findings. |
 
-## Recomendación final
+## Final recommendation
 
-Actualizar `progress.md` cada vez que cambien las ramas, la integración o las validaciones. Actualizar `projectbrief.md` solo ante cambios del negocio o del propósito del proyecto, y `techContext.md` solo ante cambios de arquitectura, stack o contratos técnicos. Mantener `CONTEXT.md` y `CONTEXT.es.md` sincronizados.
+Update `progress.md` whenever branches, integration, or validations change. Update `projectbrief.md` only when the business or project purpose changes, and `techContext.md` only when the architecture, stack, or technical contracts change. Keep `CONTEXT.md` and `CONTEXT.es.md` synchronized.

@@ -1,47 +1,47 @@
 # Tech Context
 
-> Este documento describe la arquitectura y las tecnologías identificadas en el repositorio. El contexto empresarial canónico para los agentes es [`CONTEXT.md`](../CONTEXT.md); [`CONTEXT.es.md`](../CONTEXT.es.md) se mantiene como versión/origen en español.
+> This document describes the architecture and technologies identified in the repository. The canonical business context for agents is [`CONTEXT.md`](../CONTEXT.md); [`CONTEXT.es.md`](../CONTEXT.es.md) is retained as the Spanish version/source.
 
-## Implementación frontend previa: Hito 1 estático
+## Previous frontend implementation: static Milestone 1
 
-- `index.html` / `index.en.html`: landing corporativa de HealthCore (HTML5 + Tailwind CSS v4 vía CDN `@tailwindcss/browser@4`).
-- `aplication.html` / `aplication.en.html`: formulario de solicitud de atención médica.
-- `style.css`: hoja de estilos propia complementaria a Tailwind.
-- `validation.js`: validación de formulario en JavaScript vainilla, sin dependencias externas.
-- Brief original en [`promt.md`](../promt.md) ("HITO 1 -- ENTREGA 27/06").
+- `index.html` / `index.en.html`: HealthCore corporate landing page (HTML5 + Tailwind CSS v4 via CDN `@tailwindcss/browser@4`).
+- `aplication.html` / `aplication.en.html`: medical care request form.
+- `style.css`: custom stylesheet complementing Tailwind.
+- `validation.js`: vanilla JavaScript form validation, with no external dependencies.
+- Original brief in [`promt.md`](../promt.md) ("MILESTONE 1 -- DELIVERY 27/06").
 
-## Implementación frontend identificada
+## Identified frontend implementation
 
-El repositorio contiene un Hito 1 estático en la raíz y una implementación previa de Talent Pipeline Tracker basada en Next.js. Esta última define la estructura técnica descrita abajo, pero su estado de integración se mantiene en [`progress.md`](./progress.md).
+The repository contains a static Milestone 1 in the root and a previous Next.js-based Talent Pipeline Tracker implementation. The latter defines the technical structure described below, but its integration status is maintained in [`progress.md`](./progress.md).
 
-### Stack tecnológico
+### Technology stack
 
-- **Framework**: Next.js (`^16.3.5`), usando el App Router (carpeta `app/`).
-- **Lenguaje**: TypeScript (`^7.0.2`), `strict: true` en `tsconfig.json`.
-- **UI**: React `^19.3.0` / `react-dom` `^19.3.0`, iconos con `lucide-react`.
-- **Estilos**: Tailwind CSS cargado vía CDN (`@tailwindcss/browser@4`) en `app/layout.tsx`, más un módulo CSS propio (`app/talents/pipeline.module.css`) y una hoja de estilos estática (`public/style.css`) para la landing.
-- **Tipos**: `@types/node`, `@types/react`, `@types/react-dom` como devDependencies.
-- No hay backend propio: la app es un frontend Next.js puro que consume una API HTTP externa.
+- **Framework**: Next.js (`^16.3.5`), using the App Router (`app/` directory).
+- **Language**: TypeScript (`^7.0.2`), `strict: true` in `tsconfig.json`.
+- **UI**: React `^19.3.0` / `react-dom` `^19.3.0`, with icons from `lucide-react`.
+- **Styles**: Tailwind CSS loaded via CDN (`@tailwindcss/browser@4`) in `app/layout.tsx`, plus a custom CSS module (`app/talents/pipeline.module.css`) and a static stylesheet (`public/style.css`) for the landing page.
+- **Types**: `@types/node`, `@types/react`, and `@types/react-dom` as devDependencies.
+- There is no custom backend: the app is a pure Next.js frontend consuming an external HTTP API.
 
-### Estructura relevante del monorepo
+### Relevant monorepo structure
 
 ```text
-uis/talent-pipeline-tracker/     # Aplicación previa de gestión de talento
+uis/talent-pipeline-tracker/     # Previous talent management application
 ├── app/
-│   ├── layout.tsx               # Root layout, carga Tailwind por CDN y LanguageProvider
-│   ├── page.tsx                 # "/" redirige a /index.html (landing estática)
+│   ├── layout.tsx               # Root layout, loads Tailwind via CDN and LanguageProvider
+│   ├── page.tsx                 # "/" redirects to /index.html (static landing page)
 │   ├── components/
-│   │   ├── global-navbar.tsx    # Navbar compartida entre vistas de talentos
-│   │   └── language-context.tsx # Contexto de idioma (ES/EN)
+│   │   ├── global-navbar.tsx    # Shared navbar across talent views
+│   │   └── language-context.tsx # Language context (ES/EN)
 │   └── talents/
-│       ├── page.tsx / talent-pipeline.tsx   # Listado del pipeline (ES)
-│       ├── new/page.tsx / new-talent.tsx    # Alta de candidato (ES)
-│       ├── [id]/page.tsx / talent-detail.tsx# Detalle de candidato (ES)
-│       ├── en/page.tsx, en/new/page.tsx, en/[id]/page.tsx  # Variantes en inglés
+│       ├── page.tsx / talent-pipeline.tsx   # Pipeline listing (ES)
+│       ├── new/page.tsx / new-talent.tsx    # Candidate creation (ES)
+│       ├── [id]/page.tsx / talent-detail.tsx# Candidate detail (ES)
+│       ├── en/page.tsx, en/new/page.tsx, en/[id]/page.tsx  # English variants
 │       ├── types.ts             # TalentRecord, TalentNote, TalentStatus, TalentStage
-│       ├── labels.ts            # Etiquetas ES/EN para status y stage
+│       ├── labels.ts            # ES/EN labels for status and stage
 │       └── pipeline.module.css
-├── public/                      # Landing estática de HealthCore (HTML/CSS servidos por Next.js)
+├── public/                      # Static HealthCore landing page (HTML/CSS served by Next.js)
 │   ├── index.html / index.en.html
 │   ├── aplication.html / aplication.en.html
 │   └── style.css
@@ -49,78 +49,75 @@ uis/talent-pipeline-tracker/     # Aplicación previa de gestión de talento
 ├── package.json / package-lock.json
 └── tsconfig.json
 
-packages/shared/                 # @repo/shared-types — paquete de tipos compartidos (aún placeholder)
+packages/shared/                 # @repo/shared-types — shared types package (still a placeholder)
 ├── package.json
-└── types/index.ts               # Solo tipos de ejemplo: Id, BaseEntity
+└── types/index.ts               # Example types only: Id, BaseEntity
 
-services/                        # Solo README de plantilla; cualquier backend debe ubicarse aquí
-uis/                              # Según su README, debería contener website/ y backoffice/ (aún no existen como carpetas separadas)
+services/                        # Template README only; any backend must be located here
+uis/                              # Its README says it should contain website/ and backoffice/ (not yet separate folders)
 ```
 
-### Arquitectura del Hito 4
+### Milestone 4 architecture
 
-Según el `README.md` raíz y `uis/README.md`, la estructura hacia la que debe evolucionar el proyecto es:
+According to the root `README.md` and `uis/README.md`, the project should evolve toward this structure:
 
 ```text
-/uis/website        # Presencia pública de HealthCore (hoy: Hito 1 estático en la raíz)
-/uis/backoffice     # Herramientas internas (relacionadas con el Talent Pipeline Tracker previo)
-/services           # Ubicación de cualquier servicio backend de HealthCore (hoy: no existe, se usa API externa de práctica)
+/uis/website        # HealthCore public presence (currently: static Milestone 1 in the root)
+/uis/backoffice     # Internal tools (related to the previous Talent Pipeline Tracker)
+/services           # Location for any HealthCore backend service (currently: none; an external practice API is used)
 ```
 
-Estas rutas representan las responsabilidades del Hito 4. El estado de implementación de cada una se documenta en `progress.md`; no se declara aquí como implementado ningún componente que no exista en el repositorio. El README de la plantilla recomienda una API centralizada con FastAPI para `services/`, pero esa tecnología solo debe adoptarse si el enunciado del hito la exige.
+These paths represent the responsibilities of Milestone 4. The implementation status of each is documented in `progress.md`; no component that does not exist in the repository is declared implemented here. The template README recommends a centralized FastAPI API for `services/`, but that technology should be adopted only if the milestone brief requires it.
 
-### Arquitectura identificada actualmente
+### Currently identified architecture
 
-- Frontend Next.js monolítico (sin servicio backend propio en el monorepo) que llama directamente a una **API REST externa de práctica** de 4Geeks:
-  `NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1` (definida en `.env.example`).
-- El componente `talent-pipeline.tsx` implementa paginación manual sobre el endpoint `GET /records` (tamaño de página 1000 registros por request, acumulando hasta que una página viene incompleta), con una caché en memoria (`recordsCache`) invalidable vía evento (`invalidateRecordsCache`).
-- La landing corporativa (HTML/CSS estáticos en `public/`) y la app React (`app/talents/**`) coexisten en el mismo proyecto Next.js; la ruta raíz `/` simplemente redirige a la landing estática.
-- No hay capa de base de datos, autenticación, ni servicio propio: toda la persistencia depende de la API externa.
+- Monolithic Next.js frontend (without a custom backend service in the monorepo) that directly calls a **4Geeks external practice REST API**:
+  `NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1` (defined in `.env.example`).
+- The `talent-pipeline.tsx` component implements manual pagination over the `GET /records` endpoint (page size of 1,000 records per request, accumulating until a page is incomplete), with an in-memory cache (`recordsCache`) invalidated through an event (`invalidateRecordsCache`).
+- The corporate landing page (static HTML/CSS in `public/`) and React app (`app/talents/**`) coexist in the same Next.js project; the root `/` route simply redirects to the static landing page.
+- There is no database layer, authentication, or custom service: all persistence depends on the external API.
 
-### Infraestructura de agentes y skills
+### Agent and skill infrastructure
 
-- La plantilla organiza agentes en `agents/`, capacidades reutilizables en `skills/` y servidores MCP en `mcps/`.
-- En el estado actual existe `skills/_template/SKILL.md` y documentación de plantilla en `agents/` y `mcps/`.
-- La estructura específica exigida por el ejercicio (`AGENTS.md`, `.agents/rules/` y `.agents/skills/<skill>/SKILL.md`) se verifica y mantiene en `progress.md`; no se afirma aquí que exista mientras no esté presente en el árbol.
+- The template organizes agents in `agents/`, reusable capabilities in `skills/`, and MCP servers in `mcps/`.
+- The current state includes `skills/_template/SKILL.md` and template documentation in `agents/` and `mcps/`.
+- The exercise-specific structure (`AGENTS.md`, `.agents/rules/`, and `.agents/skills/<skill>/SKILL.md`) is verified and maintained in `progress.md`; this document does not claim it exists unless it is present in the tree.
 
-### Estrategia de tipos y contratos de datos
+### Type and data contract strategy
 
-- Los contratos de datos del dominio "talento" se definen localmente en `app/talents/types.ts` (`TalentRecord`, `TalentNote`, `TalentStatus`, `TalentStage`), **no** en `packages/shared/types/index.ts`.
-- `packages/shared` (`@repo/shared-types`) existe pero solo contiene tipos de ejemplo genéricos (`Id`, `BaseEntity`) — no hay integración real entre el paquete compartido y la app del tracker todavía.
-- `TalentRecord` es deliberadamente permisivo (`Record<string, RecordValue>` con múltiples alias de campo: `name`/`full_name`/`fullName`, `id`/`_id`, etc.), reflejando que la forma exacta de la respuesta de la API externa no está estandarizada.
+- Data contracts for the "talent" domain are defined locally in `app/talents/types.ts` (`TalentRecord`, `TalentNote`, `TalentStatus`, `TalentStage`), **not** in `packages/shared/types/index.ts`.
+- `packages/shared` (`@repo/shared-types`) exists but contains only generic example types (`Id`, `BaseEntity`)—there is not yet real integration between the shared package and the tracker app.
+- `TalentRecord` is deliberately permissive (`Record<string, RecordValue>`, with multiple field aliases: `name`/`full_name`/`fullName`, `id`/`_id`, etc.), reflecting that the exact shape of the external API response is not standardized.
 
-### APIs / servicios externos relevantes
+### Relevant external APIs/services
 
-- API de práctica de 4Geeks: `https://playground.4geeks.com/tracker/api/v1` (endpoint usado: `/records`). Es un servicio de terceros para fines de aprendizaje, no un servicio propio de HealthCore.
+- 4Geeks practice API: `https://playground.4geeks.com/tracker/api/v1` (endpoint used: `/records`). It is a third-party service for learning purposes, not a HealthCore-owned service.
 
-### Scripts de desarrollo, build, lint, test, validación
+### Development, build, lint, test, and validation scripts
 
-- Raíz del monorepo (`package.json`):
-  - `npm run dev` → `npm --prefix uis/talent-pipeline-tracker run dev`
-  - `npm run build` → `... run build`
-  - `npm run start` → `... run start`
-  - `npm run typecheck` → `... run typecheck`
-- Dentro de `uis/talent-pipeline-tracker/package.json`:
+- Monorepo root (`package.json`) currently has no application scripts. This is intentional because `/uis/website` and `/uis/backoffice` are static applications without package-level build or TypeScript tooling.
+- The previous Talent Pipeline Tracker scripts are historical context only and are not current repository validation commands.
+- In the previous Talent Pipeline Tracker package:
   - `dev`: `next dev`
   - `build`: `next build`
   - `start`: `next start`
   - `typecheck`: `tsc --noEmit`
-  - ❓ No verificado: no hay script de `lint` ni de `test` definido en ese `package.json`.
+  - ❓ Not verified: no `lint` or `test` script is defined in that `package.json`.
 
-### Restricciones técnicas conocidas
+### Known technical constraints
 
-- `tsconfig.json` usa `strict: true`, `moduleResolution: "Bundler"`, `jsx: "react-jsx"`, `outDir: "dist"` — cualquier cambio de tipos debe respetar modo estricto.
-- La app depende de que `NEXT_PUBLIC_API_URL` esté configurada (variable pública, expuesta al cliente); sin ella, las requests a `/records` fallan.
-- El README raíz describe una plantilla sin runner de workspace global. El `package.json` raíz disponible delega los scripts al proyecto Next.js.
+- `tsconfig.json` uses `strict: true`, `moduleResolution: "Bundler"`, `jsx: "react-jsx"`, and `outDir: "dist"`—any type changes must respect strict mode.
+- The app depends on `NEXT_PUBLIC_API_URL` being configured (a public variable exposed to the client); without it, requests to `/records` fail.
+- The root README describes a template without a global workspace runner. The available root `package.json` delegates scripts to the Next.js project.
 
-### Convenciones importantes del proyecto
+### Important project conventions
 
-- Un subfolder por app dentro de `uis/`, cada una con su propia documentación (regla del `README.md` raíz).
-- Contenido bilingüe (ES/EN) resuelto con rutas paralelas (`/talents` vs `/talents/en`) en lugar de un sistema i18n de Next.js.
-- Comentarios de una sola línea explicando decisiones no evidentes (ver `global-navbar.tsx`, `talent-pipeline.tsx`).
-- `AGENTS.md`/`CLAUDE.md` dentro de `uis/talent-pipeline-tracker/` son generados automáticamente por `next dev` (contienen la marca `BEGIN:nextjs-agent-rules` / referencian `node_modules/next/dist/server/lib/generate-agent-files.js`) — no deben tratarse como documentación manual del proyecto.
+- One subfolder per app under `uis/`, each with its own documentation (root `README.md` rule).
+- Bilingual content (ES/EN) is handled with parallel routes (`/talents` vs `/talents/en`) rather than a Next.js i18n system.
+- Single-line comments explain non-obvious decisions (see `global-navbar.tsx`, `talent-pipeline.tsx`).
+- Generated tracker `AGENTS.md`/`CLAUDE.md` files were produced by `next dev` and should not be treated as manual project documentation.
 
-### Dependencias/configuraciones que un nuevo agente debería conocer antes de modificar código
+### Dependencies/configurations a new agent should know before modifying code
 
-- El paquete `packages/shared` no está enlazado como workspace de npm (no hay `workspaces` en el `package.json` raíz visto); su reutilización real desde `uis/talent-pipeline-tracker` no está verificada (❓ No verificado).
-- Los datos que llegan de la API externa no siguen un esquema fijo (de ahí los múltiples alias opcionales en `TalentRecord`); cualquier cambio en el parsing debe mantener esa tolerancia.
+- The `packages/shared` package is not linked as an npm workspace (there is no `workspaces` entry in the observed root `package.json`); its reuse by the previous tracker was not verified (❓ Not verified).
+- Data arriving from the external API does not follow a fixed schema (hence the multiple optional aliases in `TalentRecord`); any parsing changes must preserve that tolerance.

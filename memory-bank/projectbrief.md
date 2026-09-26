@@ -1,43 +1,43 @@
 # Project Brief
 
-## Proyecto y fuente de contexto
+## Project and context source
 
-Este repositorio es el proyecto transversal de AI Engineering de 4Geeks Academy para **HealthCore**. La fuente principal de verdad sobre el negocio es [`CONTEXT.es.md`](../CONTEXT.es.md). El proyecto debe conservar la separación entre contexto empresarial, implementación técnica y evolución por hitos.
+This repository is 4Geeks Academy's cross-cutting AI Engineering project for **HealthCore**. The primary source of truth for the business is [`CONTEXT.es.md`](../CONTEXT.es.md). The project must preserve the separation between business context, technical implementation, and milestone-based evolution.
 
-## Qué es HealthCore
+## What HealthCore is
 
-HealthCore es una empresa sanitaria de atención ambulatoria fundada en 2011 en Austin, Texas. Opera 12 clínicas: 9 en Estados Unidos y 3 en el Reino Unido. Ofrece atención primaria, consultas con especialistas, gestión de enfermedades crónicas y programas de salud preventiva. Cuenta con aproximadamente 200 empleados y una facturación anual cercana a 28 millones de dólares.
+HealthCore is an outpatient healthcare company founded in 2011 in Austin, Texas. It operates 12 clinics: 9 in the United States and 3 in the United Kingdom. It offers primary care, specialist consultations, chronic disease management, and preventive health programs. It has approximately 200 employees and annual revenue of about 28 million dollars.
 
-La empresa está organizada en Operaciones Clínicas, Experiencia del Paciente y Acceso, Ciclo de Ingresos y Facturación, Cumplimiento y Gobierno del Dato, Personas y Fuerza Laboral, Tecnología y Dirección Ejecutiva. La unidad interna **HealthCore Digital** construye sistemas, flujos de trabajo y herramientas inteligentes para modernizar la operación.
+The company is organized into Clinical Operations, Patient Experience and Access, Revenue Cycle and Billing, Compliance and Data Governance, People and Workforce, Technology, and Executive Leadership. The internal **HealthCore Digital** unit builds systems, workflows, and intelligent tools to modernize operations.
 
-## Problema que resuelve el proyecto
+## Problem the project addresses
 
-HealthCore opera con sistemas heredados que no se comunican correctamente: dos plataformas EHR, facturación separada por país, reservas telefónicas y ausencia de una capa de datos compartida. Esto dificulta la coordinación entre sedes y países, la visibilidad operativa y la toma de decisiones.
+HealthCore operates legacy systems that do not communicate properly: two EHR platforms, country-specific billing, telephone booking, and no shared data layer. This makes coordination across sites and countries, operational visibility, and decision-making more difficult.
 
-El proyecto busca proporcionar interfaces y servicios que hagan más accesibles y consistentes los procesos de HealthCore, respetando las obligaciones de HIPAA y UK GDPR. Las necesidades de negocio incluyen mejorar el acceso y las citas, las operaciones clínicas, la facturación, el cumplimiento, la gestión de personas y la información ejecutiva.
+The project aims to provide interfaces and services that make HealthCore's processes more accessible and consistent while respecting HIPAA and UK GDPR obligations. Business needs include improving access and appointments, clinical operations, billing, compliance, people management, and executive information.
 
-## Usuarios y áreas
+## Users and areas
 
-- Pacientes y prospectos que necesitan información y contacto con HealthCore.
-- Personal clínico y Operaciones Clínicas, bajo la dirección del Dr. Marcus Reid.
-- Experiencia del Paciente y Acceso, bajo Priya Nair.
-- Ciclo de Ingresos y Facturación, bajo Tom Callahan.
-- Cumplimiento y Gobierno del Dato, bajo Claire Whitfield.
-- Personas y Fuerza Laboral, bajo Diane Foster.
-- Tecnología, bajo James Osei.
-- Dirección Ejecutiva, bajo la Dra. Sandra Okonkwo.
+- Patients and prospects who need information and contact with HealthCore.
+- Clinical staff and Clinical Operations, led by Dr. Marcus Reid.
+- Patient Experience and Access, led by Priya Nair.
+- Revenue Cycle and Billing, led by Tom Callahan.
+- Compliance and Data Governance, led by Claire Whitfield.
+- People and Workforce, led by Diane Foster.
+- Technology, led by James Osei.
+- Executive Leadership, led by Dr. Sandra Okonkwo.
 
-## Objetivos generales
+## General objectives
 
-- Construir soluciones digitales seguras y centradas en el paciente.
-- Reducir la fragmentación de información entre clínicas, países y áreas.
-- Facilitar la operación y la toma de decisiones con información más accesible.
-- Evolucionar el monorepo siguiendo responsabilidades separadas para interfaces públicas, herramientas internas y servicios.
+- Build secure, patient-centered digital solutions.
+- Reduce information fragmentation across clinics, countries, and departments.
+- Facilitate operations and decision-making with more accessible information.
+- Evolve the monorepo with separate responsibilities for public interfaces, internal tools, and services.
 
-## Propósito de la arquitectura del Hito 4
+## Purpose of the Milestone 4 architecture
 
-- **`/uis/website`**: presencia web pública de HealthCore para pacientes y prospectos. El Hito 1 previo —landing y formulario estáticos en la raíz— es el antecedente de esta responsabilidad.
-- **`/uis/backoffice`**: aplicación interna para capacidades administrativas y operativas. El Talent Pipeline Tracker es una implementación previa relacionada con Personas y Fuerza Laboral, reutilizable como antecedente para esta responsabilidad.
-- **`/services`**: espacio para servicios backend que soporten las interfaces y procesos de HealthCore. Su implementación concreta y tecnologías deben basarse en los requisitos del Hito 4; no se declara aquí una implementación que aún no existe.
+- **`/uis/website`**: HealthCore's public web presence for patients and prospects. The previous Milestone 1—static landing page and form in the root—is the predecessor for this responsibility.
+- **`/uis/backoffice`**: internal application for administrative and operational capabilities. Talent Pipeline Tracker is a previous implementation related to People and Workforce and can be reused as prior work for this responsibility.
+- **`/services`**: space for backend services supporting HealthCore's interfaces and processes. Its concrete implementation and technologies must be based on Milestone 4 requirements; no implementation that does not yet exist is declared here.
 
-El Hito 1 y el Talent Pipeline Tracker son antecedentes relevantes, no el foco principal del Hito 4.
+Milestone 1 and Talent Pipeline Tracker are relevant prior work, not the primary focus of Milestone 4.

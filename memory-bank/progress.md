@@ -1,90 +1,88 @@
 # Progress
 
-## Hito actual: Ingeniería impulsada por IA
+## Current milestone: AI-driven Engineering
 
-La fuente canónica de contexto empresarial para los agentes es [`CONTEXT.md`](../CONTEXT.md). [`CONTEXT.es.md`](../CONTEXT.es.md) se mantiene como versión/origen en español y debe permanecer sincronizado.
+The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT.md). [`CONTEXT.es.md`](../CONTEXT.es.md) is retained as the Spanish version/source and must remain synchronized.
 
-## Estado actual
+## Current status
 
-### Infraestructura de agentes
+### Agent infrastructure
 
-| Componente | Estado | Situación actual |
+| Component | Status | Current situation |
 |---|---|---|
-| `memory-bank/` | ✅ Completado | Existe y contiene `projectbrief.md`, `techContext.md`, `progress.md` y `AUDIT.md`. |
-| `AGENTS.md` | ❌ Pendiente | No existe un `AGENTS.md` en la raíz del repositorio. Los `AGENTS.md` encontrados dentro de dependencias o generados por Next.js no sustituyen una guía curada del proyecto. |
-| `.agents/rules/` | ❌ Pendiente | No existe esta estructura en el repositorio actual. |
-| `.agents/skills/<skill>/SKILL.md` | ❌ Pendiente | No existe esta estructura específica; sí existe `skills/_template/SKILL.md` como plantilla general. |
-| `agents/` | 🟡 Parcial | Existe la estructura y documentación de plantilla, pero no hay un agente HealthCore implementado. |
-| `skills/` | 🟡 Parcial | Existe `skills/_template/SKILL.md` y skills de ejemplo (`code-review`, `data-analysis`, `research`), pero no se ha verificado una skill específica del hito. |
-| `mcps/` | 🟡 Parcial | Existe la documentación base, sin servidor MCP propio implementado. |
+| `memory-bank/` | ✅ Complete | Exists and contains `projectbrief.md`, `techContext.md`, `progress.md`, and `AUDIT.md`. |
+| `AGENTS.md` | ✅ Verified | Root guide exists and documents session-start reading order, the pre-commit workflow, protected files, scope rules, Memory Bank responsibilities, and no automatic commits. |
+| `.agents/rules/` | ✅ Complete | `frontend-boundaries.md` and `context-and-memory.md` exist with frontend boundaries and context/memory rules. |
+| `.agents/skills/<skill>/SKILL.md` | ✅ Complete | `.agents/skills/delivery-check/SKILL.md` exists with the review, validation, and delivery procedure. |
+| `agents/` | 🟡 Partial | The template structure and documentation exist, but no HealthCore agent has been implemented. |
+| `skills/` | 🟡 Partial | `skills/_template/SKILL.md` and example skills (`code-review`, `data-analysis`, `research`) exist, but a milestone-specific skill has not been verified. |
+| `mcps/` | 🟡 Partial | Base documentation exists, without a custom MCP server implemented. |
 
-### Aplicación
+### Application
 
 #### `/uis/website`
 
-- 🟡 **Parcial**.
-- Existe la implementación estática previa del Hito 1 en la raíz: `index.html`, `index.en.html`, `aplication.html`, `aplication.en.html`, `style.css` y `validation.js`.
-- La presencia pública aún no está organizada en una aplicación separada dentro de `/uis/website`.
-- El antecedente utiliza HTML5, JavaScript vainilla y Tailwind CSS por CDN.
+- ✅ **Verified**.
+- The public website now exists under `/uis/website` with its own README, bilingual landing pages, bilingual care-request forms, stylesheet, and validation script.
+- The `/` entry point is `uis/website/index.html` when the application is served as the website root.
+- The implementation intentionally reuses the Milestone 1 content and visual identity from the root files without adding a backend API or patient-data persistence.
+- Local verification with `python3 -m http.server 4173 --directory uis/website` returned HTTP 200 for `/`, `index.en.html`, and `aplication.html`; the root content check passed.
 
 #### `/uis/backoffice`
 
-- ❌ **Pendiente**.
-- No existe la ruta `/uis/backoffice` como aplicación implementada.
-- El Talent Pipeline Tracker es una implementación existente reutilizable, con listado, alta, detalle, rutas ES/EN y navegación compartida, pero permanece fuera de la estructura integrada de Hito 4.
+- ✅ **Verified initial entry view**.
+- The application now has a dedicated static HealthCore Digital operations overview at `/uis/backoffice/index.html`, with its own responsive layout, internal navigation, company metrics, operational priorities, and HIPAA/UK GDPR context.
+- The view intentionally contains no backend, API, authentication, persistence, or patient data. Talent Pipeline Tracker remains separate and was not assumed to be reusable for this entry view.
+- Local verification with `python3 -m http.server 4174 --directory uis/backoffice` returned HTTP 200 for `/`; HealthCore Digital and business-metric content checks passed.
 
 #### `/services`
 
-- ✅ **Sin implementación requerida en este hito**.
-- La carpeta contiene únicamente documentación de plantilla; cualquier backend que se implemente deberá ubicarse bajo `/services`.
-- La aplicación previa consume directamente la API externa de práctica de 4Geeks mediante `NEXT_PUBLIC_API_URL`.
-- FastAPI, backups, observabilidad y monitoreo no se marcan como entregables de este hito salvo que el enunciado oficial los exija explícitamente.
+- ✅ **No implementation required in this milestone**.
+- The folder contains only template documentation; any backend that is implemented must be located under `/services`.
+- The previous application directly consumes the 4Geeks external practice API through `NEXT_PUBLIC_API_URL`.
+- FastAPI, backups, observability, and monitoring are not marked as deliverables for this milestone unless the official brief explicitly requires them.
 
-## Estado de `CONTEXT.md`
+## `CONTEXT.md` status
 
-- ✅ `CONTEXT.md` contiene el briefing real de HealthCore y coincide sustancialmente con `CONTEXT.es.md`.
-- ✅ Incluye los datos principales de la empresa, áreas, problemas, necesidades y restricciones HIPAA/UK GDPR.
-- 🟡 `CONTEXT.es.md` se mantiene como versión/origen en español; ambos archivos deben mantenerse sincronizados si se actualiza el briefing.
+- ✅ `CONTEXT.md` contains the actual HealthCore brief and substantially matches `CONTEXT.es.md`.
+- ✅ Includes the main company data, departments, problems, needs, and HIPAA/UK GDPR constraints.
+- 🟡 `CONTEXT.es.md` is retained as the Spanish version/source; both files must remain synchronized if the brief is updated.
 
-## Ramas y código reutilizable
+## Branches and reusable code
 
-- `feature/agent-memory-bank`: rama de trabajo de esta documentación.
-- `feature/talent-tracker`: contiene la implementación previa del Talent Pipeline Tracker, pendiente de integración en `/uis/backoffice`.
-- `feature/domain-models`: rama remota identificada; su relación con el hito actual no está verificada.
-- El Hito 1 y el Talent Pipeline Tracker deben considerarse implementaciones existentes reutilizables, no el cumplimiento completo del hito actual.
+- `feature/agent-memory-bank`: working branch for this documentation.
+- `feature/talent-tracker`: contains the previous Talent Pipeline Tracker implementation, pending integration into `/uis/backoffice`.
+- `feature/domain-models`: identified remote branch; its relationship to the current milestone has not been verified.
+- Milestone 1 and Talent Pipeline Tracker should be considered existing reusable implementations, not full completion of the current milestone.
 
-## Gaps actuales
+## Current gaps
 
-- Falta crear la infraestructura específica de agentes: `AGENTS.md`, `.agents/rules/` y `.agents/skills/<skill>/SKILL.md`.
-- Falta organizar la presencia pública en `/uis/website`.
-- Falta integrar o migrar el Talent Pipeline Tracker hacia `/uis/backoffice`.
-- `packages/shared` contiene únicamente `Id` y `BaseEntity`; los tipos del tracker siguen definidos localmente.
-- La aplicación previa depende de una API externa de práctica y no de un servicio propio de HealthCore.
-- No hay una suite de tests o configuración de lint verificada para la estructura objetivo.
+- The specific `.agents/` infrastructure has been created; root `AGENTS.md` exists in the working tree and should be maintained as a curated project guide. No `uis/AGENTS.md` exists in the current tree, and no historical Git entry for that path was found.
+- The static applications have no package-local development, typecheck, build, lint, or test scripts.
+- The root `package.json` intentionally has no application scripts because the current website and backoffice are static applications without package-level build tooling.
+- `packages/shared` contains only `Id` and `BaseEntity`; tracker types are still defined locally.
+- The previous application depends on an external practice API rather than a HealthCore-owned service.
+- No test suite or lint configuration has been verified for the target structure.
 
-## Validaciones
+## Validations
 
-| Validación | Estado | Notas |
+| Validation | Status | Notes |
 |---|---|---|
-| `CONTEXT.md` contra `CONTEXT.es.md` | ✅ Completado | Ambos contienen el briefing real de HealthCore; `CONTEXT.md` es la fuente canónica para los agentes y `CONTEXT.es.md` la versión/origen en español. |
-| Memory Bank | ✅ Completado | Los cuatro documentos existen y fueron reorganizados según sus responsabilidades. |
-| `AGENTS.md` raíz | ❌ Pendiente | No existe en el árbol actual. |
-| `.agents/rules/` | ❌ Pendiente | No existe en el árbol actual. |
-| `.agents/skills/<skill>/SKILL.md` | ❌ Pendiente | No existe la estructura específica exigida. |
-| `/uis/website` | ❌ Pendiente | La implementación pública sigue en la raíz. |
-| `/uis/backoffice` | ❌ Pendiente | El tracker no está integrado en esa ruta. |
-| `/services` | ✅ Conforme | No se exige implementar un servicio backend en este hito; cualquier backend existente debe ubicarse allí. |
-| TypeScript | ❓ No verificado | No se ejecutó `tsc --noEmit` para una estructura integrada del hito. |
-| Build | ❓ No verificado | No se verificó un build de la arquitectura objetivo. |
-| Lint | ❓ No verificado | No se encontró una configuración de lint aplicable a las áreas objetivo. |
-| Tests | ❓ No verificado | No se encontró una suite de tests del hito. |
-| API externa | 🟡 Parcial | El tracker referencia `https://playground.4geeks.com/tracker/api/v1`; no se probó la integración en tiempo real en esta actualización. |
+| `CONTEXT.md` against `CONTEXT.es.md` | ✅ Complete | Both contain the actual HealthCore brief; `CONTEXT.md` is the canonical source for agents and `CONTEXT.es.md` is the Spanish version/source. |
+| Memory Bank | ✅ Complete | All four documents exist and were reorganized according to their responsibilities. |
+| Root `AGENTS.md` | ✅ Verified | Exists in the working tree and satisfies the session-start, pre-commit, protected-file, scope, and no-automatic-commit requirements. |
+| `.agents/rules/` | ✅ Complete | Frontend boundary and context/memory rules created. |
+| `.agents/skills/<skill>/SKILL.md` | ✅ Complete | `delivery-check` skill created. |
+| `/uis/website` | ✅ Verified | Static bilingual public website served successfully at `/`, with English and care-request routes also returning HTTP 200. |
+| `/uis/backoffice` | ✅ Verified | Dedicated static internal entry view served successfully at `/`, with visible HealthCore Digital branding and business metrics. |
+| `/services` | ✅ Compliant | Implementing a backend service is not required in this milestone; any existing backend must be located there. |
+| TypeScript | ➖ Not configured | No root or package-local TypeScript check applies to the current static website and backoffice applications. |
+| Build | ➖ Not configured | No root or package-local build command applies to the current static website and backoffice applications. |
+| Lint | ❓ Not verified | No lint configuration applicable to the target areas was found. |
+| Tests | ❓ Not verified | No milestone test suite was found. |
+| External API | 🟡 Partial | The tracker references `https://playground.4geeks.com/tracker/api/v1`; real-time integration was not tested in this update. |
 
-## Próximos pasos priorizados
+## Prioritized next steps
 
-1. Crear `AGENTS.md` raíz con las reglas generales del repositorio.
-2. Crear `.agents/rules/` y al menos una skill en `.agents/skills/<skill>/SKILL.md`, alineada con el ejercicio.
-3. Confirmar en el enunciado cuáles son los entregables funcionales del hito antes de asumir backend, FastAPI u otras capacidades.
-4. Organizar el Hito 1 bajo `/uis/website` sin perder las versiones ES/EN.
-5. Integrar la implementación reutilizable del Talent Pipeline Tracker bajo `/uis/backoffice`.
-6. Revisar contratos compartidos en `packages/shared` y ejecutar typecheck, build, lint y tests cuando exista la estructura integrada.
+1. Extend `/uis/backoffice` only when a concrete internal workflow is required; evaluate Talent Pipeline Tracker integration separately rather than assuming it is required for the entry view.
+2. Add application-specific lint, test, or build tooling only if a future milestone requires it.
