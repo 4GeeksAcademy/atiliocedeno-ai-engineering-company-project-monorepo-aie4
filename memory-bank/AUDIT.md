@@ -6,6 +6,8 @@
 **Canonical source of business context for agents:** [`CONTEXT.md`](../CONTEXT.md)
 **Spanish version/source:** [`CONTEXT.es.md`](../CONTEXT.es.md)
 
+**Final cleanup note:** The static backoffice remains independent from the Talent Pipeline Tracker. No hardcoded `localhost:3000` cross-navigation is included. The final audit retains only the current `feature/agent-memory-bank` audit; the obsolete `feature/domain-models` section was removed from `AUDIT_FINAL.md`.
+
 ## Scope and method
 
 The final Memory Bank content was compared against:

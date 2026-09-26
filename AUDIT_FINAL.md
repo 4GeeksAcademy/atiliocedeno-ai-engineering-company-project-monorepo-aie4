@@ -1,168 +1,164 @@
 # Auditoría final del proyecto HealthCore
 
-**Fecha:** 2026-09-08  
-**Rama:** `feature/domain-models`  
-**Pull request:** [#4 fix entidades](https://github.com/4GeeksAcademy/atiliocedeno-ai-engineering-company-project-monorepo-aie4/pull/4)  
-**Especificación utilizada:** `CONTEXT.es.md`
+**Fecha de actualización:** 2026-09-26
+**Rama actual:** `feature/agent-memory-bank`
+**HEAD:** `c575056 docs: synchronize memory bank after tracker merge`
+**Rama remota:** `origin/feature/agent-memory-bank` — la rama local está adelantada y no se ha hecho push.
+**Especificación:** `CONTEXT.md` / `CONTEXT.es.md`
+**Estado:** cambios revisados y validados para el commit de seguridad solicitado.
 
 ## 1. Resultado ejecutivo
 
-El proyecto implementa el núcleo TypeScript del Hito 2 de HealthCore: modelos de dominio, colecciones, búsquedas, transformaciones de negocio y validaciones. La rama compila correctamente en modo estricto y contiene los cambios funcionales finales en la rama remota.
-
-El código principal está listo para revisión y merge. La página de pruebas utiliza ahora los identificadores actuales y se carga desde la salida TypeScript compilada. No existe una suite automatizada; la validación disponible es el typecheck y el panel manual.
-
-## 2. Estado de la rama y cambios realizados
-
-La rama `feature/domain-models` contiene estos commits propios respecto de `main`:
-
-1. `8355f54` - implementación inicial de entidades.
-2. `fbc719e` - reorganización de `src` y separación de datos dummy.
-3. `9b95af2` - corrección de `license*` a `licence*`.
-4. `7b3cdc2` - alineación de los datos de ejemplo con `CONTEXT.es.md`.
-
-El último commit funcional modifica únicamente:
-
-- `src/data dummy/dummyData.ts`
-- `src/data dummy/sampleData.ts`
-
-`CONTEXT.es.md` fue restaurado y no forma parte de estos cambios. Los archivos de prueba se actualizaron posteriormente sin tocar `index.html`. `AUDIT_FINAL.md`, `INTEGRITY_CHECK.md` y `result.md` son archivos locales sin seguimiento y no deben añadirse automáticamente.
-
-## 3. Modelos de dominio
-
-`src/types/models.ts` define los seis tipos requeridos:
-
-- `ServiceType`
-- `ClaimStatus`
-- `DenialReason`
-- `AppointmentStatus`
-- `ClinicianRole`
-- `CMEStatus`
-
-También define las cinco interfaces principales:
-
-- `Claim`
-- `Appointment`
-- `Clinician`
-- `Location`
-- `CMEReport`
-
-Los campos de licencia usan consistentemente la ortografía británica: `licenceState`, `licenceExpiryDate` y `licenceDaysRemaining`. No se encontraron propiedades activas con la forma americana `license*`.
-
-## 4. Funcionalidad implementada
-
-### Colecciones
-
-- `filterClaims`
-- `filterAppointmentsByStatus`
-- `sortClaimsById`
-- `sortAppointmentsByDate`
-- `groupClaimsBy`
-
-Las funciones de ordenamiento clonan el array antes de usar `sort`, por lo que no mutan la entrada.
-
-### Búsquedas
-
-- `findClaimById`: búsqueda lineal.
-- `findClinicianById`: búsqueda lineal.
-- `binarySearchClaimById`: búsqueda binaria sobre claims previamente ordenados y retorna el índice o `-1`.
-
-### Transformaciones de negocio
-
-- `calculateDenialRate`
-- `denialRateByPayer`
-- `denialRateByLocation`
-- `flagHighDenialPayers`
-- `calculateNoShowCost`
-- `noShowRateByLocation`
-- `flagHighNoShowLocations`
-- `generateCMEReport`
-- `getCliniciansAtRisk`
-- `getCliniciansWithExpiringLicences`
-
-También existen dos auxiliares exportadas: `getCMEReportByClinician` y `getValidClinicianRoles`.
-
-### Validaciones
-
-- `validateClaim`
-- `validateClinician`
-- `isDenialRateAboveThreshold`
-- `isNoShowRateAboveThreshold`
-
-En total hay 24 funciones exportadas en los módulos de utilidades: 22 del alcance principal y 2 auxiliares.
-
-## 5. Reglas de negocio verificadas
-
-- Tasa de denegación: `claims denied / total claims * 100`, redondeada a dos decimales.
-- Umbral predeterminado de denegación: `> 8%`.
-- Coste de no-show: utiliza la tarifa media del tipo de servicio y un período inclusivo de siete días.
-- Umbral predeterminado de no-show: `> 20%`.
-- CME completado: horas registradas mayores o iguales a las requeridas.
-- CME vencido: ciclo terminado con horas insuficientes.
-- CME en riesgo: ciclo activo y retraso superior a 15 puntos porcentuales frente al avance esperado.
-- CME sin horas requeridas: progreso del 100%, sin división por cero.
-- Claims: importe positivo, fecha no futura, sede conocida, motivo obligatorio cuando el estado es `denied` y `patientId` con patrón `HC-` más seis caracteres alfanuméricos.
-- Clínicos: horas CME no negativas, fecha de licencia válida, licencia no vencida y rol permitido.
-
-## 6. Datos de ejemplo finales
-
-Los archivos `dummyData.ts` y `sampleData.ts` fueron alineados con `CONTEXT.es.md`:
-
-- 3 sedes: `us-tx-001` Austin, `us-fl-001` Miami y `us-ga-001` Atlanta.
-- 5 claims: `CLM-000001` a `CLM-000005`.
-- 5 citas: `APT-000001` a `APT-000005`.
-- 3 clínicos: Marcus Reid, Sandra Flores y David Okafor.
-- Tarifas de consulta completas para todos los `ServiceType`.
-- Fechas en formato ISO y horas en formato de 24 horas.
-- `patientId` con el formato `HC-XXXXXX`.
-
-## 7. Estructura final relevante
+El repositorio contiene tres aplicaciones de interfaz separadas y preservadas:
 
 ```text
-src/
-├── types/
-│   └── models.ts
-├── utils/
-│   ├── collections.ts
-│   ├── search.ts
-│   ├── transformations.ts
-│   └── validations.ts
-├── data dummy/
-│   ├── dummyData.ts
-│   └── sampleData.ts
-└── index_test.ts
+uis/
+├── website/                    # sitio público estático bilingüe
+├── backoffice/                 # vista interna estática de HealthCore Digital
+└── talent-pipeline-tracker/   # aplicación Next.js de gestión de talentos
 ```
 
-La lógica fuente está en TypeScript. Se eliminó `src/data dummy/dummyData.js` porque no tenía dependencias válidas y duplicaba datos antiguos. También se eliminó el runner raíz `index_test.js`; el panel usa `dist/index_test.js` generado por `npm run build`.
+La rama `feature/talent-tracker` fue integrada mediante el merge commit `9934c0d`. La configuración del tracker fue ajustada después para eliminar un `outDir` innecesario. El sitio público y el backoffice se sirven de forma independiente; el website no expone una ruta `/backoffice`.
 
-## 8. Verificaciones ejecutadas
+## 2. Estado de Git y commits relevantes
 
-Comando ejecutado:
+### Commits de la rama actual
 
-```bash
-npx tsc --noEmit
-```
+1. `c575056` — sincronización de Memory Bank después de integrar el tracker.
+2. `9934c0d` — merge de `feature/talent-tracker` en `feature/agent-memory-bank`.
+3. `d8fcba3` — `feat: complete AI-ready monorepo setup`.
+4. `c74df5b` — estructura inicial de Memory Bank.
 
-Resultado: compilación exitosa, sin errores ni advertencias reportadas.
+### Ramas verificadas
 
-Para ejecutar el panel manual en navegador se genera primero la salida ES module:
+- `feature/agent-memory-bank` — rama actual.
+- `feature/talent-tracker` — rama local preservada en `cbf26c3`; también existe `origin/feature/talent-tracker`.
+- `main` — `e5081f2`, rama base.
+- `origin/feature/domain-models` — rama remota identificada, fuera del alcance de esta auditoría.
 
-```bash
-npm run build
-```
+### Conflictos del merge
 
-Después puede abrirse `index_test.html` desde un servidor estático local.
+- `.gitignore`: resuelto combinando exclusiones de dependencias, builds, variables de entorno y artefactos Next.js.
+- `AGENTS.md`: se conservó la guía curada de la rama actual frente a las instrucciones generadas por Next.js.
 
-La configuración mantiene `strict: true`, `moduleResolution: "Bundler"`, `forceConsistentCasingInFileNames: true` y limita la compilación a `src/**/*.ts`.
+No quedan conflictos sin resolver.
 
-No hay tests automatizados configurados. `index_test.html` carga `dist/index_test.js` y `src/index_test.ts` ofrece pruebas manuales para filtros, ordenamiento, agrupación, búsquedas, tasas, no-shows, CME, validaciones y umbrales.
+## 3. Cambios locales actuales
 
-## 9. Pendientes no bloqueantes
+| Archivo | Modificación | Estado |
+|---|---|---|
+| `uis/talent-pipeline-tracker/tsconfig.json` | Elimina `outDir: "dist"`; el tracker usa `tsc --noEmit` y Next.js administra su salida. | Validado para commit |
+| `uis/website/README.md` | Documenta que website y backoffice son aplicaciones independientes y que website no expone `/backoffice`. | Validado para commit |
+| `uis/website/index.html` | Cambia la hoja de estilos a la ruta relativa `style.css`. | Validado para commit |
+| `uis/website/index.en.html` | Cambia la hoja de estilos a la ruta relativa `style.css`. | Validado para commit |
+| `uis/website/aplication.html` | Cambia `style.css` y `validation.js` a rutas relativas. | Validado para commit |
+| `uis/website/aplication.en.html` | Cambia `style.css` y `validation.js` a rutas relativas. | Validado para commit |
 
-1. Añadir tests automatizados para fórmulas, fechas límite, búsqueda binaria, validaciones y estados CME.
-2. Decidir si `AUDIT_FINAL.md`, `INTEGRITY_CHECK.md` y `result.md` deben versionarse; actualmente permanecen sin seguimiento.
+No se modificaron `CONTEXT.md`, archivos `.env`, dependencias, lockfiles ni servicios backend.
 
-## 10. Conclusión
+## 4. Inventario de archivos y responsabilidades
 
-El núcleo de dominio y las utilidades TypeScript están implementados, tipados y compilando correctamente. Los datos TypeScript ya reflejan la especificación española, la nomenclatura `licence*` está corregida, no quedan copias JavaScript de datos y el panel de pruebas usa la salida compilada.
+### Raíz
 
-**Estado recomendado:** listo para code review y merge. La única mejora pendiente es añadir tests automatizados, que no bloquea este hito.
+- `AGENTS.md`, `CLAUDE.md`: instrucciones para agentes.
+- `CONTEXT.md`, `CONTEXT.es.md`: contexto empresarial canónico y versión española.
+- `README.md`, `README.es.md`, `company-choice.md`, `promt.md`: documentación y material del proyecto.
+- `package.json`: configuración raíz; actualmente no define scripts de aplicación.
+- `index.html`, `index.en.html`, `aplication.html`, `aplication.en.html`, `style.css`, `validation.js`: implementación histórica de Milestone 1 conservada en la raíz.
+- `index_test.html`, `src/`, `tsconfig.tsbuildinfo`, `dist/`: material del núcleo TypeScript y su salida/estado de compilación.
+- `.gitignore`: exclusiones de dependencias, builds, entornos y artefactos generados.
+- `AUDIT_FINAL.md`, `INTEGRITY_CHECK.md`, `result.md`: auditoría y resultados del proyecto.
+
+### `.agents/`, `agents/`, `skills/`, `mcps/`, `workflows/`
+
+
+### `memory-bank/`
+
+- `projectbrief.md`: propósito y contexto del proyecto.
+- `techContext.md`: stack, arquitectura, contratos y restricciones.
+- `progress.md`: estado, entregables, gaps y validaciones.
+- `AUDIT.md`: auditoría técnica del estado del repositorio.
+
+### `uis/website/`
+
+- `index.html`, `index.en.html`: landing pública en español e inglés.
+- `aplication.html`, `aplication.en.html`: formularios de solicitud de atención.
+- `style.css`: estilos personalizados complementarios a Tailwind CDN.
+- `validation.js`: validación vanilla del formulario y selección de clínicas.
+- `README.md`: límites, rutas, ejecución y validación.
+
+### `uis/backoffice/`
+
+- `index.html`: vista interna estática de operaciones HealthCore Digital.
+- `style.css`: layout y estilos responsive del backoffice.
+- `README.md`: documentación de alcance y ejecución.
+
+### `uis/talent-pipeline-tracker/`
+
+- `app/`: App Router de Next.js, layouts, navbar, contexto de idioma, pipeline, alta y detalle de talentos.
+- `public/`: landing y formularios estáticos preservados de la implementación anterior.
+- `package.json`: scripts `dev`, `start`, `build` y `typecheck`.
+- `tsconfig.json`: TypeScript estricto, `moduleResolution: "Bundler"`, sin `outDir` innecesario.
+- `.env.example`: variable `NEXT_PUBLIC_API_URL` para la API externa de práctica.
+- `next-env.d.ts`: declaraciones generadas por Next.js; no se edita manualmente.
+- `AGENTS.md`, `CLAUDE.md`: reglas generadas por Next.js.
+
+### Otras áreas
+
+- `packages/shared/`: paquete de tipos genéricos (`Id`, `BaseEntity`).
+- `services/`: documentación de plantilla; no hay backend HealthCore implementado.
+- `data/`, `docs/`, `infra/`, `internal/`, `scripts/`, `shared/`: documentación, plantillas y áreas reservadas del monorepo.
+
+## 5. Funcionalidad y decisiones verificadas
+
+### Website
+
+- Mantiene las rutas bilingües públicas y el formulario de solicitud de atención.
+- Usa HTML semántico, Tailwind Browser CDN y JavaScript vanilla.
+- Las rutas de assets son relativas para que funcione al servir directamente `uis/website`.
+- No contiene backend, autenticación, persistencia ni datos de pacientes.
+- No enlaza directamente a `/backoffice`, porque ese endpoint no existe cuando se sirve website de forma aislada.
+
+### Backoffice
+
+- Presenta métricas no sensibles, prioridades operativas y contexto HIPAA/UK GDPR.
+- Se sirve desde `uis/backoffice` con un servidor estático independiente.
+- Incluye navegación interna propia, sin acoplamiento de rutas al tracker.
+
+### Talent Pipeline Tracker
+
+- Next.js 16.3.5, React 19.3.0, TypeScript 7.0.2 y `lucide-react`.
+- Rutas de talentos en español e inglés, listado, alta y detalle.
+- Consume la API externa `NEXT_PUBLIC_API_URL` (`https://playground.4geeks.com/tracker/api/v1`).
+- Usa tipos locales tolerantes porque la respuesta de la API no tiene un contrato completamente estandarizado.
+- No tiene backend, autenticación ni persistencia propia.
+
+### Núcleo TypeScript histórico
+
+- `src/types/models.ts`, `src/utils/`, `src/data dummy/` y `src/index_test.ts` conservan los modelos, utilidades, datos de ejemplo y panel manual del hito de dominio anterior.
+- `packages/shared` aún no está integrado con el tracker.
+
+## 6. Validaciones ejecutadas
+
+| Validación | Resultado |
+|---|---|
+| `npm run typecheck` desde `uis/talent-pipeline-tracker` | ✅ Correcto |
+| `npm run build` desde `uis/talent-pipeline-tracker` | ✅ Correcto; rutas Next generadas para `/`, `/talents`, `/talents/en`, alta y detalle |
+| Website servido en `localhost:4290` | ✅ `/`, `/index.en.html`, `/aplication.html` y `/aplication.en.html` respondieron HTTP 200 |
+| Backoffice servido en `localhost:4291` | ✅ `/` respondió HTTP 200 |
+| Website `/backoffice/index.html` | ✅ HTTP 404 esperado; confirma separación de aplicaciones |
+| `git diff --check` | ✅ Correcto |
+| Tracker dev server | ✅ Existía una instancia activa en `localhost:3000`; un segundo arranque fue rechazado por puerto/proceso Next existente |
+
+## 7. Pendientes y límites
+
+1. Para producción debe definirse un mecanismo de despliegue o dominio para cada aplicación antes de añadir enlaces cruzados.
+2. No hay scripts raíz de `dev`, `build` o `typecheck`; deben ejecutarse desde el paquete del tracker o mediante servidores estáticos para website/backoffice.
+3. No hay suite automatizada de tests ni lint configurado para las aplicaciones estáticas.
+4. La API externa del tracker no fue validada en tiempo real; requiere `NEXT_PUBLIC_API_URL`.
+
+## 8. Conclusión
+
+La integración mantiene las tres aplicaciones separadas, conserva el trabajo anterior del tracker y deja el website y backoffice operables como servidores independientes. Las modificaciones locales están acotadas a rutas de assets, documentación y configuración TypeScript.
+
+**Estado recomendado:** listo para commit de seguridad y revisión posterior.

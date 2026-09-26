@@ -1,5 +1,7 @@
 # HealthCore Website
 
+The public website is served independently from `uis/backoffice` and does not expose a `/backoffice` route.
+
 Public-facing HealthCore website for Milestone 4. This application intentionally keeps the previous Milestone 1 static experience separate from internal backoffice tools and services.
 
 ## Stack

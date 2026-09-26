@@ -33,6 +33,7 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - ✅ **Verified initial entry view**.
 - The application now has a dedicated static HealthCore Digital operations overview at `/uis/backoffice/index.html`, with its own responsive layout, internal navigation, company metrics, operational priorities, and HIPAA/UK GDPR context.
 - The view intentionally contains no backend, API, authentication, persistence, or patient data. Talent Pipeline Tracker remains a separate application under `/uis/talent-pipeline-tracker` and was not merged into or duplicated within this entry view.
+- The backoffice has no hardcoded cross-navigation to the tracker; the two applications remain independently deployable.
 - Local verification with `python3 -m http.server 4174 --directory uis/backoffice` returned HTTP 200 for `/`; HealthCore Digital and business-metric content checks passed.
 
 #### `/services`

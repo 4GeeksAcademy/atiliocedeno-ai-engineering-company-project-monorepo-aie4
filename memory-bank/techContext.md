@@ -107,7 +107,7 @@ These paths represent the responsibilities of Milestone 4. The implementation st
 
 ### Known technical constraints
 
-- `tsconfig.json` uses `strict: true`, `moduleResolution: "Bundler"`, `jsx: "react-jsx"`, and `outDir: "dist"`—any type changes must respect strict mode.
+- `tsconfig.json` uses `strict: true`, `moduleResolution: "Bundler"`, and `jsx: "react-jsx"`; it does not define an unnecessary `outDir`, and any type changes must respect strict mode.
 - The app depends on `NEXT_PUBLIC_API_URL` being configured (a public variable exposed to the client); without it, requests to `/records` fail.
 - The root README describes a template without a global workspace runner. The available root `package.json` delegates scripts to the Next.js project.
 
