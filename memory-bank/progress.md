@@ -38,8 +38,12 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 #### `/services`
 
-- ✅ **No implementation required in this milestone**.
-- The folder contains only template documentation; any backend that is implemented must be located under `/services`.
+- 🟡 **HealthCore API implementation in progress** under `/services/healthcore-api`.
+- FastAPI routes use a layered service/repository design with TinyDB persistence for users and profiles, bcrypt password hashes, JWT authentication, and owner/admin access checks.
+- Registration can include an optional `name`/`phone`/`address` profile; `/auth/me` and `/profiles/me` expose current-user operations.
+- Registration and successful login now schedule best-effort Resend email notifications, configured with `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
+- Authentication smoke checks passed for registration, login, current-user/profile reads and updates, missing/malformed/expired-token 401s, cross-owner 403, and user/profile cascade deletion. This is not a permanent automated test suite.
+- The five additional sensitive endpoints mentioned in the task were not present in the route inventory; do not invent APIs solely to secure them.
 - The previous application directly consumes the 4Geeks external practice API through `NEXT_PUBLIC_API_URL`.
 - FastAPI, backups, observability, and monitoring are not marked as deliverables for this milestone unless the official brief explicitly requires them.
 
