@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 
-from app.api.deps import CurrentUser, get_user_service
+from app.api.deps import AdminUser, CurrentUser, get_user_service
 from app.models.user import User, UserRole
 from app.schemas.user import UserAdminUpdate, UserCreate, UserRead, UserUpdate
 from app.services.email_service import send_auth_notification
@@ -31,7 +31,7 @@ def create_user(payload: UserCreate, background_tasks: BackgroundTasks) -> UserR
 
 @router.get("", response_model=list[UserRead])
 def list_users(
-    current_user: CurrentUser,
+    current_user: AdminUser,
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> list[UserRead]:
     del current_user
@@ -44,7 +44,8 @@ def get_user(
     current_user: CurrentUser,
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> UserRead:
-    del current_user
+    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot access another user's account")
     user = service.get_user(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")

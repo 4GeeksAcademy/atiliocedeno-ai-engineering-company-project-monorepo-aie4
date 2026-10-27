@@ -17,6 +17,7 @@ _db = TinyDB(DB_PATH)
 # Initialize the required tables when the database connection is opened.
 _db.table("users")
 _db.table("profiles")
+_db.table("password_reset_tokens")
 
 
 def get_db() -> TinyDB:

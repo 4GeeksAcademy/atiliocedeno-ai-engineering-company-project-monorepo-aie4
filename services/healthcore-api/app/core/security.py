@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
+from typing import Any
 
 import jwt
 from dotenv import load_dotenv
@@ -40,3 +41,22 @@ def decode_access_token(token: str) -> dict:
     if not _JWT_SECRET:
         raise RuntimeError("HEALTHCORE_JWT_SECRET must be configured")
     return jwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
+
+
+def create_password_reset_token(subject: str, token_id: str, expires_at: datetime) -> str:
+    """Create a signed, purpose-bound JWT for one password reset request."""
+    if not _JWT_SECRET:
+        raise RuntimeError("HEALTHCORE_JWT_SECRET must be configured")
+    return jwt.encode(
+        {"sub": subject, "jti": token_id, "purpose": "password_reset", "exp": expires_at},
+        _JWT_SECRET,
+        algorithm=_JWT_ALGORITHM,
+    )
+
+
+def decode_password_reset_token(token: str) -> dict[str, Any]:
+    """Verify JWT signature/expiry and reject tokens issued for other purposes."""
+    claims = decode_access_token(token)
+    if claims.get("purpose") != "password_reset":
+        raise jwt.InvalidTokenError("Token is not a password reset token")
+    return claims

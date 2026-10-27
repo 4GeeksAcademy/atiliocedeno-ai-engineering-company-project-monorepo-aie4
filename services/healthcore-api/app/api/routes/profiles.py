@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from app.api.deps import CurrentUser, get_user_service
+from app.api.deps import AdminUser, CurrentUser, get_user_service
 from app.models.user import UserRole
 from app.schemas.profile import ProfileCreate, ProfileRead, ProfileUpdate
 from app.services.user_service import UserService
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 
 def _authorize_profile_access(request_user_id: int, current_user) -> None:
+    """Allow regular accounts to manage only their own profile."""
     if current_user.id != request_user_id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Cannot access another user's profile")
 
@@ -21,12 +22,28 @@ def _authorize_profile_access(request_user_id: int, current_user) -> None:
 def create_profile(
     user_id: int,
     payload: ProfileCreate,
+    current_user: AdminUser,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> ProfileRead:
+    del current_user
+    try:
+        profile = service.create_profile(user_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return ProfileRead.model_validate(profile)
+
+
+@router.post("/me", response_model=ProfileRead, status_code=status.HTTP_201_CREATED)
+def create_my_profile(
+    payload: ProfileCreate,
     current_user: CurrentUser,
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> ProfileRead:
-    _authorize_profile_access(user_id, current_user)
+    """Allow administrators to create a profile for their own account."""
     try:
-        profile = service.create_profile(user_id, payload)
+        profile = service.create_profile(current_user.id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

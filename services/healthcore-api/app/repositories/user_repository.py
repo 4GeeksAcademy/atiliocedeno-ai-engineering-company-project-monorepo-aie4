@@ -66,6 +66,15 @@ class UserRepository:
             self._table.update(data, doc_ids=[user_id])
         return user.model_copy(update={"id": user_id})
 
+    def update_password_hash(self, user_id: int, password_hash: str) -> User | None:
+        """Update only a user's password hash without replacing other fields."""
+        with self._lock:
+            document = self._table.get(doc_id=user_id)
+            if document is None:
+                return None
+            self._table.update({"hashed_password": password_hash}, doc_ids=[user_id])
+        return self._to_model({**document, "hashed_password": password_hash}, user_id)
+
     def delete(self, user_id: int) -> bool:
         """Delete a user by TinyDB document ID."""
         with self._lock:
