@@ -36,6 +36,7 @@ export default function GlobalNavbar({ backLabel = false, languageHref }: Global
           <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href={`${homePage}#features`}>{isEnglish ? "Features" : "Características"}</Link>
           <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href={`${homePage}#contact`}>{isEnglish ? "Contact" : "Contacto"}</Link>
           <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href={talentPath}>{pipelineLabel}</Link>
+          <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href="/account/change-password">{isEnglish ? "Change password" : "Cambiar contraseña"}</Link>
           <Link className="flex items-center gap-1.5 rounded-lg border border-[#1F2937]/20 px-3 py-1.5 text-sm font-semibold text-[#1F2937]/70 transition-all duration-200 hover:border-[#2563EB]/40 hover:text-[#2563EB]" href={alternateLanguageHref} lang={isEnglish ? "es" : "en"}>
             <span aria-hidden="true">🌐</span>{isEnglish ? "ES" : "EN"}
           </Link>
@@ -66,6 +67,7 @@ export default function GlobalNavbar({ backLabel = false, languageHref }: Global
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={`${homePage}#features`}>{isEnglish ? "Features" : "Características"}</Link>
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={`${homePage}#contact`}>{isEnglish ? "Contact" : "Contacto"}</Link>
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={talentPath}>{pipelineLabel}</Link>
+            <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href="/account/change-password">{isEnglish ? "Change password" : "Cambiar contraseña"}</Link>
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg bg-[#2563EB] px-3 py-3 text-center font-semibold text-white" href={isEnglish ? "/aplication.en.html" : "/aplication.html"}>{isEnglish ? "Request Care" : "Solicitar Atención"}</Link>
           </div>
         </nav>
