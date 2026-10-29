@@ -42,6 +42,8 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - FastAPI routes use a layered service/repository design with TinyDB persistence for users and profiles, bcrypt password hashes, JWT authentication, and owner/admin access checks.
 - Registration can include an optional `name`/`phone`/`address` profile; `/auth/me` and `/profiles/me` expose current-user operations.
 - Registration and successful login now schedule best-effort Resend email notifications, configured with `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
+- El portal comprueba la validez de los enlaces de recuperación antes de mostrar el formulario; la API ofrece `POST /auth/reset-password/validate` sin consumir el token y rechaza enlaces caducados o ya utilizados.
+- Verificación puntual: el endpoint devuelve 200 repetidamente para un token vigente y 400 para tokens caducados, malformados o consumidos; el typecheck del portal terminó correctamente.
 - Authentication smoke checks passed for registration, login, current-user/profile reads and updates, missing/malformed/expired-token 401s, cross-owner 403, and user/profile cascade deletion. This is not a permanent automated test suite.
 - The five additional sensitive endpoints mentioned in the task were not present in the route inventory; do not invent APIs solely to secure them.
 - The previous application directly consumes the 4Geeks external practice API through `NEXT_PUBLIC_API_URL`.

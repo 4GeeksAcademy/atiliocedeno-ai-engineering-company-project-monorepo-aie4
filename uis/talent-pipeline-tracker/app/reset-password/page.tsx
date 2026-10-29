@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, Suspense, useState } from "react";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { authRequest } from "../auth/session";
 
 function ResetPasswordForm() {
@@ -13,6 +13,22 @@ function ResetPasswordForm() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [validation, setValidation] = useState<{ token: string; status: "checking" | "valid" | "invalid" | "unavailable" }>({ token, status: "checking" });
+
+  useEffect(() => {
+    if (!token) {
+      setValidation({ token, status: "invalid" });
+      return;
+    }
+    let active = true;
+    setValidation({ token, status: "checking" });
+    authRequest("/auth/reset-password/validate", { token }, "")
+      .then(() => { if (active) setValidation({ token, status: "valid" }); })
+      .catch((cause) => {
+        if (active) setValidation({ token, status: cause instanceof Error && /HTTP (400|422):/.test(cause.message) ? "invalid" : "unavailable" });
+      });
+    return () => { active = false; };
+  }, [token]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,10 +46,25 @@ function ResetPasswordForm() {
       await authRequest("/auth/reset-password", { token, new_password: password });
       router.push("/login?passwordReset=success");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "El enlace es inválido, expiró o ya fue utilizado.");
+      if (cause instanceof Error && cause.message.includes("HTTP 400:")) {
+        setValidation({ token, status: "invalid" });
+      } else {
+        setError(cause instanceof Error ? cause.message : "No se pudo guardar la contraseña.");
+      }
     } finally {
       setBusy(false);
     }
+  }
+
+  if (validation.token !== token || validation.status !== "valid") {
+    const checking = validation.token !== token || validation.status === "checking";
+    return (
+      <main className="mx-auto max-w-lg px-6 py-16">
+        <h1 className="mb-3 text-3xl font-bold text-slate-900">Restablecer contraseña</h1>
+        <p role="status">{checking ? "Verificando enlace…" : validation.status === "invalid" ? "El enlace es inválido, ha caducado o ya fue utilizado." : "No se pudo verificar el enlace. Inténtalo de nuevo más tarde."}</p>
+        {!checking && <Link className="mt-5 inline-block text-blue-700 underline" href="/forgot-password">Solicitar otro enlace</Link>}
+      </main>
+    );
   }
 
   return (
