@@ -140,6 +140,7 @@ Los esquemas y ejemplos completos están disponibles en `/docs` mientras la API 
 - `GET /users`: lista usuarios, solo para admin. `GET /users/{id}`: propietario o admin.
 - `PUT /users/{id}` y `DELETE /users/{id}`: propietario o admin; solo admin puede cambiar roles o estado de otras cuentas. La eliminación también elimina el perfil asociado.
 - `POST /auth/login`, `GET /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password` y `POST /auth/change-password`: inicio de sesión, cuenta y recuperación.
+- `POST /auth/reset-password/validate` con `{ "token": "..." }`: comprueba si el enlace sigue vigente sin consumirlo; devuelve 400 si ha caducado o ya se utilizó. El restablecimiento vuelve a validar el token al guardar la contraseña.
 - `GET`, `POST` y `PUT /profiles/me`: consultar, crear o actualizar el perfil de la cuenta autenticada.
 - `/profiles/{user_id}`: operaciones por usuario protegidas; el propietario gestiona su perfil y admin puede gestionar perfiles de cualquier cuenta. Crear un perfil ajeno requiere admin.
 - `GET /health`: verificación básica de disponibilidad.

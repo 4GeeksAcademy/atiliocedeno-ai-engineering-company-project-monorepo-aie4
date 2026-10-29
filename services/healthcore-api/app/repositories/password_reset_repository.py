@@ -31,6 +31,12 @@ class PasswordResetRepository:
                 }
             )
 
+    def is_valid(self, user_id: int, token_id: str) -> bool:
+        query = Query()
+        with self._lock:
+            record = self._table.get((query.user_id == user_id) & (query.token_id == token_id))
+            return bool(record and not record.get("used") and record.get("expires_at", 0) > datetime.now(timezone.utc).timestamp())
+
     def consume(self, user_id: int, token_id: str) -> bool:
         """Mark a matching, unexpired token used exactly once."""
         query = Query()

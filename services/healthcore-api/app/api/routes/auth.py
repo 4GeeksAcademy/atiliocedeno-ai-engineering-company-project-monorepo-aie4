@@ -3,7 +3,7 @@
 import os
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, status
 
 from app.api.deps import CurrentUser, get_user_service
 from app.core.security import create_access_token, verify_password
@@ -67,6 +67,12 @@ def reset_password(payload: ResetPasswordRequest) -> AuthMessageResponse:
     if not PasswordService().reset_password(payload.token, payload.new_password):
         raise HTTPException(status_code=400, detail="Invalid, expired, or already used reset token")
     return AuthMessageResponse(message="Password has been reset successfully.")
+
+@router.post("/reset-password/validate", response_model=AuthMessageResponse)
+def validate_reset_token(token: str = Body(embed=True, min_length=1, max_length=4096)) -> AuthMessageResponse:
+    if not PasswordService().is_reset_token_valid(token):
+        raise HTTPException(status_code=400, detail="Invalid, expired, or already used reset token")
+    return AuthMessageResponse(message="Reset token is valid.")
 
 
 @router.post("/change-password", response_model=AuthMessageResponse)

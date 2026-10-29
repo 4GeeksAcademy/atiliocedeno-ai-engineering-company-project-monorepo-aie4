@@ -39,6 +39,16 @@ class PasswordService:
         self.reset_tokens.issue(user.id, token_id, expires_at)
         return token
 
+    def is_reset_token_valid(self, token: str) -> bool:
+        try:
+            claims = decode_password_reset_token(token)
+            user_id = int(claims["sub"])
+            token_id = claims["jti"]
+        except (jwt.InvalidTokenError, KeyError, TypeError, ValueError, RuntimeError):
+            return False
+        return (isinstance(token_id, str) and self.users.get_by_id(user_id) is not None
+                and self.reset_tokens.is_valid(user_id, token_id))
+
     def reset_password(self, token: str, new_password: str) -> bool:
         """Validate and consume a one-time token, then update the password hash."""
         try:
