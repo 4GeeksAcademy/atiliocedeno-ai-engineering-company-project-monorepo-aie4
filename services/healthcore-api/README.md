@@ -145,6 +145,26 @@ Los esquemas y ejemplos completos están disponibles en `/docs` mientras la API 
 - `/profiles/{user_id}`: operaciones por usuario protegidas; el propietario gestiona su perfil y admin puede gestionar perfiles de cualquier cuenta. Crear un perfil ajeno requiere admin.
 - `GET /health`: verificación básica de disponibilidad.
 
+## Análisis provisional de incidentes CSV
+
+La API incluye un prototipo autenticado para cargar CSV sin persistir el archivo: `POST /incidents/analyze` devuelve agregados y `POST /incidents/export` descarga únicamente códigos de incidencias de validación y números de fila. Ambos endpoints requieren un token Bearer válido y un multipart field llamado `file`. El límite es 25 MB. La interfaz está en `uis/backoffice`; por defecto usa `http://localhost:8000` y acepta configurar `window.HEALTHCORE_API_URL` antes de cargar `incidents.js`.
+
+El esquema asumido por este prototipo es `incident_id,incident_date,clinic,category,severity,status,description`, con fecha ISO (`YYYY-MM-DD`). **Es provisional, no ha sido confirmado contra el briefing original**. Usa solamente CSV sintético o adecuadamente desidentificado; no cargues datos reales de pacientes. La revisión de seguridad/cumplimiento sigue siendo necesaria y esta implementación no representa una certificación HIPAA/UK GDPR.
+
+También se puede ejecutar el análisis desde la raíz del repositorio:
+
+```bash
+python scripts/analyze.py /ruta/a/incidentes-sinteticos.csv
+```
+
+Para probar el backend: `python -m pytest services/healthcore-api/tests` desde la raíz (con las dependencias del backend instaladas). Los issues del análisis JSON no contienen valores de origen, y la exportación solo incluye `row,issue_code`.
+
+## Despliegue de prototipo en Render
+
+El blueprint está en `render.yaml` en la raíz del repositorio. En Render selecciona **New + → Blueprint** y conecta el repositorio/branch publicado. Revisa los dos servicios antes de confirmar. La API requiere `HEALTHCORE_JWT_SECRET` (generado por el blueprint), CORS para la URL del sitio y un disco persistente porque TinyDB almacena cuentas y perfiles. Configura además Resend solo si se necesitan emails.
+
+Esto es únicamente un despliegue de prueba: TinyDB en un único proceso no es una base de datos de producción escalable, y el analizador CSV sigue teniendo un esquema de entrada provisional. No publiques datos sanitarios reales ni credenciales de usuario hasta completar una revisión de seguridad, privacidad y cumplimiento. Los blueprints no se han desplegado ni verificado en una cuenta Render desde este entorno.
+
 ## Estructura y persistencia
 
 - `app/api/routes/`: rutas y adaptación HTTP.

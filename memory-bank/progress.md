@@ -38,7 +38,7 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 #### `/services`
 
-- 🟡 **HealthCore API implementation in progress** under `/services/healthcore-api`.
+- 🟡 **HealthCore API implementation in progress** under `/services/healthcore-api`; an incident CSV analysis prototype has been added on `feature/healthcore-incidents-analysis`.
 - FastAPI routes use a layered service/repository design with TinyDB persistence for users and profiles, bcrypt password hashes, JWT authentication, and owner/admin access checks.
 - Registration can include an optional `name`/`phone`/`address` profile; `/auth/me` and `/profiles/me` expose current-user operations.
 - Registration and successful login now schedule best-effort Resend email notifications, configured with `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
@@ -47,6 +47,9 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - Authentication smoke checks passed for registration, login, current-user/profile reads and updates, missing/malformed/expired-token 401s, cross-owner 403, and user/profile cascade deletion. This is not a permanent automated test suite.
 - The five additional sensitive endpoints mentioned in the task were not present in the route inventory; do not invent APIs solely to secure them.
 - The previous application directly consumes the 4Geeks external practice API through `NEXT_PUBLIC_API_URL`.
+- Incident analysis provides authenticated `POST /incidents/analyze` and `POST /incidents/export`, a transient 25 MB streaming CSV parser, a CLI (`scripts/analyze.py`), and the static backoffice upload panel. CSV analysis tests currently pass (14 tests in the HealthCore service suite). The prototype generates aggregate counts and a sanitized `row,issue_code` findings export without persisting the upload.
+- **Important unresolved requirement:** the original attached milestone text and dataset were unavailable. The current expected columns (`incident_id,incident_date,clinic,category,severity,status,description`) and analysis behavior are assumptions, not an approved contract. Only synthetic/de-identified data may be used; do not interpret this as approval for real patient data or compliance certification.
+- Render deployment descriptors have been prepared at the repository root and in `services/healthcore-api/render.yaml`; no cloud deployment has been initiated or verified. Review/merge/push and create the Render Blueprint in the user's account before any hosted service exists.
 - FastAPI, backups, observability, and monitoring are not marked as deliverables for this milestone unless the official brief explicitly requires them.
 
 ## `CONTEXT.md` status

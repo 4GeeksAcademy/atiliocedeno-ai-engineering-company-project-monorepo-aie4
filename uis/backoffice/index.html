@@ -23,6 +23,7 @@
           <a class="nav-link" href="#operations"><span>⌁</span> Operations</a>
           <a class="nav-link" href="#people"><span>♙</span> People &amp; workforce</a>
           <a class="nav-link" href="#compliance"><span>◇</span> Compliance</a>
+          <a class="nav-link" href="#incident-analysis"><span>⚑</span> Incident analysis</a>
         </nav>
         <div class="sidebar-note">
           <span class="status-dot"></span>
@@ -71,9 +72,27 @@
           </section>
 
           <section class="footer-callout" id="people"><span class="callout-icon">✦</span><div><strong>HealthCore Digital connects the people behind the care.</strong><span>This internal view is a foundation for future operational tools and shared intelligence.</span></div><span class="arrow">→</span></section>
+
+          <section class="panel incident-panel" id="incident-analysis" aria-labelledby="incident-title">
+            <div class="panel-heading"><div><p class="eyebrow">Clinical operations</p><h2 id="incident-title">Incident analysis</h2></div><span class="panel-status">Transient processing</span></div>
+            <p class="incident-intro">Upload a de-identified incident CSV to validate rows and review aggregate trends. Required columns: incident_id, incident_date, clinic, category, severity, status, description.</p>
+            <form id="incident-upload-form" class="incident-form">
+              <label for="api-token">HealthCore API access token</label>
+              <input id="api-token" type="password" autocomplete="off" required aria-describedby="privacy-note" />
+              <label for="incident-file">De-identified CSV file</label>
+              <input id="incident-file" type="file" accept=".csv,text/csv" required />
+              <p id="privacy-note" class="privacy-note">Use synthetic or de-identified data only. Uploads are analyzed in memory and are not persisted. This prototype is not approved for real patient data.</p>
+              <button class="button-primary" type="submit">Analyze incidents</button>
+            </form>
+            <div id="incident-results" class="incident-results" aria-live="polite"></div>
+          </section>
         </div>
         <footer>HealthCore Digital · Internal operations workspace <span>Built for secure, human-centered healthcare operations</span></footer>
       </main>
     </div>
+    <script>
+      window.HEALTHCORE_API_URL = window.HEALTHCORE_API_URL || "https://healthcore-api.onrender.com";
+    </script>
+    <script src="/incidents.js" defer></script>
   </body>
 </html>
