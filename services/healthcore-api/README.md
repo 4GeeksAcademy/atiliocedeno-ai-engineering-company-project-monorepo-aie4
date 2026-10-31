@@ -145,25 +145,75 @@ Los esquemas y ejemplos completos están disponibles en `/docs` mientras la API 
 - `/profiles/{user_id}`: operaciones por usuario protegidas; el propietario gestiona su perfil y admin puede gestionar perfiles de cualquier cuenta. Crear un perfil ajeno requiere admin.
 - `GET /health`: verificación básica de disponibilidad.
 
-## Análisis provisional de incidentes CSV
+## Incident Analysis: ejecución local
 
-La API incluye un prototipo autenticado para cargar CSV sin persistir el archivo: `POST /incidents/analyze` devuelve agregados y `POST /incidents/export` descarga únicamente códigos de incidencias de validación y números de fila. Ambos endpoints requieren un token Bearer válido y un multipart field llamado `file`. El límite es 25 MB. La interfaz está en `uis/backoffice`; por defecto usa `http://localhost:8000` y acepta configurar `window.HEALTHCORE_API_URL` antes de cargar `incidents.js`.
+El briefing suministrado por el usuario define nueve columnas exactas: `incident_id,date,clinic_id,country,category,description,status,patient_id,satisfaction_score`. Se utiliza la tabla de aceptación de **100** filas; la introducción menciona 1.000, pero no corresponde al dataset de aceptación. El archivo de briefing no estaba en este checkout; su contenido fue proporcionado directamente durante la implementación.
 
-El esquema asumido por este prototipo es `incident_id,incident_date,clinic,category,severity,status,description`, con fecha ISO (`YYYY-MM-DD`). **Es provisional, no ha sido confirmado contra el briefing original**. Usa solamente CSV sintético o adecuadamente desidentificado; no cargues datos reales de pacientes. La revisión de seguridad/cumplimiento sigue siendo necesaria y esta implementación no representa una certificación HIPAA/UK GDPR.
+El servicio real está en `services/healthcore-api` (no `services/api`). Se reutiliza FastAPI y la autenticación JWT existentes.
 
-También se puede ejecutar el análisis desde la raíz del repositorio:
+### Arquitectura y reglas
+
+`app/schemas/incidents.py` centraliza `IncidentRecord`, `SatisfactionSummary`, `ValidationSummary`, `AnalysisResult`, `AnalysisAPIResponse` y `ExportState`, con Pydantic v2. Valida IDs ASCII de seis dígitos, fecha ISO/calendario, doce clínicas y país compatible, cinco categorías, tres estados, descripción de al menos cinco caracteres y satisfacción entera 1–5 obligatoria en cerrados. Las validaciones cruzadas se ejecutan por campo para recoger errores independientes incluso si otro campo falla.
+
+`app/services/incident_analysis.py` itera CSV UTF-8 (BOM permitido), valida cada fila, detecta duplicados normalizados y suma exclusivamente registros válidos. Una fila inválida se cuenta una vez, pero puede contribuir a varias reglas. Las categorías, estados, países y puntuaciones incluyen los valores con conteo cero. `total_records = valid_records + invalid_records`; promedio y distribución de satisfacción solo usan incidentes válidos CLOSED.
+
+`app/services/incident_reporting.py` comparte el informe de consola y exportación `metric,value,percentage` entre CLI y API. Porcentajes de categoría/estado/país: denominador de registros válidos; satisfacción: cerrados con score. Sin denominador, porcentaje 0; sin scores, promedio null/N/A.
+
+### CLI
+
+Desde la raíz con el entorno Python activo:
 
 ```bash
-python scripts/analyze.py /ruta/a/incidentes-sinteticos.csv
+python scripts/analyze.py incidents-healthcore.csv
+python scripts/analyze.py scripts/incidents-healthcore.csv --no-prompt
+python scripts/analyze.py /ruta/a/archivo.csv --export /ruta/nueva/results.csv
+python scripts/analyze.py incidents-healthcore.csv --json --no-prompt
 ```
 
-Para probar el backend: `python -m pytest services/healthcore-api/tests` desde la raíz (con las dependencias del backend instaladas). Los issues del análisis JSON no contienen valores de origen, y la exportación solo incluye `row,issue_code`.
+El dataset original ya estaba versionado bajo `scripts/`; no existía en la raíz. Se añadió un enlace simbólico relativo `incidents-healthcore.csv -> scripts/incidents-healthcore.csv`, sin cambiar ni duplicar contenido. No se confirmó que el dataset fuera sintético: no redistribuir su contenido ni añadir nuevas copias a Git.
 
-## Despliegue de prototipo en Render
+La CLI acepta cualquier ruta. En una terminal interactiva pregunta `¿Deseas exportar los resultados a CSV? [s / n]`; `s` crea `results.csv`. Sin terminal, con `--no-prompt`, `--json` o `--export`, no bloquea esperando entrada. La exportación no sobrescribe archivos existentes. Código 0: análisis completado, aunque incluya registros inválidos; código 2: error operativo. `--max-bytes` permite ajustar el límite de 25.000.000 bytes para procesamiento local de históricos.
 
-El blueprint está en `render.yaml` en la raíz del repositorio. En Render selecciona **New + → Blueprint** y conecta el repositorio/branch publicado. Revisa los dos servicios antes de confirmar. La API requiere `HEALTHCORE_JWT_SECRET` (generado por el blueprint), CORS para la URL del sitio y un disco persistente porque TinyDB almacena cuentas y perfiles. Configura además Resend solo si se necesitan emails.
+### API
 
-Esto es únicamente un despliegue de prueba: TinyDB en un único proceso no es una base de datos de producción escalable, y el analizador CSV sigue teniendo un esquema de entrada provisional. No publiques datos sanitarios reales ni credenciales de usuario hasta completar una revisión de seguridad, privacidad y cumplimiento. Los blueprints no se han desplegado ni verificado en una cuenta Render desde este entorno.
+| Método y ruta | Comportamiento |
+| --- | --- |
+| `POST /api/incidents/analyze` | Bearer JWT + multipart `file`; valida CSV, devuelve todos los agregados y guarda el último resultado de la cuenta. |
+| `GET /api/incidents/results/export` | Bearer JWT; descarga `results.csv` del último análisis de esa cuenta, sin volver a enviar el CSV. 404 si no existe. |
+
+Los endpoints provisionales `/incidents/analyze` y `/incidents/export` se retiraron; todos los consumidores del repositorio usan las rutas requeridas. Errores: 400 entrada vacía/encoding/CSV/encabezados, 401 autenticación, 404 sin resultados, 413 tamaño excesivo, 415 extensión no CSV, 422 falta archivo o multipart incorrecto, 500 fallo interno sanitizado. Las filas con errores de negocio retornan 200 con sus conteos.
+
+El repositorio TinyDB guarda únicamente un agregado por cuenta, bajo una clave de ID y fecha de creación; esto impide acceder al resultado de otra cuenta o de una cuenta eliminada cuyo ID se reutilice. No hay selector de usuario en el endpoint de exportación. Cargas fallidas conservan el último resultado exitoso.
+
+### Backoffice
+
+```bash
+# Terminal backend, desde services/healthcore-api:
+HEALTHCORE_FRONTEND_URL=http://localhost:4174 uvicorn app.main:app --reload
+# Otra terminal, desde la raíz:
+python3 -m http.server 4174 --bind 127.0.0.1 --directory uis/backoffice
+```
+
+Abrir `http://localhost:4174/#incident-analysis`, introducir un token obtenido mediante `/auth/login`, seleccionar CSV y analizar. El token permanece en el formulario y no se guarda en web storage. La URL por defecto es `http://localhost:8000`; `window.HEALTHCORE_API_URL` permite cambiarla. CORS conserva el único origen configurable existente: usa 3000 para el portal o 4174 para el backoffice. No se modificaron archivos `.env`.
+
+### Pruebas y resultados
+
+```bash
+python -m pip install -r services/healthcore-api/requirements-dev.txt
+python -m pytest services/healthcore-api/tests -q
+python -m compileall -q services/healthcore-api/app scripts/analyze.py
+npm --prefix uis/backoffice ci
+npm --prefix uis/backoffice test
+npm --prefix uis/backoffice run check
+```
+
+Verificados: 59 tests Python y 5 frontend, sin fallos ni omitidos; 100.000 filas sintéticas. La muestra produce 100/94/6, categorías 30/20/14/17/13, estados 28/52/14, países 61/33, scores 3/5/12/23/9, 52 cerrados puntuados y media 3.58. Descarga real desde navegador idéntica byte por byte a la exportación CLI. Tracker: typecheck y build correctos.
+
+### Privacidad y límites
+
+No se imprimen valores de origen, filas, IDs, descripciones ni objetos de error Pydantic. Las pruebas usan sentinelas sintéticos y comprueban API, exportación, consola, almacenamiento y logs. El procesamiento es local; no llama a LLMs. El archivo subido puede usar almacenamiento temporal de Starlette durante multipart; se cierra y descarta al terminar. El límite se comprueba después del parsing multipart y también durante el análisis: no es un límite del tráfico recibido por el servidor.
+
+La detección de duplicados conserva hashes de IDs en memoria O(n); no se promete memoria constante para un millón de filas. TinyDB conserva solo agregados, pero sigue siendo almacenamiento local en un único proceso: no se implementaron TTL ni purga de agregados de cuentas eliminadas. Revisar política de retención, límites de petición y persistencia antes de producción. No hay certificación regulatoria. No se requiere Render ni otro proveedor cloud.
 
 ## Estructura y persistencia
 

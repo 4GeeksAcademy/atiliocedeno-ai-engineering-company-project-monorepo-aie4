@@ -1,98 +1,155 @@
-"""API authentication and response-minimization tests."""
-
-from __future__ import annotations
-
-import sys
+"""Authenticated API, export, and prior authentication behavior."""
+import io
+import csv
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from app.api.deps import get_current_user
+from app.main import app
+from app.models.user import User, UserRole
 
-SERVICE_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(SERVICE_ROOT))
-
-from app.api.deps import get_current_user  # noqa: E402
-from app.main import app  # noqa: E402
-from app.models.user import User, UserRole  # noqa: E402
-
-SYNTHETIC_ID = "SYNTHETIC-INCIDENT-IDENTIFIER"
-SYNTHETIC_DESCRIPTION = "Synthetic patient narrative only"
-VALID_CSV = (
-    "incident_id,incident_date,clinic,category,severity,status,description\n"
-    f"{SYNTHETIC_ID},2025-03-01,Austin,fall,moderate,open,{SYNTHETIC_DESCRIPTION}\n"
-)
+DATASET = Path(__file__).resolve().parents[3] / "scripts/incidents-healthcore.csv"
 
 
 @pytest.fixture
-def client():  # type: ignore[no-untyped-def]
-    app.dependency_overrides[get_current_user] = lambda: User(
-        id=7,
-        email="tester@example.com",
-        hashed_password="not-a-real-hash",
-        role=UserRole.USER,
-    )
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
+def client():
+    user = User(id=7, email="tester@example.com", hashed_password="test", role=UserRole.USER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.clear()
 
 
-def test_analyze_response_is_authenticated_and_minimized(client: TestClient) -> None:
-    response = client.post(
-        "/incidents/analyze",
-        files={"file": ("incidents.csv", VALID_CSV, "text/csv")},
-    )
+def upload(client, path, data=None, filename="incidents.csv"):
+    return client.post(path, files={"file": (filename, DATASET.read_bytes() if data is None else data, "text/csv")})
 
+
+def test_analyze_dataset_and_minimized_response(client):
+    response = upload(client, "/api/incidents/analyze")
     assert response.status_code == 200
-    assert response.json()["valid_rows"] == 1
-    body = response.text
-    assert SYNTHETIC_ID not in body
-    assert SYNTHETIC_DESCRIPTION not in body
-    assert "issues" not in response.json()
-    assert "dataset_fingerprint" not in response.json()
+    assert response.json()["valid_records"] == 94
+    assert response.json()["invalid_records"] == 6
+    assert response.json()["total_records"] == 100
+    assert not {"patient_id", "description", "incident_id"}.intersection(response.json())
 
 
-def test_analyze_requires_authentication() -> None:
+@pytest.mark.parametrize("path", ["/api/incidents/analyze", "/api/incidents/results/export"])
+def test_requires_authentication(path):
     with TestClient(app) as client:
-        response = client.post(
-            "/incidents/analyze",
-            files={"file": ("incidents.csv", VALID_CSV, "text/csv")},
-        )
-    assert response.status_code == 401
+        assert (client.get(path) if path.endswith("export") else upload(client, path)).status_code == 401
 
 
-def test_non_csv_filename_returns_specific_safe_error(client: TestClient) -> None:
-    response = client.post(
-        "/incidents/analyze",
-        files={"file": ("incidents.txt", VALID_CSV, "text/plain")},
-    )
-
-    assert response.status_code == 400
+@pytest.mark.parametrize("path", ["/api/incidents/analyze"])
+def test_non_csv_filename_returns_safe_error(client, path):
+    response = upload(client, path, filename="private.txt")
+    assert response.status_code == 415
     assert response.json() == {"detail": {"code": "invalid_file_type"}}
 
 
-def test_export_does_not_contain_raw_identifiers_or_descriptions(client: TestClient) -> None:
-    duplicate_csv = VALID_CSV + (
-        f"{SYNTHETIC_ID},2025-03-02,Austin,fall,moderate,open,{SYNTHETIC_DESCRIPTION}\n"
-    )
-    response = client.post(
-        "/incidents/export",
-        files={"file": ("incidents.csv", duplicate_csv, "text/csv")},
-    )
-
+def test_export_aggregate_counts_and_privacy(client):
+    assert upload(client, "/api/incidents/analyze").status_code == 200
+    response = client.get("/api/incidents/results/export")
     assert response.status_code == 200
-    assert "duplicate_incident_id" in response.text
-    assert SYNTHETIC_ID not in response.text
-    assert SYNTHETIC_DESCRIPTION not in response.text
+    rows = {row["metric"]: row["value"] for row in csv.DictReader(io.StringIO(response.text))}
+    assert rows["valid_records"] == "94"
+    assert rows["invalid_records"] == "6"
+    assert rows["average_satisfaction"] == "3.58"
+    assert set(rows).isdisjoint({"patient_id", "description", "incident_id"})
 
 
-def test_bad_csv_errors_do_not_echo_raw_values(client: TestClient) -> None:
-    sensitive = "PRIVATE-NARRATIVE-DO-NOT-ECHO"
-    response = client.post(
-        "/incidents/analyze",
-        files={"file": ("incidents.csv", f"wrong,headers\n{SYNTHETIC_ID},{sensitive}\n", "text/csv")},
-    )
+@pytest.mark.parametrize("path", ["/api/incidents/analyze"])
+@pytest.mark.parametrize("data,code", [(b"", "empty_file"), (b"private,headers\nsecret,private", "invalid_headers"), (b"\xff", "invalid_encoding")])
+def test_bad_csv_errors_are_safe(client, path, data, code):
+    response = upload(client, path, data=data)
+    assert response.status_code == 400
+    assert response.json() == {"detail": {"code": code}}
 
+
+def test_upload_limit(client, monkeypatch):
+    monkeypatch.setattr("app.api.routes.incidents.MAX_UPLOAD_BYTES", 10)
+    response = upload(client, "/api/incidents/analyze")
+    assert response.status_code == 413
+    assert response.json()["detail"]["code"] == "file_too_large"
+
+
+def test_previous_auth_profile_and_reset_flow():
+    from app.repositories.user_repository import UserRepository
+    from app.services.password_service import PasswordService
+    with TestClient(app) as client:
+        assert client.get("/health").json() == {"status": "ok"}
+        email = "regression@example.com"
+        password = "local-test-password-123"
+        registered = client.post("/users", json={"email": email, "password": password, "profile": {"name": "Regression Tester"}})
+        assert registered.status_code == 201
+        user_id = registered.json()["id"]
+        assert "hashed_password" not in registered.text
+        token = client.post("/auth/login", json={"email": email, "password": password}).json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        assert client.get("/auth/me", headers=headers).status_code == 200
+        assert client.get("/profiles/me", headers=headers).status_code == 200
+        assert client.get("/users", headers=headers).status_code == 403
+        assert client.post("/api/incidents/analyze", headers=headers, files={"file": ("incidents.csv", DATASET.read_bytes())}).json()["valid_records"] == 94
+        user = UserRepository().get_by_email(email)
+        reset = PasswordService().issue_reset(user)
+        for _ in range(2):
+            assert client.post("/auth/reset-password/validate", json={"token": reset}).status_code == 200
+        assert client.post("/auth/reset-password", json={"token": reset, "new_password": "changed-test-password-123"}).status_code == 200
+        assert client.post("/auth/reset-password/validate", json={"token": reset}).status_code == 400
+        assert client.delete(f"/users/{user_id}", headers=headers).status_code == 204
+
+
+def test_export_isolation_and_latest_result(client):
+    from datetime import datetime, timezone
+    from app.schemas.incidents import AnalysisResult
+    from app.services.incident_reporting import export_csv
+    first = upload(client, "/api/incidents/analyze")
+    assert first.status_code == 200
+    first_export = client.get("/api/incidents/results/export")
+    assert first_export.text == export_csv(AnalysisResult.model_validate(first.json()))
+    assert first_export.headers["content-disposition"] == 'attachment; filename="results.csv"'
+    assert first_export.headers["content-type"].startswith("text/csv")
+    original = app.dependency_overrides[get_current_user]
+    for other in [User(id=8, email="other@example.com", hashed_password="test", role=UserRole.USER),
+                  User(id=7, email="reused@example.com", hashed_password="test", role=UserRole.USER, created_at=datetime(2030, 1, 1, tzinfo=timezone.utc))]:
+        app.dependency_overrides[get_current_user] = lambda: other
+        assert client.get("/api/incidents/results/export").status_code == 404
+    app.dependency_overrides[get_current_user] = original
+    header = DATASET.read_bytes().splitlines()[0] + b"\n"
+    assert upload(client, "/api/incidents/analyze", data=header).json()["total_records"] == 0
+    assert "total_records,0" in client.get("/api/incidents/results/export").text
+
+
+def test_methods_missing_upload_and_sanitized_internal_errors(client, monkeypatch, caplog):
+    assert client.post("/api/incidents/analyze").status_code == 422
+    assert client.get("/api/incidents/analyze").status_code == 405
+    assert client.post("/api/incidents/results/export").status_code == 405
+    assert client.post("/incidents/analyze").status_code == 404
+    def fail(*args, **kwargs):
+        raise RuntimeError("PRIVATE_SYNTHETIC_SENTINEL")
+    monkeypatch.setattr("app.api.routes.incidents.analyze_incident_stream", fail)
+    response = upload(client, "/api/incidents/analyze")
+    assert response.status_code == 500
+    assert response.json() == {"detail": {"code": "analysis_failed"}}
+    assert "PRIVATE_SYNTHETIC_SENTINEL" not in response.text + caplog.text
+
+
+def test_privacy_in_response_export_storage_and_logs(client, caplog):
+    from app.db.tinydb import get_db
+    sentinel = "PRIVATE_SYNTHETIC_SENTINEL"
+    header = DATASET.read_bytes().splitlines()[0].decode()
+    data = header + f"\n{sentinel},2024-01-01,US-TX-01,US,BILLING,{sentinel},CLOSED,{sentinel},4\n"
+    response = upload(client, "/api/incidents/analyze", data=data.encode())
     assert response.status_code == 200
-    assert sensitive not in response.text
-    assert SYNTHETIC_ID not in response.text
-    assert response.json()["invalid_rows"] == 0
+    exported = client.get("/api/incidents/results/export")
+    assert sentinel not in response.text + exported.text + caplog.text + str(get_db().table("incident_results").all())
+    assert response.json()["invalid_records"] == 1
+
+
+def test_non_file_multipart_field_does_not_echo_input(client):
+    response = client.post("/api/incidents/analyze", data={"file": "PRIVATE_MULTIPART_SENTINEL"})
+    assert response.status_code == 422
+    assert response.json() == {"detail": {"code": "invalid_upload"}}
+    assert "PRIVATE_MULTIPART_SENTINEL" not in response.text

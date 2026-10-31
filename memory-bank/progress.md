@@ -47,9 +47,9 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - Authentication smoke checks passed for registration, login, current-user/profile reads and updates, missing/malformed/expired-token 401s, cross-owner 403, and user/profile cascade deletion. This is not a permanent automated test suite.
 - The five additional sensitive endpoints mentioned in the task were not present in the route inventory; do not invent APIs solely to secure them.
 - The previous application directly consumes the 4Geeks external practice API through `NEXT_PUBLIC_API_URL`.
-- Incident analysis provides authenticated `POST /incidents/analyze` and `POST /incidents/export`, a transient 25 MB streaming CSV parser, a CLI (`scripts/analyze.py`), and the static backoffice upload panel. CSV analysis tests currently pass (14 tests in the HealthCore service suite). The prototype generates aggregate counts and a sanitized `row,issue_code` findings export without persisting the upload.
-- **Important unresolved requirement:** the original attached milestone text and dataset were unavailable. The current expected columns (`incident_id,incident_date,clinic,category,severity,status,description`) and analysis behavior are assumptions, not an approved contract. Only synthetic/de-identified data may be used; do not interpret this as approval for real patient data or compliance certification.
-- Render deployment descriptors have been prepared at the repository root and in `services/healthcore-api/render.yaml`; no cloud deployment has been initiated or verified. Review/merge/push and create the Render Blueprint in the user's account before any hosted service exists.
+- Incident Analysis completed against the official briefing supplied by the user: nine-column CSV, Pydantic v2, shared streaming engine, readable CLI and aggregate export, authenticated API and static backoffice integration. See the 2026-10-31 audit below.
+- Required routes are `POST /api/incidents/analyze` and `GET /api/incidents/results/export`. Only the latest aggregate per account is persisted in TinyDB; no raw uploads or patient values are retained in results.
+- The feature-only Render blueprint and hosted URL defaults were removed. No deployment was performed.
 - FastAPI, backups, observability, and monitoring are not marked as deliverables for this milestone unless the official brief explicitly requires them.
 
 ## `CONTEXT.md` status
@@ -97,3 +97,15 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 1. Decide separately whether future internal workflows should integrate with `/uis/backoffice`; do not duplicate the preserved Talent Pipeline Tracker application without an explicit architectural decision.
 2. Add application-specific lint, test, or build tooling only if a future milestone requires it.
+
+## Incident Analysis delivery — 2026-10-31
+
+- Branch: `feature/healthcore-incidents-analysis`, HEAD `224ee8d`. The already-prepared merge of `origin/main` (`666e17a`) remains pending and untouched; no new merge, commit, push, rebase or deployment was performed.
+- Baseline: 10 failing and 4 passing historical tests, due to the old prototype API/CLI/test contract. Corrected consumers and expanded validation rather than replacing the existing engine.
+- Source briefing was supplied directly by the user because the documented file path was absent. The explicit 100-record acceptance table governs over the introductory 1,000-row statement.
+- Dataset already existed at `scripts/incidents-healthcore.csv`; its SHA-256 remains `b13555a640f986cd7e1435e3f96f517406e08595753058a4fb16df731d504740`. A root relative symlink enables the required command without copying rows. Synthetic provenance has not been confirmed; no raw dataset changes were staged.
+- Acceptance: 100 total / 94 valid / 6 invalid; categories 30/20/14/17/13; states 28/52/14; countries 61/33; satisfaction distribution 3/5/12/23/9, 52 scored closed cases, average 3.58. All required invalid-reason counts equal 1.
+- QA: 59 Python tests passed, 5 frontend tests passed, zero failed/skipped. Python compilation and JS syntax checks passed. A 100,000-row synthetic streaming case passed. Tests cover independent simultaneous errors, privacy sentinels, export parity, missing uploads, internal errors and user/account-incarnation isolation.
+- Real browser verification passed: local JWT upload, rendering, invalid warning, navigation and GET download. The download matches CLI CSV byte for byte. 390px viewport has no horizontal overflow. Screenshots were saved outside the repository as review evidence.
+- Prior functionality: auth/profile/reset regression test passed; Talent Pipeline Tracker typecheck and production build passed. Previous domain models, public website, tracker source, environment files and root lockfiles remain unchanged.
+- Limitations: TinyDB single-process persistence without aggregate TTL/purge; multipart may spool uploads temporarily before the analysis size check; duplicate detection uses O(n) hash memory. Existing FastAPI/TestClient deprecations and Next.js workspace-root warnings remain. No regulatory certification or production readiness claim.

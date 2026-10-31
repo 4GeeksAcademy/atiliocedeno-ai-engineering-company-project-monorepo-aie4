@@ -6,7 +6,7 @@ import re
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 CLINIC_COUNTRIES: dict[str, str] = {
@@ -52,7 +52,7 @@ INVALID_RULES = (
 class IncidentRecord(BaseModel):
     """One HealthCore incident with field and cross-field validation."""
 
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, strict=True)
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, strict=True, validate_default=True, hide_input_in_errors=True)
 
     incident_id: str
     date: str
@@ -62,12 +62,12 @@ class IncidentRecord(BaseModel):
     description: str
     status: str
     patient_id: str
-    satisfaction_score: int | None
+    satisfaction_score: int | None = None
 
     @field_validator("incident_id")
     @classmethod
     def validate_incident_id(cls, value: str) -> str:
-        if not re.fullmatch(r"HC-\d{6}", value):
+        if not re.fullmatch(r"HC-[0-9]{6}", value):
             raise PydanticCustomError("incident_id_invalid", "invalid incident identifier")
         return value
 
@@ -91,9 +91,12 @@ class IncidentRecord(BaseModel):
 
     @field_validator("country")
     @classmethod
-    def validate_country(cls, value: str) -> str:
+    def validate_country(cls, value: str, info: ValidationInfo) -> str:
         if value not in {"US", "UK"}:
             raise PydanticCustomError("country_invalid", "invalid country")
+        clinic = info.data.get("clinic_id")
+        if clinic is not None and value != CLINIC_COUNTRIES[clinic]:
+            raise PydanticCustomError("country_clinic_mismatch", "country does not match clinic")
         return value
 
     @field_validator("category")
@@ -120,7 +123,7 @@ class IncidentRecord(BaseModel):
     @field_validator("patient_id")
     @classmethod
     def validate_patient_id(cls, value: str) -> str:
-        if not re.fullmatch(r"PAT-\d{6}", value):
+        if not re.fullmatch(r"PAT-[0-9]{6}", value):
             raise PydanticCustomError("patient_id_invalid", "invalid patient identifier")
         return value
 
@@ -141,13 +144,13 @@ class IncidentRecord(BaseModel):
             raise PydanticCustomError("satisfaction_score_invalid", "invalid score")
         return score
 
-    @model_validator(mode="after")
-    def validate_clinic_country_and_closed_score(self) -> IncidentRecord:
-        if self.country != CLINIC_COUNTRIES[self.clinic_id]:
-            raise PydanticCustomError("country_clinic_mismatch", "country does not match clinic")
-        if self.status == "CLOSED" and self.satisfaction_score is None:
+    @field_validator("satisfaction_score")
+    @classmethod
+    def validate_closed_score(cls, value: int | None, info: ValidationInfo) -> int | None:
+        # Field validators still run when unrelated fields fail validation.
+        if info.data.get("status") == "CLOSED" and value is None:
             raise PydanticCustomError("closed_without_satisfaction_score", "closed incident needs a score")
-        return self
+        return value
 
 
 class ValidationSummary(BaseModel):
@@ -160,7 +163,15 @@ class ValidationSummary(BaseModel):
     diagnostic_limit: int = Field(ge=0)
 
 
-class AnalysisResult(BaseModel):
+class SatisfactionSummary(BaseModel):
+    """Statistics from valid CLOSED incidents only."""
+
+    satisfaction_distribution: dict[int, int]
+    closed_with_valid_satisfaction: int = Field(ge=0)
+    average_satisfaction: float | None = Field(default=None, ge=1, le=5)
+
+
+class AnalysisResult(SatisfactionSummary):
     """Safe aggregate result shared by CLI, API, exports, and dashboard."""
 
     model_config = ConfigDict(extra="forbid")
@@ -171,17 +182,20 @@ class AnalysisResult(BaseModel):
     categories: dict[str, int]
     statuses: dict[str, int]
     countries: dict[str, int]
-    satisfaction_distribution: dict[int, int]
-    closed_with_valid_satisfaction: int = Field(ge=0)
-    average_satisfaction: float | None
     invalid_breakdown: ValidationSummary
+
+    @model_validator(mode="after")
+    def validate_totals(self) -> AnalysisResult:
+        if self.total_records != self.valid_records + self.invalid_records:
+            raise ValueError("inconsistent_record_counts")
+        return self
 
 
 class AnalysisExportRow(BaseModel):
     """One aggregate-only CSV export row."""
 
     metric: str
-    value: str | int | float
+    value: str | int | float | None
     percentage: float | None = None
 
 
@@ -192,7 +206,7 @@ class AnalysisAPIResponse(AnalysisResult):
 class ExportState(BaseModel):
     """Private persisted pointer data for one user's latest safe aggregate."""
 
-    user_id: int
+    owner_key: str
     result: AnalysisResult
 
 

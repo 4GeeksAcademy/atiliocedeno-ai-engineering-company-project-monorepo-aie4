@@ -11,7 +11,7 @@ Minimal internal entry view for HealthCore Digital's operational workspace. This
 ## Routes
 
 - `index.html` — internal HealthCore Digital overview and `/` entry point when served from this directory
-- `incidents.js` — incident CSV upload, aggregate rendering, and sanitized findings download
+- `incidents.js` — incident CSV upload, aggregate rendering, and aggregate results download
 
 ## Run locally
 
@@ -23,13 +23,23 @@ python3 -m http.server 4174 --directory uis/backoffice
 
 Then open <http://localhost:4174/>.
 
+## Incident analysis
+
+Open `http://localhost:4174/#incident-analysis`. Start the existing HealthCore API with `HEALTHCORE_FRONTEND_URL=http://localhost:4174` to allow this origin. Obtain a token with `/auth/login`; the form never saves it in web storage. API default: `http://localhost:8000`, overridable with `window.HEALTHCORE_API_URL` before `incidents.js` loads.
+
+Upload uses `POST /api/incidents/analyze`; **Download Results CSV** uses `GET /api/incidents/results/export` for the latest authorized result, without reuploading the file. The nine-column contract and domain rules are documented in the backend README. Cards show total/valid/invalid counts and satisfaction; sections show all five categories, three states, two countries, five scores and safe validation-reason counts. Invalid records are excluded from business metrics; rule counts can overlap.
+
 ## Validation
 
-This is a static application and does not define package-local build, typecheck, lint, or test scripts. Validate the entry point through a local static server and confirm that the page renders the HealthCore business metrics and internal navigation.
+The application remains static HTML/CSS/JS; it has no production build step. Node and jsdom are used only for tests:
 
-For CSV analysis, start `services/healthcore-api` separately, sign in to obtain a bearer token, then use the **Incident analysis** section. The client sends the selected file to `/incidents/analyze` or `/incidents/export`; it does not store the token in web storage. `window.HEALTHCORE_API_URL` may be set before `incidents.js` loads to use a different API origin. The current expected headers are provisional and documented in the backend README; only synthetic or de-identified CSVs are appropriate for this prototype.
+```bash
+npm ci
+npm test
+npm run check
+```
 
-Render deployment descriptors are provided in the repository root (`render.yaml`) and in `services/healthcore-api/render.yaml`. The frontend currently defaults to `https://healthcore-api.onrender.com`; update that value in `incidents.js` if the Render service uses another hostname. Render static sites do not provide runtime environment variables to plain HTML automatically, so configure the API hostname in source or add a generated runtime config before deployment.
+Five tests cover selection, upload/loading, result rendering, warnings, navigation, export method, authorization errors and safe error feedback. Browser verification passed with the local API and reference dataset (100/94/6, average 3.58), including CSV download and a 390px mobile viewport without horizontal overflow. The downloaded CSV matched the CLI export byte for byte.
 
 ## Boundaries
 

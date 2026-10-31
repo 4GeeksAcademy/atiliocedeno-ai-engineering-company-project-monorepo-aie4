@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, Suspense, useEffect, useState } from "react";
-import { authRequest } from "../auth/session";
+import { authRequest, isUnauthorized, hasStatus } from "../auth/session";
 
 function ResetPasswordForm() {
   const params = useSearchParams();
@@ -25,7 +25,7 @@ function ResetPasswordForm() {
     authRequest("/auth/reset-password/validate", { token }, "")
       .then(() => { if (active) setValidation({ token, status: "valid" }); })
       .catch((cause) => {
-        if (active) setValidation({ token, status: cause instanceof Error && /HTTP (400|422):/.test(cause.message) ? "invalid" : "unavailable" });
+        if (active) setValidation({ token, status: hasStatus(cause, 400) || hasStatus(cause, 422) ? "invalid" : "unavailable" });
       });
     return () => { active = false; };
   }, [token]);
@@ -46,7 +46,7 @@ function ResetPasswordForm() {
       await authRequest("/auth/reset-password", { token, new_password: password });
       router.push("/login?passwordReset=success");
     } catch (cause) {
-      if (cause instanceof Error && cause.message.includes("HTTP 400:")) {
+      if (hasStatus(cause, 400)) {
         setValidation({ token, status: "invalid" });
       } else {
         setError(cause instanceof Error ? cause.message : "No se pudo guardar la contraseña.");

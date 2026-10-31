@@ -1,9 +1,11 @@
 "use client";
+import { PhoneInput } from "../../components/phone-input";
+import { phoneError, normalizePhone } from "../../auth/phone";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
-import { apiRequest, clearAccessToken, getAccessToken } from "../../auth/session";
+import { apiRequest, clearAccessToken, getAccessToken, isUnauthorized, hasStatus } from "../../auth/session";
 
 type Profile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 type ProfileForm = { name: string; phone: string; address: string };
@@ -34,12 +36,12 @@ export default function AccountProfilePage() {
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
         const text = cause instanceof Error ? cause.message : "No se pudo cargar el perfil.";
-        if (text.includes("HTTP 401") || text.includes("HTTP 403")) {
+        if (isUnauthorized(cause)) {
           clearAccessToken();
           router.replace("/login");
           return;
         }
-        if (text.includes("HTTP 404")) {
+        if (hasStatus(cause, 404)) {
           setHasProfile(false);
           return;
         }
@@ -51,10 +53,11 @@ export default function AccountProfilePage() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy || phoneError(form.phone)) return;
     setBusy(true);
     setError("");
     setMessage("");
-    const body = { name: form.name.trim() || null, phone: form.phone.trim() || null, address: form.address.trim() || null };
+    const body = { name: form.name.trim() || null, phone: normalizePhone(form.phone), address: form.address.trim() || null };
     try {
       const profile = await apiRequest<Profile>("/profiles/me", {
         method: hasProfile ? "PUT" : "POST",
@@ -63,10 +66,10 @@ export default function AccountProfilePage() {
       setForm({ name: profile.name ?? "", phone: profile.phone ?? "", address: profile.address ?? "" });
       setUserId(profile.user_id);
       setHasProfile(true);
-      setMessage("Perfil guardado correctamente.");
+      router.replace("/dashboard");
     } catch (cause) {
       const text = cause instanceof Error ? cause.message : "No se pudo guardar el perfil.";
-      if (text.includes("HTTP 401") || text.includes("HTTP 403")) {
+      if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
         return;
@@ -91,7 +94,7 @@ export default function AccountProfilePage() {
       setMessage("Perfil eliminado. Puedes crear uno nuevo cuando quieras.");
     } catch (cause) {
       const text = cause instanceof Error ? cause.message : "No se pudo eliminar el perfil.";
-      if (text.includes("HTTP 401") || text.includes("HTTP 403")) {
+      if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
         return;
@@ -112,7 +115,7 @@ export default function AccountProfilePage() {
         <p className="mt-2 text-slate-500">Mantén actualizados tus datos de contacto.</p>
         {loading ? <p role="status" className="mt-8 text-slate-500">Cargando perfil…</p> : <form onSubmit={saveProfile} className="mt-8 grid gap-5">
           <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-name">Nombre<input id="profile-name" autoComplete="name" maxLength={200} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={inputClass} /></label>
-          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-phone">Teléfono<input id="profile-phone" type="tel" autoComplete="tel" maxLength={40} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className={inputClass} /></label>
+          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-phone">Teléfono<PhoneInput id="profile-phone" type="tel" autoComplete="tel" maxLength={40} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className={inputClass} /></label>
           <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-address">Dirección<input id="profile-address" autoComplete="street-address" maxLength={500} value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className={inputClass} /></label>
           {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           {message && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}

@@ -13,7 +13,7 @@ type GlobalNavbarProps = {
 export default function GlobalNavbar({ backLabel = false, languageHref }: GlobalNavbarProps) {
   const { language } = useLanguage();
   const isEnglish = language === "en";
-  const homePage = isEnglish ? "/index.en.html" : "/index.html";
+  const homePage = isEnglish ? "/en" : "/";
   const talentPath = backLabel ? (isEnglish ? "/talents/en" : "/talents") : "/talents/new";
   const alternateLanguageHref = languageHref ?? (isEnglish ? "/talents" : "/talents/en");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -40,7 +40,7 @@ export default function GlobalNavbar({ backLabel = false, languageHref }: Global
           <Link className="flex items-center gap-1.5 rounded-lg border border-[#1F2937]/20 px-3 py-1.5 text-sm font-semibold text-[#1F2937]/70 transition-all duration-200 hover:border-[#2563EB]/40 hover:text-[#2563EB]" href={alternateLanguageHref} lang={isEnglish ? "es" : "en"}>
             <span aria-hidden="true">🌐</span>{isEnglish ? "ES" : "EN"}
           </Link>
-          <Link className="rounded-lg bg-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-[#1d4ed8]" href={isEnglish ? "/aplication.en.html" : "/aplication.html"}>
+          <Link className="rounded-lg bg-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-[#1d4ed8]" href={isEnglish ? "/en/care-request" : "/care-request"}>
             {isEnglish ? "Request Care" : "Solicitar Atención"}
           </Link>
         </nav>
@@ -68,7 +68,7 @@ export default function GlobalNavbar({ backLabel = false, languageHref }: Global
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={`${homePage}#contact`}>{isEnglish ? "Contact" : "Contacto"}</Link>
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={talentPath}>{pipelineLabel}</Link>
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href="/account/change-password">{isEnglish ? "Change password" : "Cambiar contraseña"}</Link>
-            <Link onClick={() => setMenuOpen(false)} className="rounded-lg bg-[#2563EB] px-3 py-3 text-center font-semibold text-white" href={isEnglish ? "/aplication.en.html" : "/aplication.html"}>{isEnglish ? "Request Care" : "Solicitar Atención"}</Link>
+            <Link onClick={() => setMenuOpen(false)} className="rounded-lg bg-[#2563EB] px-3 py-3 text-center font-semibold text-white" href={isEnglish ? "/en/care-request" : "/care-request"}>{isEnglish ? "Request Care" : "Solicitar Atención"}</Link>
           </div>
         </nav>
       )}

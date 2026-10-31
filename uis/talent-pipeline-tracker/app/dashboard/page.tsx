@@ -1,10 +1,12 @@
 "use client";
+import { PhoneInput } from "../components/phone-input";
+import { phoneError, normalizePhone } from "../auth/phone";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { Activity, ArrowUpRight, BriefcaseMedical, CircleUserRound, LogOut, RefreshCw, ShieldCheck, Users } from "lucide-react";
-import { apiRequest, clearAccessToken, getAccessToken } from "../auth/session";
+import { apiRequest, clearAccessToken, getAccessToken, isUnauthorized, hasStatus } from "../auth/session";
 
 type Profile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 type UserInfo = { email: string; role: string; profile: Profile | null };
@@ -36,6 +38,7 @@ export default function DashboardPage() {
     setError("");
     try {
       const userInfo = await apiRequest<UserInfo>("/auth/me", { signal });
+      if (!userInfo.profile) { router.replace("/account/profile"); return; }
       setMe(userInfo);
       setProfileForm({ name: userInfo.profile?.name ?? "", phone: userInfo.profile?.phone ?? "", address: userInfo.profile?.address ?? "" });
       setState("ready");
@@ -54,7 +57,7 @@ export default function DashboardPage() {
     } catch (requestError) {
       if (signal?.aborted) return;
       const message = errorText(requestError);
-      if (message.includes("HTTP 401") || message.includes("HTTP 403")) {
+      if (isUnauthorized(requestError)) {
         clearAccessToken();
         router.replace("/login");
         return;
@@ -79,13 +82,13 @@ export default function DashboardPage() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!me) return;
+    if (!me || savingProfile || phoneError(profileForm.phone)) return;
     setSavingProfile(true);
     setProfileError("");
     setProfileNotice("");
     const body = {
       name: profileForm.name.trim() || null,
-      phone: profileForm.phone.trim() || null,
+      phone: normalizePhone(profileForm.phone),
       address: profileForm.address.trim() || null,
     };
     try {
@@ -99,7 +102,7 @@ export default function DashboardPage() {
       setProfileNotice("Tu información se guardó correctamente.");
     } catch (cause) {
       const message = errorText(cause);
-      if (message.includes("HTTP 401") || message.includes("HTTP 403")) {
+      if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
         return;
@@ -173,7 +176,7 @@ export default function DashboardPage() {
               </dl> : !editingProfile && <div className="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Todavía no hay un perfil asociado a tu cuenta.</div>}
               {editingProfile ? <form onSubmit={saveProfile} className="mt-6 grid gap-4 border-t border-slate-100 pt-5">
                 <label className="grid gap-2 text-sm font-semibold text-slate-700">Nombre<input maxLength={200} autoComplete="name" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
-                <label className="grid gap-2 text-sm font-semibold text-slate-700">Teléfono<input maxLength={40} type="tel" autoComplete="tel" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
+                <label className="grid gap-2 text-sm font-semibold text-slate-700">Teléfono<PhoneInput maxLength={40} type="tel" autoComplete="tel" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
                 <label className="grid gap-2 text-sm font-semibold text-slate-700">Dirección<input maxLength={500} autoComplete="street-address" value={profileForm.address} onChange={(event) => setProfileForm({ ...profileForm, address: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
                 {profileError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{profileError}</p>}
                 <div className="flex flex-wrap gap-3"><button disabled={savingProfile} className="rounded-lg bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">{savingProfile ? "Guardando…" : "Guardar información"}</button><button type="button" disabled={savingProfile} onClick={() => { setEditingProfile(false); setProfileError(""); setProfileForm({ name: me.profile?.name ?? "", phone: me.profile?.phone ?? "", address: me.profile?.address ?? "" }); }} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancelar</button></div>

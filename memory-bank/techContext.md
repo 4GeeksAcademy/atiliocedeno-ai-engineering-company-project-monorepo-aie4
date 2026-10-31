@@ -122,3 +122,11 @@ These paths represent the responsibilities of Milestone 4. The implementation st
 
 - The `packages/shared` package is not linked as an npm workspace (there is no `workspaces` entry in the observed root `package.json`); its reuse by the previous tracker was not verified (❓ Not verified).
 - Data arriving from the external API does not follow a fixed schema (hence the multiple optional aliases in `TalentRecord`); any parsing changes must preserve that tolerance.
+
+## Verified Incident Analysis architecture (2026-10-31)
+
+This section supersedes earlier historical statements that no backend exists for this feature. The existing FastAPI service is `services/healthcore-api`; its JWT/TinyDB authentication remains unchanged. `IncidentRecord` field validators collect independent HealthCore field/cross-field violations; typed `SatisfactionSummary`, `ValidationSummary` and `AnalysisResult` describe aggregate output. Streaming CSV parsing and hash-based duplicate detection remain in `incident_analysis.py`; `incident_reporting.py` provides the common CLI/HTTP export representation.
+
+`POST /api/incidents/analyze` stores one aggregate in TinyDB per authenticated account incarnation (numeric ID + creation timestamp). `GET /api/incidents/results/export` exports that same account's latest aggregate. No raw rows are stored in that table. The static backoffice consumes these contracts without recalculating business metrics. CLI exports use exclusive file creation. Development test dependencies are isolated in `requirements-dev.txt` and a backoffice package with jsdom/Node tests; no frontend framework or production build was added.
+
+Local backoffice origin is 4174; use the existing `HEALTHCORE_FRONTEND_URL` setting for CORS. Deployment infrastructure was not added. Duplicate-ID detection uses O(n) hash memory; TinyDB still requires a single-process deployment and a separate retention strategy before production use.

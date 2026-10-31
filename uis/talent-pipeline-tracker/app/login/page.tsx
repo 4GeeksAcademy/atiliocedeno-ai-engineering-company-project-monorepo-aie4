@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, Suspense, useState } from "react";
-import { authRequest, saveAccessToken } from "../auth/session";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
+import { authRequest, saveAccessToken, apiRequest, getAccessToken, clearAccessToken, isUnauthorized, accountDestination, type Account } from "../auth/session";
 
 function LoginForm() {
   const router = useRouter();
@@ -13,14 +13,26 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (!getAccessToken()) return;
+    const controller = new AbortController();
+    apiRequest<Account>("/auth/me", {signal: controller.signal}).then(account => router.replace(accountDestination(account))).catch(error => {
+      if (controller.signal.aborted) return;
+      if (isUnauthorized(error)) clearAccessToken();
+    });
+    return () => controller.abort();
+  }, [router]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError("");
     try {
       const result = await authRequest<{ access_token: string }>("/auth/login", { email, password }, "");
       saveAccessToken(result.access_token);
-      router.push("/dashboard");
+      const account = await apiRequest<Account>("/auth/me", {token: result.access_token});
+      router.replace(accountDestination(account));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo iniciar sesión.");
     } finally {
@@ -36,7 +48,7 @@ function LoginForm() {
         <section className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1558c0] via-[#176bc9] to-[#13a994] p-12 text-white lg:flex">
           <div className="absolute -right-24 top-20 h-80 w-80 rounded-full border border-white/15" />
           <div className="absolute -right-8 top-36 h-52 w-52 rounded-full border border-white/15" />
-          <Link href="/index.html" className="relative inline-flex items-center gap-3 text-2xl font-extrabold tracking-tight">
+          <Link href="/" className="relative inline-flex items-center gap-3 text-2xl font-extrabold tracking-tight">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15 text-2xl">✚</span>
             <span>Health<span className="text-teal-200">Core</span></span>
           </Link>
@@ -50,7 +62,7 @@ function LoginForm() {
 
         <section className="flex items-center px-6 py-10 sm:px-12 lg:px-14">
           <div className="mx-auto w-full max-w-md">
-            <Link href="/index.html" className="mb-10 inline-flex items-center gap-2 text-xl font-extrabold tracking-tight text-[#2563EB] lg:hidden">
+            <Link href="/" className="mb-10 inline-flex items-center gap-2 text-xl font-extrabold tracking-tight text-[#2563EB] lg:hidden">
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-700">✚</span>
               <span>Health<span className="text-teal-500">Core</span></span>
             </Link>

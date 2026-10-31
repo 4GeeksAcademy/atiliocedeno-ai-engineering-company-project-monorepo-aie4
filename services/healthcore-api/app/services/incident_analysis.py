@@ -117,8 +117,8 @@ def _analyze_reader(source: TextIO) -> AnalysisResult:
             row = {key: value for key, value in raw.items() if key is not None}
             if None in raw or any(value is None for value in raw.values()):
                 row_rules.add("invalid_record_structure")
-            identifier = row.get("incident_id") or ""
-            if re.fullmatch(r"HC-\d{6}", identifier):
+            identifier = (row.get("incident_id") or "").strip()
+            if re.fullmatch(r"HC-[0-9]{6}", identifier):
                 digest = hashlib.sha256(identifier.encode("utf-8")).digest()
                 if digest in seen_ids:
                     row_rules.add("duplicate_incident_id")
@@ -153,7 +153,7 @@ def _analyze_reader(source: TextIO) -> AnalysisResult:
             categories[incident.category] += 1
             statuses[incident.status] += 1
             countries[incident.country] += 1
-            if incident.satisfaction_score is not None:
+            if incident.status == "CLOSED" and incident.satisfaction_score is not None:
                 satisfaction[incident.satisfaction_score] += 1
     except csv.Error as exc:
         raise ValueError("invalid_csv") from exc
@@ -166,10 +166,10 @@ def _analyze_reader(source: TextIO) -> AnalysisResult:
         total_records=total_records,
         valid_records=valid_records,
         invalid_records=invalid_records,
-        categories={key: categories[key] for key in INCIDENT_CATEGORIES if categories[key]},
-        statuses={key: statuses[key] for key in INCIDENT_STATUSES if statuses[key]},
-        countries={key: countries[key] for key in ("US", "UK") if countries[key]},
-        satisfaction_distribution={key: satisfaction[key] for key in range(1, 6) if satisfaction[key]},
+        categories={key: categories[key] for key in INCIDENT_CATEGORIES},
+        statuses={key: statuses[key] for key in INCIDENT_STATUSES},
+        countries={key: countries[key] for key in ("US", "UK")},
+        satisfaction_distribution={key: satisfaction[key] for key in range(1, 6)},
         closed_with_valid_satisfaction=sum(satisfaction.values()),
         average_satisfaction=average,
         invalid_breakdown=ValidationSummary(

@@ -18,23 +18,6 @@ def _authorize_profile_access(request_user_id: int, current_user) -> None:
         raise HTTPException(status_code=403, detail="Cannot access another user's profile")
 
 
-@router.post("/{user_id}", response_model=ProfileRead, status_code=status.HTTP_201_CREATED)
-def create_profile(
-    user_id: int,
-    payload: ProfileCreate,
-    current_user: AdminUser,
-    service: Annotated[UserService, Depends(get_user_service)],
-) -> ProfileRead:
-    del current_user
-    try:
-        profile = service.create_profile(user_id, payload)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return ProfileRead.model_validate(profile)
-
-
 @router.post("/me", response_model=ProfileRead, status_code=status.HTTP_201_CREATED)
 def create_my_profile(
     payload: ProfileCreate,
@@ -71,6 +54,23 @@ def update_my_profile(
     profile = service.update_profile(current_user.id, payload)
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
+    return ProfileRead.model_validate(profile)
+
+
+@router.post("/{user_id}", response_model=ProfileRead, status_code=status.HTTP_201_CREATED)
+def create_profile(
+    user_id: int,
+    payload: ProfileCreate,
+    current_user: AdminUser,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> ProfileRead:
+    del current_user
+    try:
+        profile = service.create_profile(user_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return ProfileRead.model_validate(profile)
 
 

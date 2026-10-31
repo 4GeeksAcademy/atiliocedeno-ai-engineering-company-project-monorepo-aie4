@@ -160,3 +160,47 @@ The requested static website and backoffice entry views are verified. Repository
 ## Final recommendation
 
 Update `progress.md` whenever branches, integration, or validations change. Update `projectbrief.md` only when the business or project purpose changes, and `techContext.md` only when the architecture, stack, or technical contracts change. Keep `CONTEXT.md` and `CONTEXT.es.md` synchronized.
+
+
+# Incident Analysis audit — 2026-10-31
+
+Scope: official briefing supplied by the user; existing engine, CLI, API and backoffice. No changes to main, prior tracker/domain models, public website, authentication code or environment files. The pre-existing pending merge remains intact. No commit, push, rebase or deployment.
+
+Baseline: 10 failed / 4 passed. Final: 59 Python tests and 5 frontend tests pass, 0 failed/skipped. Python compilation, JavaScript syntax, git diff checks, tracker typecheck/build and real-browser upload/render/export all pass. Mobile checked at 390px with no horizontal overflow. CLI and browser CSV downloads are byte-identical.
+
+Removed only root `render.yaml` (introduced in feature commit `224ee8d`, absent from origin/main), associated hosted URL defaults and deployment instructions. The historically mentioned service-level Render file did not exist.
+
+Pydantic v2 validators collect independent field and cross-field failures. Multipart validation and internal failures return sanitized codes. Tests verify owner isolation, account ID reuse protection, safe sentinels in responses/exports/logs/storage and 100,000 synthetic rows. Test accounts use temporary databases.
+
+| Métrica | Esperado | Real | Resultado |
+| --- | ---: | ---: | --- |
+| `total_records` | 100 | 100 | PASS |
+| `valid_records` | 94 | 94 | PASS |
+| `invalid_records` | 6 | 6 | PASS |
+| `categories.APPOINTMENT` | 30 | 30 | PASS |
+| `categories.BILLING` | 20 | 20 | PASS |
+| `categories.CLINICAL_CARE` | 14 | 14 | PASS |
+| `categories.ACCESSIBILITY` | 17 | 17 | PASS |
+| `categories.ADMINISTRATIVE` | 13 | 13 | PASS |
+| `statuses.OPEN` | 28 | 28 | PASS |
+| `statuses.CLOSED` | 52 | 52 | PASS |
+| `statuses.DISCARDED` | 14 | 14 | PASS |
+| `countries.US` | 61 | 61 | PASS |
+| `countries.UK` | 33 | 33 | PASS |
+| `invalid_breakdown.invalid_or_missing_clinic` | 1 | 1 | PASS |
+| `invalid_breakdown.country_clinic_mismatch` | 1 | 1 | PASS |
+| `invalid_breakdown.invalid_or_missing_category` | 1 | 1 | PASS |
+| `invalid_breakdown.invalid_description` | 1 | 1 | PASS |
+| `invalid_breakdown.invalid_or_missing_patient_id` | 1 | 1 | PASS |
+| `invalid_breakdown.closed_without_satisfaction_score` | 1 | 1 | PASS |
+| `satisfaction_distribution.1` | 3 | 3 | PASS |
+| `satisfaction_distribution.2` | 5 | 5 | PASS |
+| `satisfaction_distribution.3` | 12 | 12 | PASS |
+| `satisfaction_distribution.4` | 23 | 23 | PASS |
+| `satisfaction_distribution.5` | 9 | 9 | PASS |
+| `closed_with_valid_satisfaction` | 52 | 52 | PASS |
+| `average_satisfaction` | 3.58 | 3.58 | PASS |
+
+Observations: TinyDB single-process storage without aggregate TTL or deleted-account purge; multipart spooling occurs before the analysis limit; O(n) duplicate hash memory. The CSV was already tracked and its synthetic provenance remains unconfirmed; contents/hash unchanged and no new raw copy staged. A root relative symlink enables the required CLI command. Existing deprecation and workspace-root warnings remain. The desktop/mobile screenshots and aggregate-only exports are external review artifacts, not repository assets.
+
+Final status: **READY WITH OBSERVATIONS** for review; no claim of production or regulatory certification.

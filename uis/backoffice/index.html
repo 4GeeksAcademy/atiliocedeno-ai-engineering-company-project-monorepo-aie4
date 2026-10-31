@@ -75,13 +75,13 @@
 
           <section class="panel incident-panel" id="incident-analysis" aria-labelledby="incident-title">
             <div class="panel-heading"><div><p class="eyebrow">Clinical operations</p><h2 id="incident-title">Incident analysis</h2></div><span class="panel-status">Transient processing</span></div>
-            <p class="incident-intro">Upload a de-identified incident CSV to validate rows and review aggregate trends. Required columns: incident_id, incident_date, clinic, category, severity, status, description.</p>
+            <p class="incident-intro">Upload a de-identified incident CSV to validate rows and review aggregate trends. Required columns: incident_id, date, clinic_id, country, category, description, status, patient_id, satisfaction_score.</p>
             <form id="incident-upload-form" class="incident-form">
               <label for="api-token">HealthCore API access token</label>
               <input id="api-token" type="password" autocomplete="off" required aria-describedby="privacy-note" />
               <label for="incident-file">De-identified CSV file</label>
               <input id="incident-file" type="file" accept=".csv,text/csv" required />
-              <p id="privacy-note" class="privacy-note">Use synthetic or de-identified data only. Uploads are analyzed in memory and are not persisted. This prototype is not approved for real patient data.</p>
+              <p id="privacy-note" class="privacy-note">Use synthetic or de-identified data only. Raw uploads are discarded after analysis; only aggregate results are saved for your account. This prototype is not approved for real patient data.</p>
               <button class="button-primary" type="submit">Analyze incidents</button>
             </form>
             <div id="incident-results" class="incident-results" aria-live="polite"></div>
@@ -91,7 +91,7 @@
       </main>
     </div>
     <script>
-      window.HEALTHCORE_API_URL = window.HEALTHCORE_API_URL || "https://healthcore-api.onrender.com";
+      window.HEALTHCORE_API_URL = window.HEALTHCORE_API_URL || "http://localhost:8000";
     </script>
     <script src="/incidents.js" defer></script>
   </body>

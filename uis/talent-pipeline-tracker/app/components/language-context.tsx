@@ -12,17 +12,21 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function languageFromPath(pathname: string | null): AppLanguage {
-  return pathname === "/talents/en" || pathname?.startsWith("/talents/en/") ? "en" : "es";
+function languageFromPath(pathname: string | null): AppLanguage | null {
+  if (pathname === "/en" || pathname?.startsWith("/en/") || pathname?.startsWith("/talents/en")) return "en";
+  if (pathname === "/" || pathname === "/care-request" || pathname === "/talents") return "es";
+  return null;
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [language, setLanguage] = useState<AppLanguage>(() => languageFromPath(pathname));
+  const [language, setLanguage] = useState<AppLanguage>(() => languageFromPath(pathname) ?? "es");
 
   useEffect(() => {
-    setLanguage(languageFromPath(pathname));
+    setLanguage(languageFromPath(pathname) ?? (sessionStorage.getItem("healthcore_language") === "en" ? "en" : "es"));
   }, [pathname]);
+
+  useEffect(() => { document.documentElement.lang = language; sessionStorage.setItem("healthcore_language", language); }, [language]);
 
   const value = useMemo(() => ({ language, setLanguage }), [language]);
 
