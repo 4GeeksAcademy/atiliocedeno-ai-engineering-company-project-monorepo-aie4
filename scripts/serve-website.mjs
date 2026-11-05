@@ -68,8 +68,8 @@ const server = createServer(async (request, response) => {
   }
 });
 
-const port = Number(process.env.PORT || 4173);
+const port = Number(process.env.PORT || 4187);
 const host = process.env.HOST || "0.0.0.0";
 server.listen(port, host, () => {
-  console.log(`HealthCore HTML site: http://localhost:${port} (listening on ${host})`);
+  console.log(`HealthCore historical HTML (no authentication): http://localhost:${port} (listening on ${host})`);
 });

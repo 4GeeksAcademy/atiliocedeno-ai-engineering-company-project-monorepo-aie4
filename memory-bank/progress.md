@@ -148,3 +148,9 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - Corrected current references to deleted CONTEXT.es.md in projectbrief/techContext, the root script description and the inaccurate claim that root landing pages load validation.js.
 - HTTP checks confirmed active Next routes/redirects and retained static-server pages/assets. Static `/login` and `/talents` are unsupported and now documented.
 - Tests/typecheck/build not repeated: documentation-only changes. Cleanup proposal requires explicit approval; no phase-3 commit/push.
+
+
+## Principal frontend entry point correction
+
+- Root `serve:website` now starts Next.js locally on 4173; `serve:historical` preserves the independent HTML server on configurable port 4187. Root dev/build/start delegate to Next. No production navigation URL is hardcoded.
+- Browser verification: clicked Ingresar from the Spanish landing on 4173; Next login rendered at `/login`. Application READMEs explain commands and backend origin configuration; institutional root README and protected agent files untouched.

@@ -7,10 +7,10 @@ These are the retained static copies of the public bilingual HealthCore pages, k
 From the repository root:
 
 ```bash
-npm run serve:website
+npm run serve:historical
 ```
 
-Open <http://localhost:4173/> to review the retained static version. The Node.js server maps `/`, `/en`, `/care-request`, and `/en/care-request` to the Spanish/English landing and care-request pages. Historical `.html` page names and the local `style.css` and `validation.js` assets are also served. It only serves an explicit allowlist from this directory; it does not replace the Next.js public routes or deployment configuration. Set `PORT` to override the default port; `HOST` can select a different bind address.
+Open <http://localhost:4187/> to review the retained static version. The Node.js server maps `/`, `/en`, `/care-request`, and `/en/care-request` to the Spanish/English landing and care-request pages. Historical `.html` page names and the local `style.css` and `validation.js` assets are also served. It only serves an explicit allowlist from this directory; it does not replace the Next.js public routes or deployment configuration. Set `PORT` to override the default port; `HOST` can select a different bind address.
 
 The pages use Tailwind's browser CDN, so their utility styling requires network access. Form validation and clinic selection remain in the existing vanilla JavaScript; this static site does not submit to or persist data in the HealthCore API.
 
@@ -28,3 +28,5 @@ The standalone server does not implement `/login` or `/talents` (both return
 404). The retained landing pages include `/login`; use the Next.js portal for
 account functionality. These historical pages are not a complete replacement
 for Next.js. See the [content comparison and retention inventory](../../docs/FRONTEND_HISTORY_INVENTORY.md).
+
+For the principal Next.js frontend, use root `npm run serve:website` (local port 4173) or `npm run dev` (Next default). Next owns `/login`, `/`, `/en`, `/care-request` and `/en/care-request`. Production uses `npm run build` then `npm start`; links remain relative to its configured origin. The historical server is not an authentication gateway.

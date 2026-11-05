@@ -34,7 +34,7 @@ Run `npm run dev`; validate with `npm test`, `npm run typecheck`, `npm run build
 | `public/` | Retained historical HTML/CSS copies. Four legacy HTML URLs redirect to active Next routes; these copies are not the active page components. |
 | `../website/` | Independent academic HTML/CSS/JS deliverable, preserved. |
 | `../../scripts/serve-website.mjs` | Allowlisted static server for `uis/website/`, preserved. |
-| `../../package.json` | Exposes `serve:website` for that historical site, not the Next app. |
+| `../../package.json` | Exposes Next dev/build/start; `serve:website` starts Next locally on 4173, `serve:historical` starts the independent HTML server on 4187. |
 
 No historical files or lockfiles are removed. Next explicitly uses the monorepo
 root for Turbopack and output tracing; package installation and scripts remain
@@ -42,3 +42,9 @@ local to this app. Root landing HTML and the independent backoffice also remain.
 
 Se conservan los entregables académicos y el servidor estático. Las correcciones
 del frontend activo no se propagan automáticamente a esas versiones históricas.
+
+## Principal entry point
+
+From the repository root, `npm run serve:website` starts Next.js on local port 4173, including login and all bilingual public routes. `npm run dev` uses the Next default port. For production use root `npm run build` and `npm start`; no production origin or port is embedded in navigation links. `npm run serve:historical` is only for the academic HTML site (default 4187, configurable with PORT).
+
+When using local port 4173, configure the backend `HEALTHCORE_FRONTEND_URL` to the matching frontend origin for CORS and reset links. No local environment values are changed automatically. Root `npm run dev` retains the default 3000 workflow. The institutional root README retains historical commands; use this application README for the current command distinction.
