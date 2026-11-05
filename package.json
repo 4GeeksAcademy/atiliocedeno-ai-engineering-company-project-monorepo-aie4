@@ -1,5 +1,7 @@
 {
   "name": "atiliocedeno-ai-engineering-company-project-monorepo-aie4",
   "private": true,
-  "scripts": {}
+  "scripts": {
+    "serve:website": "node scripts/serve-website.mjs"
+  }
 }

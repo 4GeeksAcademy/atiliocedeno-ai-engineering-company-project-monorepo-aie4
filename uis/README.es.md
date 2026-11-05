@@ -1,15 +1,9 @@
-# Carpeta `uis`
+# Interfaces de usuario
 
-Esta carpeta contiene **todos los proyectos con interfaz de usuario** para el proyecto transversal de AI Engineering de la compañía — por ejemplo: un sitio web público, un frontend de panel de administración, una interfaz de ecommerce, portales para clientes, aplicaciones Streamlit/Gradio u otras herramientas sólo-frontend.
+Esta carpeta contiene aplicaciones distintas; sus HTML, rutas e historias no son intercambiables.
 
-Los dos proyectos principales que se almacenan aquí son:
+- [`website/`](./website/README.md) — sitio estático bilingüe de HealthCore conservado como referencia y compatibilidad. Las rutas públicas actuales están implementadas en la aplicación Next.js de `talent-pipeline-tracker/`; el comando raíz `npm run serve:website` sigue disponible para la copia estática.
+- [`backoffice/`](./backoffice/README.md) — cliente estático existente para análisis de incidentes con la API de HealthCore.
+- [`talent-pipeline-tracker/`](./talent-pipeline-tracker/) — aplicación Next.js con las rutas públicas de HealthCore y un módulo Talent Tracker separado. El servidor HTML estático sigue siendo independiente y no sustituye ni modifica estas rutas.
 
-- **`website`** — la presencia web pública de la compañía.
-- **`backoffice`** — la aplicación interna de administración. Es el lugar ideal para desarrollar múltiples soluciones dentro de un mismo proyecto: autenticación, gestión de personas, gestión de operaciones, comunicación interna y otras capacidades de back-office.
-
-Organiza `uis/` por **distintas áreas de la compañía** — cada subcarpeta agrupa un ámbito diferente (por ejemplo, web pública frente a operaciones internas) e incluye su propia documentación técnica y funcional.
-
-- **Propósito principal**: centralizar en un único lugar todas las aplicaciones frontend que dan soporte a los casos de uso de la compañía.
-- **Recomendación**: documenta en este archivo (o en sub-READMEs) las aplicaciones que vayas añadiendo, su objetivo, tecnología usada y cómo ejecutarlas.
-
-> _These instructions are also available in [English](./README.md)._
+El backend de HealthCore está documentado en [`../services/healthcore-api/README.md`](../services/healthcore-api/README.md). Consulta [el índice en inglés](./README.md) para el mismo resumen.

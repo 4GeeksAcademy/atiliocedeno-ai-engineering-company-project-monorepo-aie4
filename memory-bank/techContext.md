@@ -2,17 +2,34 @@
 
 > This document describes the architecture and technologies identified in the repository. The canonical business context for agents is [`CONTEXT.md`](../CONTEXT.md); [`CONTEXT.es.md`](../CONTEXT.es.md) is retained as the Spanish version/source.
 
+## Current verified implementation snapshot (2026-10-31)
+
+- `services/healthcore-api/`: FastAPI service with JWT authentication, TinyDB local persistence, account/profile/password flows, and authenticated incident-analysis aggregates/export. This is one local service, not a deployed or multi-service production architecture.
+- `uis/talent-pipeline-tracker/`: Next.js 16 App Router and React 19 application. It contains bilingual HealthCore landing/care-request routes, account/profile/dashboard functionality, and a distinct Talent Tracker module that uses the external 4Geeks practice API.
+- `uis/website/`: retained static bilingual public-site comparison/compatibility copy; no backend or persistence. The current `/`, `/en`, `/care-request`, and `/en/care-request` routes render the existing HealthCore React/TSX components in `uis/talent-pipeline-tracker/`. The root `npm run serve:website`, static source/assets, and Next `public/` legacy copies remain available; no cleanup is implied. Distinct root landing pages and shared assets remain as earlier milestone artifacts; identical root care-request form copies were removed with user approval.
+- `uis/backoffice/`: static internal UI that submits incident CSV to the authenticated HealthCore API; it does not persist the token in browser storage.
+- `scripts/incidents-healthcore.csv`: sole canonical tracked dataset path; the obsolete root symlink was removed after all in-repository consumers were confirmed to use this location. The dataset provenance is unconfirmed; do not print or redistribute its rows.
+- `packages/shared/` is not connected as a package workspace. No deployment manifest was found in the repository during the 2026-10-31 audit; this does not rule out external deployment contracts.
+
+The four permanent Next redirects preserve `/index.html`→`/`, `/index.en.html`→`/en`, `/aplication.html`→`/care-request`, and `/aplication.en.html`→`/en/care-request`. Retain them unless an explicit compatibility review approves a change.
+
+### Local configuration and security boundaries
+
+- Backend local configuration: `services/healthcore-api/.env`; frontend local configuration: `uis/talent-pipeline-tracker/.env.local`. `.env.example` files are templates only. Do not read or commit actual secrets; use Codespaces secret/environment settings or runtime environment variables for Codespaces.
+- `NEXT_PUBLIC_*` values are browser-visible and must not contain credentials. Resend is optional; without configured credentials and sender, email delivery is not available.
+- TinyDB is local, single-process persistence. Aggregate retention/purge, production deployment controls, and regulatory/security approval remain gaps. The application is not approved for real patient data.
+
 ## Previous frontend implementation: static Milestone 1
 
-- `index.html` / `index.en.html`: HealthCore corporate landing page (HTML5 + Tailwind CSS v4 via CDN `@tailwindcss/browser@4`).
-- `aplication.html` / `aplication.en.html`: medical care request form.
-- `style.css`: custom stylesheet complementing Tailwind.
-- `validation.js`: vanilla JavaScript form validation, with no external dependencies.
+- `index.html` / `index.en.html`: earlier HealthCore corporate landing pages (HTML5 + Tailwind CSS v4 via CDN `@tailwindcss/browser@4`), distinct from `uis/website` and retained at root.
+- The earlier root `aplication.html` / `aplication.en.html` copies were byte-identical to `uis/website` forms and were removed with explicit user approval. External/static hosting consumers were not verifiable from repository evidence.
+- Root `style.css` and `validation.js`: custom stylesheet and vanilla form validation shared by the retained root pages; byte-identical counterparts remain in `uis/website`.
+- `src/index_test.html` and `src/index_test.ts`: earlier domain-core manual panel and TypeScript source. The panel points to `../dist/index_test.js`; no matching build setup is tracked in the repository.
 - Original brief in [`promt.md`](../promt.md) ("MILESTONE 1 -- DELIVERY 27/06").
 
-## Identified frontend implementation
+## Previous frontend implementation: Talent Pipeline Tracker
 
-The repository contains a static Milestone 1 in the root and a previous Next.js-based Talent Pipeline Tracker implementation. The latter defines the technical structure described below, but its integration status is maintained in [`progress.md`](./progress.md).
+The repository contains a static Milestone 1 in the root and a previous Next.js-based Talent Pipeline Tracker implementation. The Next.js application now also contains the HealthCore portal and custom API integration described in the later dated section; the historical tracker-only description below should be read as prior state, not current architecture.
 
 ### Technology stack
 
@@ -41,7 +58,7 @@ uis/talent-pipeline-tracker/     # Previous talent management application
 │       ├── types.ts             # TalentRecord, TalentNote, TalentStatus, TalentStage
 │       ├── labels.ts            # ES/EN labels for status and stage
 │       └── pipeline.module.css
-├── public/                      # Static HealthCore landing page (HTML/CSS served by Next.js)
+├── public/                      # Legacy HTML copies; served by Next.js
 │   ├── index.html / index.en.html
 │   ├── aplication.html / aplication.en.html
 │   └── style.css
@@ -57,12 +74,12 @@ services/                        # Template README only; any backend must be loc
 uis/                              # Contains website/, backoffice/, and the preserved talent-pipeline-tracker/
 ```
 
-### Milestone 4 architecture
+### Milestone 4 architecture — historical target description
 
 According to the root `README.md` and `uis/README.md`, the project should evolve toward this structure:
 
 ```text
-/uis/website        # HealthCore public presence (currently: static Milestone 1 in the root)
+/uis/website        # Independent HealthCore public-site milestone (bilingual landing and care forms)
 /uis/backoffice     # Internal HealthCore Digital entry view
 /uis/talent-pipeline-tracker # Preserved previous milestone Next.js application
 /services           # Location for any HealthCore backend service (currently: none; an external practice API is used)
@@ -70,13 +87,13 @@ According to the root `README.md` and `uis/README.md`, the project should evolve
 
 These paths represent the responsibilities of Milestone 4. The implementation status of each is documented in `progress.md`; no component that does not exist in the repository is declared implemented here. The template README recommends a centralized FastAPI API for `services/`, but that technology should be adopted only if the milestone brief requires it.
 
-### Currently identified architecture
+### Previous tracker-only architecture (historical)
 
-- Monolithic Next.js frontend (without a custom backend service in the monorepo) that directly calls a **4Geeks external practice REST API**:
+- The tracker module directly calls a **4Geeks external practice REST API**:
   `NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1` (defined in `.env.example`).
 - The `talent-pipeline.tsx` component implements manual pagination over the `GET /records` endpoint (page size of 1,000 records per request, accumulating until a page is incomplete), with an in-memory cache (`recordsCache`) invalidated through an event (`invalidateRecordsCache`).
 - The corporate landing page (static HTML/CSS in `public/`) and React app (`app/talents/**`) coexist in the same Next.js project; the root `/` route simply redirects to the static landing page.
-- There is no database layer, authentication, or custom service: all persistence depends on the external API.
+- Those statements described the tracker before HealthCore API/account features were added; they do not describe the current repository as a whole.
 
 ### Agent and skill infrastructure
 

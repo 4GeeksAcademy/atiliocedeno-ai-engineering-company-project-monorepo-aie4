@@ -59,7 +59,7 @@ Crea `uis/talent-pipeline-tracker/.env.local` y añade las variables del fronten
 npm run dev
 ```
 
-Abre <http://localhost:3000>. La página inicial redirige a la landing de HealthCore (`/index.html`). El botón **“Ingresar”** está en el **footer**, junto a los iconos de redes sociales; en inglés aparece como **“Sign in”**. Ese botón lleva a `/login`. También se puede abrir directamente <http://localhost:3000/login>. El formulario permite registrarse desde el enlace “Regístrate”/“Sign up” y luego iniciar sesión.
+Abre <http://localhost:3000>. La landing de HealthCore en español se sirve en `/` y la versión inglesa en `/en`. El botón **“Ingresar”** (en inglés, **“Sign in”**) lleva a `/login`; también se puede abrir directamente <http://localhost:3000/login>. El formulario permite registrarse desde el enlace “Regístrate”/“Sign up” y luego iniciar sesión. Las rutas históricas `/index.html`, `/index.en.html`, `/aplication.html` y `/aplication.en.html` redirigen a sus rutas actuales.
 
 ### 3. Crear la cuenta administradora inicial
 
@@ -100,7 +100,7 @@ RESEND_FROM_EMAIL=
 | --- | --- | --- |
 | `HEALTHCORE_JWT_SECRET` | Sí | Secreto fuerte que firma los tokens. Genera uno localmente con `python -c 'import secrets; print(secrets.token_urlsafe(48))'` y pega el resultado como valor. No publiques ni reutilices el valor del ejemplo. El backend también admite `SECRET_KEY` como alternativa heredada, pero si ambas están definidas prevalece `HEALTHCORE_JWT_SECRET`. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | No | Duración del token de acceso; por defecto, 30 minutos. También se reconoce `HEALTHCORE_ACCESS_TOKEN_MINUTES` como nombre alternativo heredado. |
-| `HEALTHCORE_FRONTEND_URL` | No en desarrollo local | Origen del frontend, sin ruta final; por defecto `http://localhost:3000`. Se usa para CORS y para construir enlaces de restablecimiento de contraseña. En otro host, reemplázalo por el origen real del frontend. |
+| `HEALTHCORE_FRONTEND_URL` | No en desarrollo local | Único origen del frontend, sin ruta final; por defecto `http://localhost:3000`. Se usa tanto para el permiso CORS como para construir enlaces de restablecimiento de contraseña. Un proceso API admite solo este origen en CORS: configura `http://localhost:4174` para el backoffice o `http://localhost:3000` para el portal. Para servir ambos simultáneamente desde otro origen se necesita un cambio explícito a una lista de orígenes segura; no uses `*`, especialmente al considerar credenciales. |
 | `RESEND_API_KEY` | No | Clave privada de Resend. Necesaria para enviar emails de notificación y recuperación de contraseña. |
 | `RESEND_FROM_EMAIL` | No | Dirección remitente verificada en Resend. Configúrala junto con la clave anterior. Si falta cualquiera de las dos, el envío se omite. |
 | `HEALTHCORE_BOOTSTRAP_ADMIN_EMAIL` | No | Correo para crear automáticamente el primer admin al arrancar la API. Se recomienda usar `scripts.manage_admin` en vez de almacenar credenciales en el `.env`. |
@@ -164,13 +164,13 @@ El servicio real está en `services/healthcore-api` (no `services/api`). Se reut
 Desde la raíz con el entorno Python activo:
 
 ```bash
-python scripts/analyze.py incidents-healthcore.csv
+python scripts/analyze.py scripts/incidents-healthcore.csv
 python scripts/analyze.py scripts/incidents-healthcore.csv --no-prompt
 python scripts/analyze.py /ruta/a/archivo.csv --export /ruta/nueva/results.csv
-python scripts/analyze.py incidents-healthcore.csv --json --no-prompt
+python scripts/analyze.py scripts/incidents-healthcore.csv --json --no-prompt
 ```
 
-El dataset original ya estaba versionado bajo `scripts/`; no existía en la raíz. Se añadió un enlace simbólico relativo `incidents-healthcore.csv -> scripts/incidents-healthcore.csv`, sin cambiar ni duplicar contenido. No se confirmó que el dataset fuera sintético: no redistribuir su contenido ni añadir nuevas copias a Git.
+El dataset versionado tiene una única ubicación canónica: `scripts/incidents-healthcore.csv`. No se confirmó su procedencia sintética: no redistribuir su contenido ni crear copias adicionales en Git.
 
 La CLI acepta cualquier ruta. En una terminal interactiva pregunta `¿Deseas exportar los resultados a CSV? [s / n]`; `s` crea `results.csv`. Sin terminal, con `--no-prompt`, `--json` o `--export`, no bloquea esperando entrada. La exportación no sobrescribe archivos existentes. Código 0: análisis completado, aunque incluya registros inválidos; código 2: error operativo. `--max-bytes` permite ajustar el límite de 25.000.000 bytes para procesamiento local de históricos.
 
@@ -194,20 +194,22 @@ HEALTHCORE_FRONTEND_URL=http://localhost:4174 uvicorn app.main:app --reload
 python3 -m http.server 4174 --bind 127.0.0.1 --directory uis/backoffice
 ```
 
-Abrir `http://localhost:4174/#incident-analysis`, introducir un token obtenido mediante `/auth/login`, seleccionar CSV y analizar. El token permanece en el formulario y no se guarda en web storage. La URL por defecto es `http://localhost:8000`; `window.HEALTHCORE_API_URL` permite cambiarla. CORS conserva el único origen configurable existente: usa 3000 para el portal o 4174 para el backoffice. No se modificaron archivos `.env`.
+Abrir `http://localhost:4174/#incident-analysis`, introducir un token obtenido mediante `/auth/login`, seleccionar CSV y analizar. El token permanece en el formulario y no se guarda en web storage. La URL por defecto es `http://localhost:8000`; `window.HEALTHCORE_API_URL` permite cambiarla. CORS conserva el único origen configurable existente: usa 3000 para el portal o 4174 para el backoffice; no pueden funcionar ambos orígenes simultáneamente con el middleware actual. No se modificaron archivos `.env`.
 
 ### Pruebas y resultados
 
 ```bash
-python -m pip install -r services/healthcore-api/requirements-dev.txt
-python -m pytest services/healthcore-api/tests -q
-python -m compileall -q services/healthcore-api/app scripts/analyze.py
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q
+python -m compileall -q app ../../scripts/analyze.py
 npm --prefix uis/backoffice ci
 npm --prefix uis/backoffice test
 npm --prefix uis/backoffice run check
 ```
 
-Verificados: 59 tests Python y 5 frontend, sin fallos ni omitidos; 100.000 filas sintéticas. La muestra produce 100/94/6, categorías 30/20/14/17/13, estados 28/52/14, países 61/33, scores 3/5/12/23/9, 52 cerrados puntuados y media 3.58. Descarga real desde navegador idéntica byte por byte a la exportación CLI. Tracker: typecheck y build correctos.
+**Resultados históricos de la entrega de análisis:** 59 tests Python y 5 frontend pasaron entonces; también pasó un caso de 100.000 filas sintéticas y la descarga verificada coincidió byte por byte con la exportación CLI. Los agregados de aceptación fueron 100/94/6, categorías 30/20/14/17/13, estados 28/52/14, países 61/33, satisfacción 3/5/12/23/9, 52 casos cerrados puntuados y media 3.58. Estas cifras son un registro histórico, no una ejecución actual.
+
+**Último registro de validación del monorepo (2026-10-31; debe repetirse tras cambios):** 76 pruebas backend pasaron con dos avisos deprecados; las 5 pruebas del backoffice y su chequeo de sintaxis pasaron. El typecheck y build de Next pasaron (18 rutas, con aviso de múltiples lockfiles). Las 5 pruebas Node del tracker no llegaron a ejecutar sus casos: el harness espera `typescript.ModuleKind.CommonJS` y `transpileModule`, APIs ausentes en la versión instalada 7.0.2. El estado detallado y las limitaciones están en [`memory-bank/progress.md`](../../memory-bank/progress.md); no reportes las pruebas del tracker como aprobadas.
 
 ### Privacidad y límites
 

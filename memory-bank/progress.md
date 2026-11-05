@@ -1,5 +1,26 @@
 # Progress
 
+> **Current verified snapshot — 2026-11-02:** Older milestone and validation entries below are historical unless explicitly identified as rerun in this snapshot.
+
+## Current repository and HealthCore status (2026-11-02)
+
+- HealthCore public-site consolidation follow-up: the four existing Next routes (`/`, `/en`, `/care-request`, `/en/care-request`) are the current route implementation; retained static HTML in `uis/website/` and the root `npm run serve:website` are compatibility/comparison copies, not deleted. The four historical `.html` redirects remain. Navigation is aligned with the static landing reference; English document language is synchronized from the pathname after hydration. Browser visual/responsive equivalence is not claimed where no browser run is available.
+
+- Branch: `feature/healthcore-incidents-analysis`; starting baseline was `3f750ea`. The working tree contains pre-existing normalization edits plus follow-up corrections; no commit, push, merge, rebase, or deployment was performed.
+- Compatibility alias `incidents-healthcore.csv` has been restored as a relative symlink to the sole canonical dataset `scripts/incidents-healthcore.csv`. Both legacy and canonical analyzer CLI paths were rerun successfully with identical aggregate JSON. Dataset SHA-256 remains `b13555a640f986cd7e1435e3f96f517406e08595753058a4fb16df731d504740`; no rows were printed.
+- Freshly rerun: backoffice 5/5 tests and `node --check incidents.js`; tracker 5/5 tests, `tsc --noEmit`, and Next production build (18 routes). Build still warns about multiple lockfiles/workspace root. The tracker test harness now uses Next's installed SWC transform; this avoids new dependencies but couples the test to a Next internal module.
+- Backend pytest could not be rerun: the selected `.venv` interpreter has no `pytest` module. The 76-pass result below is the 2026-10-31 historical run, not current verification. No package was installed during this follow-up.
+- Root Spanish/English landing CTAs target the matching forms under `uis/website`; those target files exist, and this is the intended route when serving the repository root as document root. Browser click/submission behavior and standalone-host behavior were not browser-tested. No browser automation/runtime was available.
+- `src/index_test.html` points to `../dist/index_test.js`, but that output is absent and no panel build configuration was found. The panel remains not runnable from this checkout alone and its browser runtime is unverified.
+- Documentation now explains that one API process allows only the configured `HEALTHCORE_FRONTEND_URL` origin; no CORS middleware behavior was changed. TinyDB is local and single-process; dataset provenance remains unconfirmed; retention/purge and production/regulatory review are outstanding. Do not use with real patient data.
+- `git diff --check` passed. The protected `CONTEXT.md` and `AGENTS.md` were not edited. See `AUDIT.md` for the dated follow-up and historical distinctions.
+
+### Prior validation evidence (historical — 2026-10-31)
+
+Backend **76 passed** with two FastAPI deprecation warnings; backoffice **5 passed** and syntax check passed; Next typecheck and production build passed (18 routes, with multiple-lockfile warning). At that point tracker Node tests failed 5/5 at harness setup due to removed TypeScript 7 APIs; that harness was corrected and rerun successfully on 2026-11-02. Earlier public route checks are not evidence of current browser interactions.
+
+The current API/service details and limitations are in [`techContext.md`](./techContext.md) and [`services/healthcore-api/README.md`](../services/healthcore-api/README.md).
+
 ## Current milestone: AI-driven Engineering
 
 The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT.md). [`CONTEXT.es.md`](../CONTEXT.es.md) is retained as the Spanish version/source and must remain synchronized.
@@ -103,7 +124,7 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - Branch: `feature/healthcore-incidents-analysis`, HEAD `224ee8d`. The already-prepared merge of `origin/main` (`666e17a`) remains pending and untouched; no new merge, commit, push, rebase or deployment was performed.
 - Baseline: 10 failing and 4 passing historical tests, due to the old prototype API/CLI/test contract. Corrected consumers and expanded validation rather than replacing the existing engine.
 - Source briefing was supplied directly by the user because the documented file path was absent. The explicit 100-record acceptance table governs over the introductory 1,000-row statement.
-- Dataset already existed at `scripts/incidents-healthcore.csv`; its SHA-256 remains `b13555a640f986cd7e1435e3f96f517406e08595753058a4fb16df731d504740`. A root relative symlink enables the required command without copying rows. Synthetic provenance has not been confirmed; no raw dataset changes were staged.
+- At the time of the original incident-analysis delivery, a root relative symlink enabled a compatibility command without copying rows. It was removed in the 2026-10-31 structural follow-up above. Dataset `scripts/incidents-healthcore.csv` retains SHA-256 `b13555a640f986cd7e1435e3f96f517406e08595753058a4fb16df731d504740`; synthetic provenance has not been confirmed, and no raw dataset changes were staged.
 - Acceptance: 100 total / 94 valid / 6 invalid; categories 30/20/14/17/13; states 28/52/14; countries 61/33; satisfaction distribution 3/5/12/23/9, 52 scored closed cases, average 3.58. All required invalid-reason counts equal 1.
 - QA: 59 Python tests passed, 5 frontend tests passed, zero failed/skipped. Python compilation and JS syntax checks passed. A 100,000-row synthetic streaming case passed. Tests cover independent simultaneous errors, privacy sentinels, export parity, missing uploads, internal errors and user/account-incarnation isolation.
 - Real browser verification passed: local JWT upload, rendering, invalid warning, navigation and GET download. The download matches CLI CSV byte for byte. 390px viewport has no horizontal overflow. Screenshots were saved outside the repository as review evidence.

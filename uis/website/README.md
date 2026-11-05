@@ -1,39 +1,23 @@
-# HealthCore Website
+# HealthCore public HTML website
 
-The public website is served independently from `uis/backoffice` and does not expose a `/backoffice` route.
+These are the retained static copies of the public bilingual HealthCore pages, kept as a comparison/evaluation source and for compatibility. The current public routes are implemented by the existing components in `uis/talent-pipeline-tracker/`; this static copy is independent, has no backend or patient-data persistence, and remains runnable without replacing the Next.js app.
 
-Public-facing HealthCore website for Milestone 4. This application intentionally keeps the previous Milestone 1 static experience separate from internal backoffice tools and services.
+## Pages and local server
 
-## Stack
-
-- Semantic HTML5
-- Tailwind CSS v4 via the browser CDN
-- Vanilla JavaScript for care-request form validation and clinic selection
-- No backend API or patient-data persistence is implemented here
-
-## Routes
-
-- `index.html` — Spanish public landing page
-- `index.en.html` — English public landing page
-- `aplication.html` — Spanish care-request form
-- `aplication.en.html` — English care-request form
-
-When served from this application, `index.html` is the public `/` entry point.
-
-## Run locally
-
-From the repository root, run a static server with any available local tool, for example:
+From the repository root:
 
 ```bash
-python3 -m http.server 4173 --directory uis/website
+npm run serve:website
 ```
 
-Then open <http://localhost:4173/>. The website uses Tailwind's browser CDN, so an internet connection is required for the utility classes to load during local development.
+Open <http://localhost:4173/> to review the retained static version. The Node.js server maps `/`, `/en`, `/care-request`, and `/en/care-request` to the Spanish/English landing and care-request pages. Historical `.html` page names and the local `style.css` and `validation.js` assets are also served. It only serves an explicit allowlist from this directory; it does not replace the Next.js public routes or deployment configuration. Set `PORT` to override the default port; `HOST` can select a different bind address.
 
-## Validation
+The pages use Tailwind's browser CDN, so their utility styling requires network access. Form validation and clinic selection remain in the existing vanilla JavaScript; this static site does not submit to or persist data in the HealthCore API.
 
-The application is a static HTML/JavaScript site and does not currently define package-local `build`, `typecheck`, `lint`, or test scripts. Validate it by serving `uis/website`, opening `/`, checking the language and care-form links, and reviewing the browser console for errors.
+## Existing files
 
-## Content and boundaries
+- `index.html`, `index.en.html` — Spanish and English landing pages.
+- `aplication.html`, `aplication.en.html` — Spanish and English care-request forms.
+- `style.css`, `validation.js` — shared styles and existing form behavior.
 
-Business content is based on `CONTEXT.md`. The migrated landing content preserves the existing HealthCore identity, bilingual routes, clinic coverage, HIPAA/UK GDPR messaging, department cards, company metrics, and care-request flow. Do not add internal operational data or protected patient information to this public application.
+Business content follows the protected repository context. Do not add internal operational data or protected patient information to this public site.

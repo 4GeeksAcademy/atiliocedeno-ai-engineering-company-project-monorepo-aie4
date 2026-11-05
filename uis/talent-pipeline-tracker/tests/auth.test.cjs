@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const ts=require('typescript'),{JSDOM}=require('jsdom');
+const swc=require('next/dist/build/swc'),{JSDOM}=require('jsdom');
 function load(file, globals={}, mocks={}){
- const source=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const source=swc.transformSync(fs.readFileSync(file,'utf8'),{filename:file,jsc:{target:'es2020',parser:{syntax:'typescript',tsx:file.endsWith('.tsx')},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}}).code;
  const module={exports:{}};
  vm.runInNewContext(source,{module,exports:module.exports,require:name=>mocks[name]??require(name),console,AbortController,...globals},{filename:file});return module.exports;
 }

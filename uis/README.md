@@ -1,15 +1,9 @@
-# `uis` folder
+# User interfaces
 
-This folder contains **all projects with a user interface** for the cross-functional AI Engineering company project — for example: a public website, admin dashboard frontend, ecommerce UI, customer portals, Streamlit/Gradio app or other frontend-only tools.
+This folder contains separate applications; their HTML, routes, and histories are not interchangeable.
 
-The two main projects stored here are:
+- [`website/`](./website/README.md) — retained static bilingual HealthCore site and compatibility/evaluation source. The current public routes are implemented in the existing Next.js app under `talent-pipeline-tracker/`; the root `npm run serve:website` remains available for the static copy.
+- [`backoffice/`](./backoffice/README.md) — existing static incident-analysis client for the HealthCore API.
+- [`talent-pipeline-tracker/`](./talent-pipeline-tracker/) — Next.js app with HealthCore public routes and a separate Talent Tracker module. The static HTML server remains independent and does not replace or alter these routes.
 
-- **`website`** — the company's public-facing web presence.
-- **`backoffice`** — the internal admin application. This is the ideal place to develop multiple solutions within a single project: authentication, people management, operations management, internal communication, and other back-office capabilities.
-
-Organize `uis/` by **different concerns** — each subfolder covers a distinct area of the company (for example, public web vs internal operations) and includes its own technical and functional documentation.
-
-- **Main purpose**: to centralize in a single place all frontend applications that support the company's use cases.
-- **Recommendation**: document in this file (or in sub-READMEs) the applications you add, their objective, the technology used, and how to run them.
-
-> _Estas instrucciones también están disponibles en [español](./README.es.md)._
+The HealthCore backend is documented in [`../services/healthcore-api/README.md`](../services/healthcore-api/README.md). See [the Spanish index](./README.es.md) for the same overview.
