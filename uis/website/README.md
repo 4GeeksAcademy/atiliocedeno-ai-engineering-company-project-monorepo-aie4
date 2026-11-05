@@ -21,3 +21,10 @@ The pages use Tailwind's browser CDN, so their utility styling requires network 
 - `style.css`, `validation.js` — shared styles and existing form behavior.
 
 Business content follows the protected repository context. Do not add internal operational data or protected patient information to this public site.
+
+## Compatibility boundary
+
+The standalone server does not implement `/login` or `/talents` (both return
+404). The retained landing pages include `/login`; use the Next.js portal for
+account functionality. These historical pages are not a complete replacement
+for Next.js. See the [content comparison and retention inventory](../../docs/FRONTEND_HISTORY_INVENTORY.md).

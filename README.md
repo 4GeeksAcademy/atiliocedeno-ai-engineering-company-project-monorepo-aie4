@@ -20,6 +20,8 @@ The static website and the Next.js portal are distinct implementations with diff
 
 See [`docs/ARCHITECTURE_PROPOSAL.md`](./docs/ARCHITECTURE_PROPOSAL.md) for a proposal that is explicitly separate from the architecture currently implemented.
 
+See the [historical frontend inventory](./docs/FRONTEND_HISTORY_INVENTORY.md) for exact duplicates, active consumers and proposed cleanup requiring approval.
+
 ## Local development
 
 ### HealthCore API

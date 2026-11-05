@@ -1,6 +1,6 @@
 # Tech Context
 
-> This document describes the architecture and technologies identified in the repository. The canonical business context for agents is [`CONTEXT.md`](../CONTEXT.md); [`CONTEXT.es.md`](../CONTEXT.es.md) is retained as the Spanish version/source.
+> This document describes the architecture and technologies identified in the repository. The canonical business context for agents is [`CONTEXT.md`](../CONTEXT.md).
 
 ## Current verified implementation snapshot (2026-10-31)
 
@@ -23,7 +23,7 @@ The four permanent Next redirects preserve `/index.html`→`/`, `/index.en.html`
 
 - `index.html` / `index.en.html`: earlier HealthCore corporate landing pages (HTML5 + Tailwind CSS v4 via CDN `@tailwindcss/browser@4`), distinct from `uis/website` and retained at root.
 - The earlier root `aplication.html` / `aplication.en.html` copies were byte-identical to `uis/website` forms and were removed with explicit user approval. External/static hosting consumers were not verifiable from repository evidence.
-- Root `style.css` and `validation.js`: custom stylesheet and vanilla form validation shared by the retained root pages; byte-identical counterparts remain in `uis/website`.
+- Root `style.css` is used by the root landing pages. Root `validation.js` has no current executable consumer found in the repository; both have byte-identical counterparts in `uis/website`. Historical/externally hosted consumers still require an owner decision before removal.
 - `src/index_test.html` and `src/index_test.ts`: earlier domain-core manual panel and TypeScript source. The panel points to `../dist/index_test.js`; no matching build setup is tracked in the repository.
 - Original brief in [`promt.md`](../promt.md) ("MILESTONE 1 -- DELIVERY 27/06").
 
@@ -113,7 +113,7 @@ These paths represent the responsibilities of Milestone 4. The implementation st
 
 ### Development, build, lint, test, and validation scripts
 
-- Monorepo root (`package.json`) currently has no application scripts. This is intentional because `/uis/website` and `/uis/backoffice` are static applications without package-level build or TypeScript tooling.
+- Monorepo root (`package.json`) exposes `serve:website` for the retained static website. Next build/typecheck/test scripts remain package-local.
 - The previous Talent Pipeline Tracker has package-local scripts and remains independently runnable; root scripts do not delegate to it.
 - In the previous Talent Pipeline Tracker package:
   - `dev`: `next dev`

@@ -139,3 +139,12 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - Missing/blank Tracker API configuration fails before requests, with localized errors. Existing methods, payloads and endpoint paths are preserved; no external API operations performed.
 - Active/historical ownership and local API configuration documented in the frontend README. Historical HTML/static server remain intact. Care JSON-LD URLs now refer to the active routes.
 - Validation: 10 frontend tests passed, typecheck/build passed, four public routes returned 200 with ES/EN HTML languages, four historical URLs returned 308 to canonical routes. Backend unchanged; its suite was not rerun in this frontend-only phase.
+
+
+## Historical frontend inventory — 2026-11-05 (phase 3, uncommitted)
+
+- Published existing phase-2 commit `9c9f121c330ec5ae6787d85b3075ae8b322c9ec9`; GitHub branch and local HEAD match. No merge to main.
+- Inventory and byte comparisons recorded in `docs/FRONTEND_HISTORY_INVENTORY.md`. Only documentation changed; no historical files removed/moved, no functional code or protected data changed.
+- Corrected current references to deleted CONTEXT.es.md in projectbrief/techContext, the root script description and the inaccurate claim that root landing pages load validation.js.
+- HTTP checks confirmed active Next routes/redirects and retained static-server pages/assets. Static `/login` and `/talents` are unsupported and now documented.
+- Tests/typecheck/build not repeated: documentation-only changes. Cleanup proposal requires explicit approval; no phase-3 commit/push.
