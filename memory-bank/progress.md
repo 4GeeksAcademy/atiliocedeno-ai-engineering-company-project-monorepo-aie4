@@ -130,3 +130,12 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 - Real browser verification passed: local JWT upload, rendering, invalid warning, navigation and GET download. The download matches CLI CSV byte for byte. 390px viewport has no horizontal overflow. Screenshots were saved outside the repository as review evidence.
 - Prior functionality: auth/profile/reset regression test passed; Talent Pipeline Tracker typecheck and production build passed. Previous domain models, public website, tracker source, environment files and root lockfiles remain unchanged.
 - Limitations: TinyDB single-process persistence without aggregate TTL/purge; multipart may spool uploads temporarily before the analysis size check; duplicate detection uses O(n) hash memory. Existing FastAPI/TestClient deprecations and Next.js workspace-root warnings remain. No regulatory certification or production readiness claim.
+
+## Frontend consolidation — 2026-11-05 (pending review, no commit)
+
+- Started from clean `24c5306`, synchronized with the feature branch on origin.
+- LanguageProvider is the sole client document-language owner; removed the competing DocumentLanguage component. Nested Spanish Tracker routes now select Spanish explicitly.
+- Next Turbopack and output tracing use the explicit monorepo root; build and start no longer emit workspace-root/lockfile warnings. No lockfiles or dependencies changed.
+- Missing/blank Tracker API configuration fails before requests, with localized errors. Existing methods, payloads and endpoint paths are preserved; no external API operations performed.
+- Active/historical ownership and local API configuration documented in the frontend README. Historical HTML/static server remain intact. Care JSON-LD URLs now refer to the active routes.
+- Validation: 10 frontend tests passed, typecheck/build passed, four public routes returned 200 with ES/EN HTML languages, four historical URLs returned 308 to canonical routes. Backend unchanged; its suite was not rerun in this frontend-only phase.

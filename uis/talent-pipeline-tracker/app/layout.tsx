@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import Script from "next/script";
 import { headers } from "next/headers";
 import { LanguageProvider } from "./components/language-context";
-import { DocumentLanguage } from "./document-language";
 
 export const metadata: Metadata = {
   title: "HealthCore Digital",
@@ -19,7 +18,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <head>
         <Script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4" strategy="beforeInteractive" />
       </head>
-      <body><DocumentLanguage /><LanguageProvider>{children}</LanguageProvider></body>
+      <body><LanguageProvider>{children}</LanguageProvider></body>
     </html>
   );
 }

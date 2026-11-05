@@ -5,12 +5,13 @@ export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   requestHeaders.set(
     "x-healthcore-language",
-    pathname === "/en" || pathname === "/en/care-request" ? "en" : "es",
+    pathname === "/en" || pathname === "/en/care-request" ||
+      pathname === "/talents/en" || pathname.startsWith("/talents/en/") ? "en" : "es",
   );
 
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
-  matcher: ["/", "/care-request", "/en", "/en/care-request"],
+  matcher: ["/", "/care-request", "/en", "/en/care-request", "/talents/:path*"],
 };
