@@ -60,3 +60,20 @@ test('password cancellation has explicit destinations and never submits',async()
  for(const value of ['', 'partial']){document.querySelector('#current-password').value=value;for(const link of document.querySelectorAll('a')){assert.equal(link.getAttribute('href'),'/dashboard');await act(async()=>link.click());}}
  assert.equal(passwordCalls,0);await act(async()=>root.unmount());dom.window.close();
 });
+test('password verification failure can retry without enabling unverified changes',async()=>{
+ const React=require('react'),{createRoot}=require('react-dom/client'),{act}=React;
+ const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'});
+ Object.assign(global,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true});
+ let attempts=0,passwordCalls=0,resolveVerification;const router={replace:()=>assert.fail('must retain session')};
+ const Page=load('app/account/change-password/page.tsx',{}, {'react':React,'next/link':({children,href})=>React.createElement('a',{href},children),'next/navigation':{useRouter:()=>router},'../../auth/session':{getAccessToken:()=> 'synthetic',apiRequest:async()=>{if(++attempts===1)throw Error('No se pudo conectar.');return new Promise(resolve=>resolveVerification=resolve);},authRequest:async()=>{passwordCalls++;},isUnauthorized:()=>false,clearAccessToken:()=>assert.fail('must retain token')}}).default;
+ const root=createRoot(document.querySelector('#root'));await act(async()=>root.render(React.createElement(Page)));
+ const submit=()=>document.querySelector('button:not([type="button"])');
+ assert.equal(submit().disabled,true);assert.match(document.querySelector('[role=alert]').textContent,/No se pudo/);
+ assert.equal(document.querySelector('[role=status]'),null);
+ await act(async()=>document.querySelector('form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})));
+ assert.equal(passwordCalls,0);
+ await act(async()=>document.querySelector('button[type=button]').click());
+ assert.equal(submit().disabled,true);assert.match(document.querySelector('[role=status]').textContent,/Verificando/);
+ await act(async()=>resolveVerification({}));assert.equal(submit().disabled,false);assert.equal(attempts,2);
+ await act(async()=>root.unmount());dom.window.close();
+});

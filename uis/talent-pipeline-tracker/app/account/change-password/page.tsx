@@ -15,20 +15,25 @@ export default function ChangePasswordPage() {
   const [busy, setBusy] = useState(false);
 
   const [checking, setChecking] = useState(true);
+  const [verified, setVerified] = useState(false);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
+    setChecking(true);
+    setVerified(false);
+    setError("");
     if (!getAccessToken()) { router.replace("/login"); return; }
-    apiRequest("/auth/me", {signal:controller.signal}).then(() => setChecking(false)).catch(cause => {
+    apiRequest("/auth/me", {signal:controller.signal}).then(() => { if (!controller.signal.aborted) setVerified(true); }).catch(cause => {
       if (controller.signal.aborted) return;
       if (isUnauthorized(cause)) { clearAccessToken(); router.replace("/login"); }
       else { setError(cause instanceof Error ? cause.message : "No se pudo verificar la sesión."); }
-    });
+    }).finally(() => { if (!controller.signal.aborted) setChecking(false); });
     return () => controller.abort();
-  }, [router]);
+  }, [router, verificationAttempt]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || checking) return;
+    if (busy || checking || !verified) return;
     setMessage("");
     setError("");
     if (newPassword !== confirm) {
@@ -62,6 +67,7 @@ export default function ChangePasswordPage() {
     <main className="mx-auto max-w-lg px-6 py-16">
       <h1 className="mb-3 text-3xl font-bold text-slate-900">Cambiar contraseña</h1>
       {checking && <p role="status">Verificando sesión…</p>}
+      {!checking && !verified && <button type="button" onClick={() => setVerificationAttempt(attempt => attempt + 1)} className="text-blue-700 underline">Reintentar verificación</button>}
       <form onSubmit={handleSubmit} className="grid gap-4">
         <label className="grid gap-1 font-medium" htmlFor="current-password">Contraseña actual
           <input id="current-password" type="password" autoComplete="current-password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="rounded-lg border border-slate-300 px-3 py-2" />
@@ -74,7 +80,7 @@ export default function ChangePasswordPage() {
         </label>
         {error && <p role="alert" className="text-red-700">{error}</p>}
         {message && <p role="status" className="text-green-700">{message}</p>}
-        <button disabled={busy || checking} className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60">{busy ? "Guardando…" : "Cambiar contraseña"}</button>
+        <button disabled={busy || checking || !verified} className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60">{busy ? "Guardando…" : "Cambiar contraseña"}</button>
       <Link href="/dashboard" className="text-blue-700 underline">Cancelar</Link>
       </form>
       <Link className="mt-6 inline-block text-blue-700 underline" href="/dashboard">Volver al panel</Link>

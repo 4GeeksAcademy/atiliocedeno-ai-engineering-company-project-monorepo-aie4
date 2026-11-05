@@ -2,7 +2,7 @@
 
 > English documentation. See [README.es.md](./README.es.md) for Spanish.
 
-This repository contains HealthCore's milestone-based AI Engineering work. It is not an unconfigured starter template. The business context is maintained in the protected [`CONTEXT.md`](./CONTEXT.md); its Spanish counterpart is [`CONTEXT.es.md`](./CONTEXT.es.md).
+This repository contains HealthCore's milestone-based AI Engineering work. It is not an unconfigured starter template. The business context is maintained in the protected [`CONTEXT.md`](./CONTEXT.md).
 
 ## Applications and services
 

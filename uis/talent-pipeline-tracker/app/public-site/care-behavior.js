@@ -26,8 +26,9 @@ export function initializeCareForm(root, language) {
   const clinicSelect = document.getElementById("clinic");
 
   if (countrySelect && clinicSelect) {
-    listen(countrySelect, "change", function() {
-      const country = this.value;
+    function syncClinics() {
+      const country = countrySelect.value;
+      const previousClinic = clinicSelect.value;
       const options = clinicData[country] || [];
 
       clinicSelect.innerHTML = "";
@@ -55,10 +56,12 @@ export function initializeCareForm(root, language) {
         noOpt.textContent = language === "en" ? "Select a country first" : "Seleccione un país primero";
         clinicSelect.appendChild(noOpt);
       }
-    });
+      if (options.some(option => option.value === previousClinic)) clinicSelect.value = previousClinic;
+    }
+    syncClinics();
+    listen(countrySelect, "change", syncClinics);
   }
 
- 
 
   /* ============================================================== */
   /* CONFIGURACIÓN                                                   */
@@ -246,10 +249,21 @@ export function initializeCareForm(root, language) {
     }
   }
 
+  function associateError(input, errorId, invalid) {
+    const ids = new Set((input.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean));
+    if (invalid) ids.add(errorId); else ids.delete(errorId);
+    if (ids.size) input.setAttribute("aria-describedby", [...ids].join(" "));
+    else input.removeAttribute("aria-describedby");
+    if (invalid) input.setAttribute("aria-invalid", "true");
+    else input.removeAttribute("aria-invalid");
+  }
+
   /** Crea o actualiza el mensaje de error debajo de un campo */
   function setFieldError(input, message) {
     const wrapper = input.closest(".error-wrapper") || input.parentElement;
-    const existingMsg = wrapper.querySelector(`.${ERROR_TEXT_CLASS}`);
+    const existingMsg = document.getElementById(`${ERROR_MSG_ID_PREFIX}${input.id || input.name}`);
+
+    associateError(input, `${ERROR_MSG_ID_PREFIX}${input.id || input.name}`, Boolean(message));
 
     // Remover clases de éxito
     input.classList.remove(SUCCESS_CLASS, SUCCESS_BG_CLASS);
@@ -263,7 +277,8 @@ export function initializeCareForm(root, language) {
 
       if (!existingMsg) {
         const msgEl = document.createElement("p");
-        msgEl.className = `${ERROR_TEXT_CLASS} text-xs mt-1.5 ${ERROR_MSG_ID_PREFIX}${input.id || input.name}`;
+        msgEl.className = `${ERROR_TEXT_CLASS} text-xs mt-1.5`;
+        msgEl.id = `${ERROR_MSG_ID_PREFIX}${input.id || input.name}`;
         msgEl.setAttribute("role", "alert");
         msgEl.textContent = message;
         wrapper.appendChild(msgEl);
@@ -279,8 +294,9 @@ export function initializeCareForm(root, language) {
 
   /** Marca un campo como válido visualmente */
   function setFieldSuccess(input) {
+    associateError(input, `${ERROR_MSG_ID_PREFIX}${input.id || input.name}`, false);
     const wrapper = input.closest(".error-wrapper") || input.parentElement;
-    const existingMsg = wrapper.querySelector(`.${ERROR_TEXT_CLASS}`);
+    const existingMsg = document.getElementById(`${ERROR_MSG_ID_PREFIX}${input.id || input.name}`);
     if (existingMsg) existingMsg.remove();
     input.classList.remove(ERROR_CLASS, ERROR_BG_CLASS);
 
@@ -302,6 +318,8 @@ export function initializeCareForm(root, language) {
   function setRadioGroupError(name, message) {
     const firstRadio = document.querySelector(`input[name="${name}"]`);
     if (!firstRadio) return;
+    const errorId = `error-radio-${name}`;
+    document.querySelectorAll(`input[name="${name}"]`).forEach(radio => associateError(radio, errorId, Boolean(message)));
 
     const wrapper = firstRadio.closest(".error-wrapper") || firstRadio.closest("fieldset") || firstRadio.parentElement;
     const existingMsg = wrapper.querySelector(`.${ERROR_TEXT_CLASS}[data-radio="${name}"]`);
@@ -314,6 +332,7 @@ export function initializeCareForm(root, language) {
         const msgEl = document.createElement("p");
         msgEl.className = `${ERROR_TEXT_CLASS} text-xs mt-1.5`;
         msgEl.setAttribute("data-radio", name);
+        msgEl.id = errorId;
         msgEl.setAttribute("role", "alert");
         msgEl.textContent = message;
         // Insertar después del último label del grupo
@@ -517,14 +536,14 @@ export function initializeCareForm(root, language) {
           <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
       </div>
-      <h2 class="text-2xl font-bold text-[#1F2937] mb-3">${isEnglish() ? "Request submitted successfully!" : "¡Solicitud enviada con éxito!"}</h2>
+      <h2 class="text-2xl font-bold text-[#1F2937] mb-3">${isEnglish() ? "Demonstration validated" : "Demostración validada"}</h2>
       <p class="text-[#1F2937]/60 max-w-md mx-auto mb-8">
         ${isEnglish()
-          ? "We have received your information. One of our digital health specialists will contact you within the next 24 to 48 business hours."
-          : "Hemos recibido tu información. Uno de nuestros especialistas en salud digital se comunicará contigo en las próximas 24 a 48 horas hábiles."
+          ? "This is a demonstration. No medical request was sent or saved. No appointment or follow-up has been arranged."
+          : "Esta es una demostración. No se envió ni guardó ninguna solicitud médica. No se ha concertado una cita ni un contacto posterior."
         }
       </p>
-      <a href="${isEnglish() ? "index.en.html" : "index.html"}"
+      <a href="${isEnglish() ? "/en" : "/"}"
          class="inline-block bg-[#2563EB] text-white text-base font-semibold px-8 py-3.5 rounded-xl btn-scale hover:bg-[#1d4ed8] shadow-lg shadow-blue-500/25"
          aria-label="${isEnglish() ? "Back to HealthCore home page" : "Volver a la página de inicio de HealthCore"}">
         ${isEnglish() ? "Back to home" : "Volver al inicio"}
@@ -570,10 +589,7 @@ export function initializeCareForm(root, language) {
     const clinicFieldConfig = fieldsToValidate.find(function(f) { return f.id === "clinic"; });
     if (clinicCountryInput && clinicFieldConfig) {
       listen(clinicCountryInput, "change", function () {
-        // Pequeño retraso para que el DOM de clínicas se actualice
-        setTimeout(function() {
-          validateField(clinicFieldConfig);
-        }, 50);
+        validateField(clinicFieldConfig);
       });
     }
 
@@ -592,11 +608,11 @@ export function initializeCareForm(root, language) {
         showSuccessMessage(form);
       } else {
         // Scroll al primer error
-        const firstError = form.querySelector(`.${ERROR_TEXT_CLASS}`);
+        const firstError = form.querySelector('[role="alert"]');
         if (firstError) {
           firstError.scrollIntoView({ behavior: "smooth", block: "center" });
           // Foco en el input relacionado
-          const errorId = firstError.className.match(/error-(\S+)/);
+          const errorId = firstError.id.match(/^error-(?!radio-)(\S+)/);
           if (errorId) {
             const errorInput = document.getElementById(errorId[1]);
             if (errorInput) errorInput.focus();
