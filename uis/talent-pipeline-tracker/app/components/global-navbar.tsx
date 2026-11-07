@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "./language-context";
+import BrandLogo from "./brand-logo";
 
 type GlobalNavbarProps = {
   backLabel?: boolean;
@@ -13,34 +14,27 @@ type GlobalNavbarProps = {
 export default function GlobalNavbar({ backLabel = false, languageHref }: GlobalNavbarProps) {
   const { language } = useLanguage();
   const isEnglish = language === "en";
-  const homePage = isEnglish ? "/index.en.html" : "/index.html";
-  const talentPath = backLabel ? (isEnglish ? "/talents/en" : "/talents") : "/talents/new";
+  const homePage = isEnglish ? "/en" : "/";
+  const talentPath = isEnglish ? "/talents/en" : "/talents";
   const alternateLanguageHref = languageHref ?? (isEnglish ? "/talents" : "/talents/en");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const pipelineLabel = backLabel
-    ? (isEnglish ? "Back to pipeline" : "Volver al pipeline")
-    : (isEnglish ? "New talents" : "Nuevos talentos");
+  const pipelineLabel = isEnglish ? "Back to pipeline" : "Volver al pipeline";
 
   return (
     <header className="fixed left-0 top-0 z-50 w-full bg-white/90 shadow-sm backdrop-blur-md" role="banner">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 md:h-20 lg:px-8">
-        <Link className="flex items-center gap-2" href={homePage} aria-label={isEnglish ? "HealthCore - Go to homepage" : "HealthCore - Ir al inicio"}>
-          <span className="text-2xl" aria-hidden="true">🏥</span>
-          <span className="text-xl font-bold tracking-tight text-[#2563EB]">
-            Health<span className="text-teal-500">Core</span>
-          </span>
-        </Link>
+        <BrandLogo href={homePage} size="md" ariaLabel={isEnglish ? "HealthCore - Go to home" : "HealthCore - Ir al inicio"} />
 
         <nav className="hidden items-center gap-8 md:flex" aria-label={isEnglish ? "Main navigation" : "Navegación principal"}>
           <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href={`${homePage}#features`}>{isEnglish ? "Features" : "Características"}</Link>
           <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href={`${homePage}#contact`}>{isEnglish ? "Contact" : "Contacto"}</Link>
-          <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href={talentPath}>{pipelineLabel}</Link>
+          {backLabel && <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href={talentPath}>{pipelineLabel}</Link>}
           <Link className="text-sm font-medium text-[#1F2937]/70 transition-colors duration-200 hover:text-[#2563EB]" href="/account/change-password">{isEnglish ? "Change password" : "Cambiar contraseña"}</Link>
           <Link className="flex items-center gap-1.5 rounded-lg border border-[#1F2937]/20 px-3 py-1.5 text-sm font-semibold text-[#1F2937]/70 transition-all duration-200 hover:border-[#2563EB]/40 hover:text-[#2563EB]" href={alternateLanguageHref} lang={isEnglish ? "es" : "en"}>
             <span aria-hidden="true">🌐</span>{isEnglish ? "ES" : "EN"}
           </Link>
-          <Link className="rounded-lg bg-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-[#1d4ed8]" href={isEnglish ? "/aplication.en.html" : "/aplication.html"}>
+          <Link className="rounded-lg bg-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-[#1d4ed8]" href={isEnglish ? "/en/care-request" : "/care-request"}>
             {isEnglish ? "Request Care" : "Solicitar Atención"}
           </Link>
         </nav>
@@ -66,9 +60,9 @@ export default function GlobalNavbar({ backLabel = false, languageHref }: Global
           <div className="mx-auto grid max-w-7xl gap-2">
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={`${homePage}#features`}>{isEnglish ? "Features" : "Características"}</Link>
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={`${homePage}#contact`}>{isEnglish ? "Contact" : "Contacto"}</Link>
-            <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={talentPath}>{pipelineLabel}</Link>
+            {backLabel && <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href={talentPath}>{pipelineLabel}</Link>}
             <Link onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 font-medium text-slate-700 hover:bg-slate-50" href="/account/change-password">{isEnglish ? "Change password" : "Cambiar contraseña"}</Link>
-            <Link onClick={() => setMenuOpen(false)} className="rounded-lg bg-[#2563EB] px-3 py-3 text-center font-semibold text-white" href={isEnglish ? "/aplication.en.html" : "/aplication.html"}>{isEnglish ? "Request Care" : "Solicitar Atención"}</Link>
+            <Link onClick={() => setMenuOpen(false)} className="rounded-lg bg-[#2563EB] px-3 py-3 text-center font-semibold text-white" href={isEnglish ? "/en/care-request" : "/care-request"}>{isEnglish ? "Request Care" : "Solicitar Atención"}</Link>
           </div>
         </nav>
       )}

@@ -1,31 +1,22 @@
 # HealthCore Backoffice
 
-Minimal internal entry view for HealthCore Digital's operational workspace. This application is intentionally separate from the public website in `uis/website` and from the previous Talent Pipeline Tracker.
+The active, authenticated Backoffice is the native Next.js route `/backoffice` in [`../talent-pipeline-tracker/`](../talent-pipeline-tracker/). This directory contains its Node.js source-contract tests only; it is not a separate frontend and does not need its own development server.
 
-## Stack
+## Sidebar navigation
 
-- Semantic HTML5
-- Plain CSS with responsive layout
-- No backend, API, authentication, patient data, or persistence
+- **Operations / Operaciones** scrolls to the operations snapshot on the Backoffice page.
+- **People & workforce / Personas y equipo** opens the existing `/talents` Talent Pipeline feature. It is not an HR staff directory.
+- **Digital priorities / Prioridades digitales** scrolls to the priorities panel (privacy-by-design and other product priorities).
+- **Incident analysis / Análisis de incidentes** scrolls to the CSV analysis form and results.
 
-## Routes
-
-- `index.html` — internal HealthCore Digital overview and `/` entry point when served from this directory
-
-## Run locally
-
-From the repository root:
-
-```bash
-python3 -m http.server 4174 --directory uis/backoffice
-```
-
-Then open <http://localhost:4174/>.
+The workspace snapshot, counts, rates, and priorities are illustrative content, not live clinic/business data. Incident analysis is the operational feature: the UI sends CSVs through the same-origin `/api/healthcore` proxy to FastAPI and can download aggregate results. Authentication and route protection remain in the portal; the backend validates and analyzes the data. Do not use this prototype with real patient data. See the [HealthCore API README](../../services/healthcore-api/README.md) for privacy, persistence, and compliance limitations.
 
 ## Validation
 
-This is a static application and does not define package-local build, typecheck, lint, or test scripts. Validate the entry point through a local static server and confirm that the page renders the HealthCore business metrics and internal navigation.
+Run the source-contract tests from the repository root:
 
-## Boundaries
+```bash
+npm --prefix uis/backoffice test
+```
 
-The dashboard contains only non-patient operational context from `CONTEXT.md`: clinic count, workforce size, approximate revenue, operational challenge indicators, and HIPAA/UK GDPR design constraints. Future operational functionality should use documented services under `services/` rather than adding APIs to this static entry view.
+For the app typecheck and production build, see [`../talent-pipeline-tracker/README.md`](../talent-pipeline-tracker/README.md).

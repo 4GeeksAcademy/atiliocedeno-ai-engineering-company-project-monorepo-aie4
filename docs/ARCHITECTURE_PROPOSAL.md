@@ -1,8 +1,21 @@
 # Propuesta de arquitectura para HealthCore con FastAPI
 
+> **Estado:** propuesta de evolución, no descripción literal del sistema desplegado. Las recomendaciones de dominios, servicios y capas que siguen son futuras salvo que se indiquen en la sección de arquitectura verificada. No existe en este repositorio una configuración de despliegue verificada.
+
+## Arquitectura verificada (2026-10-31)
+
+- `services/healthcore-api/` implementa una API FastAPI con JWT y TinyDB local para cuentas/perfiles y agregados de análisis de incidentes. No es una suite de microservicios por dominio.
+- `uis/talent-pipeline-tracker/` es la aplicación Next.js canónica: landing y solicitud de atención bilingües, autenticación/perfil/panel, Backoffice protegido de incidentes, laboratorio de utilidades TypeScript y un módulo Talent Tracker separado que usa la API externa de práctica de 4Geeks.
+- Las páginas públicas estáticas anteriores, la copia HTML pública, el panel manual sin bundle y las entradas HTML del Backoffice se retiraron al migrar esas funciones a Next. Se mantienen redirecciones permanentes de Next para las URLs HTML históricas.
+- El Backoffice nativo consume el contrato autenticado de análisis agregado; FastAPI conserva el procesamiento y la exportación.
+- `packages/shared/` contiene tipos de ejemplo y no está integrado como workspace npm.
+- Retención/purga de agregados, despliegue multi-proceso, observabilidad operativa y certificación regulatoria no están implementados/verificados.
+
+Esta fotografía no aprueba el sistema para datos reales ni sustituye una decisión de arquitectura para despliegue.
+
 ## 1. Resumen ejecutivo
 
-La estructura actual del monorepo ya está alineada con un enfoque de arquitectura modular y empresarial, no con un diseño de microservicios prematuros. El repositorio separa claramente responsabilidades por tipo de artefacto: interfaces de usuario en `uis/`, servicios backend en `services/`, reutilización en `packages/` y `shared/`, automatización en `workflows/`, datos en `data/`, IA en `agents/` y `skills/`, y despliegue en `infra/`.
+La estructura del monorepo reserva áreas por tipo de artefacto, pero la existencia de una carpeta no demuestra que haya una implementación, integración o despliegue. El inventario implementado al 2026-10-31 está en la sección de arquitectura verificada; las recomendaciones que siguen son propuestas.
 
 Para un proyecto de HealthCore con FastAPI, la recomendación más eficiente es:
 
@@ -18,7 +31,7 @@ Esta decisión optimiza mantenibilidad, crecimiento del producto y trazabilidad 
 
 ## 2. Diagnóstico del repositorio actual
 
-El monorepo ya presenta una organización madura y consistente:
+El monorepo contiene las siguientes áreas organizativas; su contenido e integración varían:
 
 - `uis/`: contiene aplicaciones con interfaz de usuario.
 - `services/`: reserva para APIs y servicios backend.
@@ -29,7 +42,7 @@ El monorepo ya presenta una organización madura y consistente:
 - `workflows/`: automatización.
 - `infra/`: infraestructura y despliegue.
 
-Esto es clave porque evidencia que el proyecto está pensado como un sistema empresarial compuesto por distintos dominios, no como una app monolítica sin límites funcionales.
+La estructura sugiere límites útiles para evolución futura, pero no prueba por sí sola que los dominios estén implementados o que haya una arquitectura empresarial desplegada.
 
 La estructura actual también refleja dos principios muy importantes:
 

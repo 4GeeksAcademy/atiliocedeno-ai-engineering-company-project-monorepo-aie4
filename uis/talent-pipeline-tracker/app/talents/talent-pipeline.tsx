@@ -10,7 +10,7 @@ import GlobalNavbar from "../components/global-navbar";
 import { useLanguage } from "../components/language-context";
 import type { TalentRecord } from "./types";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+import { trackerApiUrl } from "./api-url";
 const RECORDS_PAGE_SIZE = 1000;
 const DISPLAY_PAGE_SIZE = 20;
 
@@ -47,7 +47,7 @@ async function fetchAllRecords(signal: AbortSignal, isEnglish: boolean): Promise
       page: String(page),
       limit: String(RECORDS_PAGE_SIZE),
     });
-    const response = await fetch(`${API_URL}/records?${params.toString()}`, { signal });
+    const response = await fetch(trackerApiUrl(`/records?${params.toString()}`, isEnglish), { signal });
 
     if (!response.ok) {
       throw new Error(

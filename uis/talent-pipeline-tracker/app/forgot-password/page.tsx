@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { authRequest } from "../auth/session";
+import BrandLogo from "../components/brand-logo";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -25,7 +26,9 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg px-6 py-16">
+    <main className="min-h-screen bg-[#f4f8fc] px-6 py-10 text-slate-800">
+      <div className="mx-auto max-w-lg">
+      <BrandLogo className="mb-12" />
       <h1 className="mb-3 text-3xl font-bold text-slate-900">¿Olvidaste tu contraseña?</h1>
       {submitted ? (
         <section role="status" className="rounded-xl bg-blue-50 p-5 text-slate-700">
@@ -42,6 +45,7 @@ export default function ForgotPasswordPage() {
         </form>
       )}
       <Link className="mt-6 inline-block text-blue-700 underline" href="/login">Volver a iniciar sesión</Link>
+      </div>
     </main>
   );
 }
