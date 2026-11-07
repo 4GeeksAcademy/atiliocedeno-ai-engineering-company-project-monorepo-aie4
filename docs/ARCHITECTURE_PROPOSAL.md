@@ -5,9 +5,9 @@
 ## Arquitectura verificada (2026-10-31)
 
 - `services/healthcore-api/` implementa una API FastAPI con JWT y TinyDB local para cuentas/perfiles y agregados de análisis de incidentes. No es una suite de microservicios por dominio.
-- `uis/talent-pipeline-tracker/` es una aplicación Next.js que contiene landing y solicitud de atención de HealthCore, autenticación/perfil/panel y un módulo Talent Tracker separado que usa la API externa de práctica de 4Geeks.
-- `uis/website/` es una aplicación pública estática independiente, conservada como entregable de hito. Los HTML anteriores también siguen en la raíz; existen copias de compatibilidad en `uis/talent-pipeline-tracker/public/`. Las rutas antiguas tienen redirecciones permanentes definidas por Next.
-- `uis/backoffice/` es un cliente HTML/JS estático del contrato autenticado de análisis agregado del backend.
+- `uis/talent-pipeline-tracker/` es la aplicación Next.js canónica: landing y solicitud de atención bilingües, autenticación/perfil/panel, Backoffice protegido de incidentes, laboratorio de utilidades TypeScript y un módulo Talent Tracker separado que usa la API externa de práctica de 4Geeks.
+- Las páginas públicas estáticas anteriores, la copia HTML pública, el panel manual sin bundle y las entradas HTML del Backoffice se retiraron al migrar esas funciones a Next. Se mantienen redirecciones permanentes de Next para las URLs HTML históricas.
+- El Backoffice nativo consume el contrato autenticado de análisis agregado; FastAPI conserva el procesamiento y la exportación.
 - `packages/shared/` contiene tipos de ejemplo y no está integrado como workspace npm.
 - Retención/purga de agregados, despliegue multi-proceso, observabilidad operativa y certificación regulatoria no están implementados/verificados.
 

@@ -5,7 +5,6 @@
     "dev": "npm --prefix uis/talent-pipeline-tracker run dev",
     "build": "npm --prefix uis/talent-pipeline-tracker run build",
     "start": "npm --prefix uis/talent-pipeline-tracker run start",
-    "serve:website": "npm --prefix uis/talent-pipeline-tracker run dev -- --port 4173",
-    "serve:historical": "node scripts/serve-website.mjs"
+    "serve:website": "npm --prefix uis/talent-pipeline-tracker run dev -- --port 4173"
   }
 }

@@ -8,15 +8,12 @@ This repository contains HealthCore's milestone-based AI Engineering work. It is
 
 | Path | Responsibility | Current implementation |
 | --- | --- | --- |
-| `uis/website/` | Public bilingual website milestone | Standalone static HTML/CSS/JavaScript; no backend or patient-data persistence. |
-| Root `index.html`, `index.en.html`, `style.css`, `validation.js` | Earlier public-site milestone artifacts | Retained because the landing pages differ from `uis/website`; the duplicate care-request forms were removed after explicit approval. |
-| `src/index_test.html` and `src/index_test.ts` | Earlier domain-core manual test panel | Kept together; the HTML expects `../dist/index_test.js` and links back to the root landing page. No build command or generated bundle is provided, so this panel is not currently runnable from the repository alone. |
-| `uis/talent-pipeline-tracker/` | Next.js portal and prior Talent Pipeline Tracker | HealthCore bilingual landing/care request, auth/profile/dashboard, and a separate tracker using the external 4Geeks API. |
-| `uis/backoffice/` | Internal incident-analysis UI | Static client that sends CSV to the authenticated HealthCore API; it does not store the token in web storage. |
+| `uis/talent-pipeline-tracker/` | Unified Next.js frontend | HealthCore bilingual landing/care request, auth/profile/dashboard, protected incident-analysis Backoffice, domain utility lab, and separate Talent Tracker using the external 4Geeks API. |
 | `services/healthcore-api/` | HealthCore backend | FastAPI, JWT auth, TinyDB persistence, profile/account flows, and authenticated aggregate incident analysis/export. |
-| `scripts/` | Local analysis CLI and dataset | `analyze.py` and the canonical `scripts/incidents-healthcore.csv` path. |
+| `src/` | Shared TypeScript domain utilities | Domain types, transformations, validation, search and collection helpers consumed by the portal and `/domain-lab`. |
+| `scripts/` | Local analysis CLI and dataset | `analyze.py` and the canonical `scripts/incidents-healthcore.csv` path; no static website server remains. |
 
-The static website and the Next.js portal are distinct implementations with different milestone/history boundaries. The Next application retains permanent redirects from legacy HTML filenames; do not delete either application or those redirects without a separate compatibility and milestone decision. The two identical root care-request HTML copies were removed with user approval; external hosting of those root URLs was not verified. The root landing pages' care-request CTAs lead to forms under `uis/website/`; this path works when the repository root is hosted as the document root. For the standalone website, serve `uis/website/` as its document root instead. There is no verified deployment manifest in this repository.
+Next.js is the canonical frontend. Retired static landing/form pages redirect from their old HTML URLs to the active localized Next routes. The native Backoffice remains protected and sends analysis requests to FastAPI; incident processing has not moved into the frontend. There is no verified deployment manifest in this repository.
 
 See [`docs/ARCHITECTURE_PROPOSAL.md`](./docs/ARCHITECTURE_PROPOSAL.md) for a proposal that is explicitly separate from the architecture currently implemented.
 
@@ -38,7 +35,7 @@ uvicorn app.main:app --reload
 
 The API is available at `http://127.0.0.1:8000`; interactive API docs are at `/docs`. The default TinyDB file is local application data and should not be committed if it contains real information.
 
-### Next.js portal
+### Next.js frontend
 
 In another terminal:
 
@@ -48,23 +45,9 @@ npm ci
 npm run dev
 ```
 
-The portal is at `http://localhost:3000`. Full auth/profile flows require the API. The Talent Tracker uses a separate external practice API; it is not backed by HealthCore API.
+The frontend is at `http://localhost:3000`. Full auth/profile/Backoffice flows require the API. The Talent Tracker uses a separate external practice API; it is not backed by HealthCore API. Key routes include `/`, `/en`, `/care-request`, `/en/care-request`, `/backoffice`, and `/domain-lab`.
 
-### Public HTML website and backoffice
-
-From the repository root, start the public HTML site with Node.js:
-
-```bash
-npm run serve:website
-```
-
-Open `http://127.0.0.1:4173/`. The server serves only the approved pages and assets from `uis/website/`; it does not replace or change the separate Next.js portal. The HTML site requires network access for Tailwind's browser CDN. To run the independent backoffice, use another terminal:
-
-```bash
-python3 -m http.server 4174 --bind 127.0.0.1 --directory uis/backoffice
-```
-
-The API accepts exactly one configured CORS origin via `HEALTHCORE_FRONTEND_URL` (default `http://localhost:3000`), so a single API process cannot serve the portal and backoffice from different origins simultaneously. For backoffice testing use `http://localhost:4174`; for the portal use `http://localhost:3000`. Do not use a wildcard. Supporting both concurrently would require an explicit, reviewed origin allowlist change to the middleware.
+Use the same Next.js frontend for public pages and protected Backoffice. The API's configured `HEALTHCORE_FRONTEND_URL` should match this origin (default `http://localhost:3000`).
 
 ## Configuration and secrets
 
@@ -84,9 +67,8 @@ cd services/healthcore-api
 source .venv/bin/activate
 python -m pytest tests -q
 
-# Static backoffice tests
+# Backoffice navigation and incident-analysis contract tests
 npm --prefix uis/backoffice test
-npm --prefix uis/backoffice run check
 
 # Next.js tracker package; all its npm scripts are package-local
 cd uis/talent-pipeline-tracker

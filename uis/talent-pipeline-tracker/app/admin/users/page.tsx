@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { apiRequest, clearAccessToken, getAccessToken, isUnauthorized, hasStatus } from "../../auth/session";
+import BrandLogo from "../../components/brand-logo";
 
 type Profile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 type UserRecord = { id: number; email: string; is_active: boolean; role: "admin" | "manager" | "user"; created_at: string; profile: Profile | null };
@@ -160,6 +161,7 @@ export default function AdminUsersPage() {
   const input = "min-h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10";
   return <main className="min-h-screen bg-[#f4f8fc] px-5 py-9 text-slate-800 sm:px-8">
     <div className="mx-auto max-w-7xl">
+      <BrandLogo href="/dashboard" className="mb-7" />
       <Link href="/dashboard" className="text-sm font-semibold text-blue-700 hover:underline">← Volver al panel</Link>
       <header className="mb-7 mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div><p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-600">Administración</p><h1 className="mt-2 text-3xl font-bold text-slate-900">Usuarios y perfiles</h1><p className="mt-2 text-slate-500">Gestiona las cuentas y los perfiles de HealthCore.</p></div>

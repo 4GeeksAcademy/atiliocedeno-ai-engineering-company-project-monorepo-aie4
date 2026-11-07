@@ -1,9 +1,8 @@
 # Interfaces de usuario
 
-Esta carpeta contiene aplicaciones distintas; sus HTML, rutas e historias no son intercambiables.
+Esta carpeta contiene la aplicación Next.js canónica y carpetas históricas; las páginas estáticas antiguas se retiraron y las redirecciones heredadas no implican un contrato de alojamiento estático independiente.
 
-- [`website/`](./website/README.md) — sitio estático bilingüe de HealthCore conservado como referencia y compatibilidad. Las rutas públicas actuales están implementadas en la aplicación Next.js de `talent-pipeline-tracker/`; el comando raíz `npm run serve:website` sigue disponible para la copia estática.
-- [`backoffice/`](./backoffice/README.md) — cliente estático existente para análisis de incidentes con la API de HealthCore.
-- [`talent-pipeline-tracker/`](./talent-pipeline-tracker/) — aplicación Next.js con las rutas públicas de HealthCore y un módulo Talent Tracker separado. El servidor HTML estático sigue siendo independiente y no sustituye ni modifica estas rutas.
+- [`backoffice/`](./backoffice/README.md) — artefactos de pruebas/paquete de la migración; el Backoffice protegido activo es `/backoffice` en la aplicación Next.js.
+- [`talent-pipeline-tracker/`](./talent-pipeline-tracker/) — aplicación Next.js canónica con páginas públicas y formularios de HealthCore, Backoffice protegido, laboratorio de dominio y el módulo Talent Tracker. `npm run serve:website` desde la raíz inicia esta aplicación localmente.
 
 El backend de HealthCore está documentado en [`../services/healthcore-api/README.md`](../services/healthcore-api/README.md). Consulta [el índice en inglés](./README.md) para el mismo resumen.

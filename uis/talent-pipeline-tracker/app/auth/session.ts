@@ -1,4 +1,6 @@
-const API_URL = (process.env.NEXT_PUBLIC_HEALTHCORE_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
+// Route browser API calls through Next.js so Codespaces port authentication and
+// browser CORS restrictions do not block the frontend from reaching FastAPI.
+const API_URL = (process.env.NEXT_PUBLIC_HEALTHCORE_API_URL ?? "/api/healthcore").replace(/\/+$/, "");
 const TOKEN_KEY = "healthcore_access_token";
 
 export type ApiRequestOptions = {
@@ -10,11 +12,18 @@ export type ApiRequestOptions = {
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  const token = window.localStorage.getItem(TOKEN_KEY);
+  if (token) {
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; Path=/; SameSite=Lax${secure}`;
+  }
+  return token;
 }
 
 export function saveAccessToken(token: string): void {
   window.localStorage.setItem(TOKEN_KEY, token);
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; Path=/; SameSite=Lax${secure}`;
 }
 
 export class ApiError extends Error {
@@ -62,5 +71,8 @@ export function authRequest<T>(path: string, body: unknown, token?: string): Pro
 }
 
 export function clearAccessToken(): void {
-  if (typeof window !== "undefined") window.localStorage.removeItem(TOKEN_KEY);
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(TOKEN_KEY);
+    document.cookie = `${TOKEN_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
 }

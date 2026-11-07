@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { authRequest, isUnauthorized, hasStatus } from "../auth/session";
+import BrandLogo from "../components/brand-logo";
 
 function ResetPasswordForm() {
   const params = useSearchParams();
@@ -59,16 +60,16 @@ function ResetPasswordForm() {
   if (validation.token !== token || validation.status !== "valid") {
     const checking = validation.token !== token || validation.status === "checking";
     return (
-      <main className="mx-auto max-w-lg px-6 py-16">
+      <main className="min-h-screen bg-[#f4f8fc] px-6 py-10 text-slate-800"><div className="mx-auto max-w-lg"><BrandLogo className="mb-12" />
         <h1 className="mb-3 text-3xl font-bold text-slate-900">Restablecer contraseña</h1>
         <p role="status">{checking ? "Verificando enlace…" : validation.status === "invalid" ? "El enlace es inválido, ha caducado o ya fue utilizado." : "No se pudo verificar el enlace. Inténtalo de nuevo más tarde."}</p>
         {!checking && <Link className="mt-5 inline-block text-blue-700 underline" href="/forgot-password">Solicitar otro enlace</Link>}
-      </main>
+      </div></main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-lg px-6 py-16">
+    <main className="min-h-screen bg-[#f4f8fc] px-6 py-10 text-slate-800"><div className="mx-auto max-w-lg"><BrandLogo className="mb-12" />
       <h1 className="mb-3 text-3xl font-bold text-slate-900">Restablecer contraseña</h1>
       <form onSubmit={handleSubmit} className="grid gap-4">
         <label className="grid gap-1 font-medium" htmlFor="new-password">Nueva contraseña
@@ -81,7 +82,7 @@ function ResetPasswordForm() {
         <button disabled={busy} className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60">{busy ? "Guardando…" : "Guardar contraseña"}</button>
       </form>
       {error && <Link className="mt-5 inline-block text-blue-700 underline" href="/forgot-password">Solicitar otro enlace</Link>}
-    </main>
+    </div></main>
   );
 }
 

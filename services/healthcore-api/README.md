@@ -187,14 +187,7 @@ El repositorio TinyDB guarda únicamente un agregado por cuenta, bajo una clave 
 
 ### Backoffice
 
-```bash
-# Terminal backend, desde services/healthcore-api:
-HEALTHCORE_FRONTEND_URL=http://localhost:4174 uvicorn app.main:app --reload
-# Otra terminal, desde la raíz:
-python3 -m http.server 4174 --bind 127.0.0.1 --directory uis/backoffice
-```
-
-Abrir `http://localhost:4174/#incident-analysis`, introducir un token obtenido mediante `/auth/login`, seleccionar CSV y analizar. El token permanece en el formulario y no se guarda en web storage. La URL por defecto es `http://localhost:8000`; `window.HEALTHCORE_API_URL` permite cambiarla. CORS conserva el único origen configurable existente: usa 3000 para el portal o 4174 para el backoffice; no pueden funcionar ambos orígenes simultáneamente con el middleware actual. No se modificaron archivos `.env`.
+El Backoffice es ahora la ruta protegida `/backoffice` de la aplicación Next.js `uis/talent-pipeline-tracker`. Ejecuta el portal (por defecto `http://localhost:3000`) y configura `HEALTHCORE_FRONTEND_URL` para ese mismo origen si difiere. El navegador usa el proxy same-origin `/api/healthcore`; el servicio FastAPI sigue validando, analizando y exportando datos. Ya no se sirve `uis/backoffice` con `python -m http.server`. CORS mantiene la restricción del único origen configurable; no se modificaron archivos `.env`.
 
 ### Pruebas y resultados
 
@@ -209,7 +202,7 @@ npm --prefix uis/backoffice run check
 
 **Resultados históricos de la entrega de análisis:** 59 tests Python y 5 frontend pasaron entonces; también pasó un caso de 100.000 filas sintéticas y la descarga verificada coincidió byte por byte con la exportación CLI. Los agregados de aceptación fueron 100/94/6, categorías 30/20/14/17/13, estados 28/52/14, países 61/33, satisfacción 3/5/12/23/9, 52 casos cerrados puntuados y media 3.58. Estas cifras son un registro histórico, no una ejecución actual.
 
-**Último registro de validación del monorepo (2026-10-31; debe repetirse tras cambios):** 76 pruebas backend pasaron con dos avisos deprecados; las 5 pruebas del backoffice y su chequeo de sintaxis pasaron. El typecheck y build de Next pasaron (18 rutas, con aviso de múltiples lockfiles). Las 5 pruebas Node del tracker no llegaron a ejecutar sus casos: el harness espera `typescript.ModuleKind.CommonJS` y `transpileModule`, APIs ausentes en la versión instalada 7.0.2. El estado detallado y las limitaciones están en [`memory-bank/progress.md`](../../memory-bank/progress.md); no reportes las pruebas del tracker como aprobadas.
+**Registro histórico de validación del monorepo (2026-10-31; previo a la migración de UI):** 76 pruebas backend pasaron con dos avisos deprecados; las 5 pruebas del Backoffice estático y su chequeo de sintaxis pasaron. El typecheck y build de Next pasaron (18 rutas, con aviso de múltiples lockfiles). Estos resultados no validan la nueva ruta React. Consulta [`memory-bank/progress.md`](../../memory-bank/progress.md) para el estado más reciente y no reportes resultados históricos como una ejecución actual.
 
 ### Privacidad y límites
 

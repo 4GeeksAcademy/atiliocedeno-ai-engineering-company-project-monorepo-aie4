@@ -1,6 +1,16 @@
 # Progress
 
-> **Current verified snapshot — 2026-11-02:** Older milestone and validation entries below are historical unless explicitly identified as rerun in this snapshot.
+> **Current snapshot — 2026-11-05:** Frontend consolidation migrated public pages, protected Backoffice, and the domain utility panel to Next.js and removed static HTML copies. Backoffice tests (5/5), tracker typecheck, and production build pass. Tracker tests remain 11/15 because three auth tests cannot resolve `app/components/brand-logo.tsx` through the current test harness and the proxy-language test fails on a missing mock request. Runtime HTTP/protection checks and backend tests were not rerun; no commit or deployment was performed.
+
+## Frontend consolidation in progress (2026-11-05)
+
+- Canonical frontend is `uis/talent-pipeline-tracker/`. Native routes now cover the public bilingual pages, authenticated `/backoffice`, and `/domain-lab`; FastAPI remains responsible for incident processing/export.
+- Retired root/website/public static landing pages, the unbundled `src/index_test.html`, the static Backoffice entry, and the standalone website server. Kept legacy Next redirects for historical HTML URLs.
+- Removed the root `serve:historical` command and updated architecture, root/app/API READMEs and frontend boundary guidance.
+- The legacy static Backoffice tests were replaced with five source-contract checks for the native route, same-origin API/token contract, safe aggregate handling, export semantics, and proxy protection. `uis/backoffice/incidents.js` and `style.css` remain unreferenced legacy files; retain pending an explicit cleanup decision because `incidents.js` was already dirty before this migration. Backoffice `npm test` passes 5/5.
+- Tracker `npm test` currently passes 11/15. Three auth component tests cannot resolve `app/components/brand-logo.tsx` via the test harness's `../../components/brand-logo` path; the proxy language test fails because its mocked result has no `headers`. These failures are recorded, not claimed as migration regressions or fixed. `npm run typecheck` and `npm run build` pass; build generated 21 routes including `/backoffice`, `/domain-lab`, and the HealthCore proxy.
+- Runtime HTTP/protection checks and backend tests were not rerun. Do not treat source-contract checks as a substitute for runtime authenticated/anonymous route verification.
+- External or academic hosting consumers were not verifiable from local repository references. No change to FastAPI incident logic or dataset was made.
 
 ## Current repository and HealthCore status (2026-11-02)
 

@@ -2,12 +2,13 @@
 
 > This document describes the architecture and technologies identified in the repository. The canonical business context for agents is [`CONTEXT.md`](../CONTEXT.md).
 
-## Current verified implementation snapshot (2026-10-31)
+## Current implementation snapshot (2026-11-05; validated build)
 
 - `services/healthcore-api/`: FastAPI service with JWT authentication, TinyDB local persistence, account/profile/password flows, and authenticated incident-analysis aggregates/export. This is one local service, not a deployed or multi-service production architecture.
-- `uis/talent-pipeline-tracker/`: Next.js 16 App Router and React 19 application. It contains bilingual HealthCore landing/care-request routes, account/profile/dashboard functionality, and a distinct Talent Tracker module that uses the external 4Geeks practice API.
-- `uis/website/`: retained static bilingual public-site comparison/compatibility copy; no backend or persistence. The current `/`, `/en`, `/care-request`, and `/en/care-request` routes render the existing HealthCore React/TSX components in `uis/talent-pipeline-tracker/`. The root `npm run serve:website`, static source/assets, and Next `public/` legacy copies remain available; no cleanup is implied. Distinct root landing pages and shared assets remain as earlier milestone artifacts; identical root care-request form copies were removed with user approval.
-- `uis/backoffice/`: static internal UI that submits incident CSV to the authenticated HealthCore API; it does not persist the token in browser storage.
+- `uis/talent-pipeline-tracker/`: Next.js 16 App Router and React 19 canonical frontend. It includes bilingual HealthCore public/care-request routes, account/profile/dashboard, protected native Backoffice at `/backoffice`, shared TypeScript domain lab at `/domain-lab`, and a distinct Talent Tracker using the external 4Geeks practice API.
+- Retired static landing pages/site, public HTML copies, unbundled domain panel HTML, and static Backoffice entry were removed. The active Next config preserves permanent redirects for historical HTML URLs. External static-hosting consumers were not verifiable.
+- `uis/backoffice/`: legacy package/test artifacts only; not a running frontend. Its former markup-dependent tests were replaced with five source-contract assertions (5/5 pass); they do not provide browser/runtime coverage. Unreferenced `incidents.js` and `style.css` remain pending explicit cleanup review.
+- Latest frontend validation: tracker `typecheck` and production `build` pass (21 routes); Backoffice source-contract tests pass (5/5). Tracker tests pass 11/15: three auth tests fail resolving `app/components/brand-logo.tsx` through their test harness, and one proxy-language test fails because the mocked response lacks `headers`. Runtime route/protection checks and backend tests were not rerun.
 - `scripts/incidents-healthcore.csv`: sole canonical tracked dataset path; the obsolete root symlink was removed after all in-repository consumers were confirmed to use this location. The dataset provenance is unconfirmed; do not print or redistribute its rows.
 - `packages/shared/` is not connected as a package workspace. No deployment manifest was found in the repository during the 2026-10-31 audit; this does not rule out external deployment contracts.
 
@@ -19,12 +20,12 @@ The four permanent Next redirects preserve `/index.html`→`/`, `/index.en.html`
 - `NEXT_PUBLIC_*` values are browser-visible and must not contain credentials. Resend is optional; without configured credentials and sender, email delivery is not available.
 - TinyDB is local, single-process persistence. Aggregate retention/purge, production deployment controls, and regulatory/security approval remain gaps. The application is not approved for real patient data.
 
-## Previous frontend implementation: static Milestone 1
+## Previous frontend implementation: static Milestone 1 (retired)
 
-- `index.html` / `index.en.html`: earlier HealthCore corporate landing pages (HTML5 + Tailwind CSS v4 via CDN `@tailwindcss/browser@4`), distinct from `uis/website` and retained at root.
+- `index.html` / `index.en.html`: earlier HealthCore corporate landing pages (HTML5 + Tailwind CSS v4 via CDN `@tailwindcss/browser@4`), distinct from `uis/website`; retired in favor of Next routes.
 - The earlier root `aplication.html` / `aplication.en.html` copies were byte-identical to `uis/website` forms and were removed with explicit user approval. External/static hosting consumers were not verifiable from repository evidence.
-- Root `style.css` is used by the root landing pages. Root `validation.js` has no current executable consumer found in the repository; both have byte-identical counterparts in `uis/website`. Historical/externally hosted consumers still require an owner decision before removal.
-- `src/index_test.html` and `src/index_test.ts`: earlier domain-core manual panel and TypeScript source. The panel points to `../dist/index_test.js`; no matching build setup is tracked in the repository.
+- Root `style.css`, `validation.js`, and duplicate website assets were retired with their static pages.
+- `src/index_test.html` was an earlier domain-core manual panel pointing to missing `../dist/index_test.js`; it was replaced by `/domain-lab`. `src/types/` and `src/utils/` domain modules remain.
 - Original brief in [`promt.md`](../promt.md) ("MILESTONE 1 -- DELIVERY 27/06").
 
 ## Previous frontend implementation: Talent Pipeline Tracker
@@ -113,7 +114,7 @@ These paths represent the responsibilities of Milestone 4. The implementation st
 
 ### Development, build, lint, test, and validation scripts
 
-- Monorepo root (`package.json`) exposes `serve:website` for the retained static website. Next build/typecheck/test scripts remain package-local.
+- Monorepo root (`package.json`) exposes `serve:website` to start the canonical Next.js frontend locally. Next build/typecheck/test scripts remain package-local.
 - The previous Talent Pipeline Tracker has package-local scripts and remains independently runnable; root scripts do not delegate to it.
 - In the previous Talent Pipeline Tracker package:
   - `dev`: `next dev`

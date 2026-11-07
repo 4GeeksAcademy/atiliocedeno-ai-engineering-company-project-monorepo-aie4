@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { authRequest, getAccessToken, apiRequest, isUnauthorized, clearAccessToken } from "../../auth/session";
+import BrandLogo from "../../components/brand-logo";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg px-6 py-16">
+    <main className="min-h-screen bg-[#f4f8fc] px-6 py-10 text-slate-800"><div className="mx-auto max-w-lg"><BrandLogo href="/dashboard" className="mb-12" />
       <h1 className="mb-3 text-3xl font-bold text-slate-900">Cambiar contraseña</h1>
       {checking && <p role="status">Verificando sesión…</p>}
       {!checking && !verified && <button type="button" onClick={() => setVerificationAttempt(attempt => attempt + 1)} className="text-blue-700 underline">Reintentar verificación</button>}
@@ -81,9 +82,8 @@ export default function ChangePasswordPage() {
         {error && <p role="alert" className="text-red-700">{error}</p>}
         {message && <p role="status" className="text-green-700">{message}</p>}
         <button disabled={busy || checking || !verified} className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60">{busy ? "Guardando…" : "Cambiar contraseña"}</button>
-      <Link href="/dashboard" className="text-blue-700 underline">Cancelar</Link>
       </form>
       <Link className="mt-6 inline-block text-blue-700 underline" href="/dashboard">Volver al panel</Link>
-    </main>
+    </div></main>
   );
 }

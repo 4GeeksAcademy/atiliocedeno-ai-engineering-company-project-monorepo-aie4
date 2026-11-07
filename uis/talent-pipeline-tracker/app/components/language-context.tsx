@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { usePathname } from "next/navigation";
 
 export type AppLanguage = "es" | "en";
+const LANGUAGE_COOKIE = "healthcore_language";
 
 type LanguageContextValue = {
   language: AppLanguage;
@@ -13,22 +14,37 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function languageFromPath(pathname: string | null): AppLanguage | null {
-  if (pathname === "/en" || pathname?.startsWith("/en/") || (pathname === "/talents/en" || pathname?.startsWith("/talents/en/"))) return "en";
+  if (pathname === "/en" || pathname?.startsWith("/en/") || pathname === "/talents/en" || pathname?.startsWith("/talents/en/")) return "en";
   if (pathname === "/" || pathname === "/care-request" || (pathname === "/talents" || pathname?.startsWith("/talents/"))) return "es";
   return null;
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
+export function LanguageProvider({ children, initialLanguage = "es" }: { children: ReactNode; initialLanguage?: AppLanguage }) {
   const pathname = usePathname();
-  const [language, setLanguage] = useState<AppLanguage>(() => languageFromPath(pathname) ?? "es");
+  const [language, setLanguage] = useState<AppLanguage>(() => languageFromPath(pathname) ?? initialLanguage);
 
   useEffect(() => {
-    setLanguage(languageFromPath(pathname) ?? (sessionStorage.getItem("healthcore_language") === "en" ? "en" : "es"));
+    const routeLanguage = languageFromPath(pathname);
+    const storedLanguage = document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith(`${LANGUAGE_COOKIE}=`))?.split("=")[1]
+      ?? sessionStorage.getItem(LANGUAGE_COOKIE);
+    setLanguage(routeLanguage ?? (storedLanguage === "en" ? "en" : "es"));
   }, [pathname]);
 
-  useEffect(() => { document.documentElement.lang = language; sessionStorage.setItem("healthcore_language", language); }, [language]);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    sessionStorage.setItem(LANGUAGE_COOKIE, language);
+    document.cookie = `${LANGUAGE_COOKIE}=${language}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }, [language]);
 
-  const value = useMemo(() => ({ language, setLanguage }), [language]);
+  const updateLanguage = (nextLanguage: AppLanguage) => {
+    setLanguage(nextLanguage);
+    if (typeof document !== "undefined") {
+      sessionStorage.setItem(LANGUAGE_COOKIE, nextLanguage);
+      document.cookie = `${LANGUAGE_COOKIE}=${nextLanguage}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    }
+  };
+
+  const value = useMemo(() => ({ language, setLanguage: updateLanguage }), [language]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

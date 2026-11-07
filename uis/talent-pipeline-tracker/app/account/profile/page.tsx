@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { apiRequest, clearAccessToken, getAccessToken, isUnauthorized, hasStatus } from "../../auth/session";
+import BrandLogo from "../../components/brand-logo";
 
 type Profile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 type ProfileForm = { name: string; phone: string; address: string };
@@ -108,7 +109,7 @@ export default function AccountProfilePage() {
   const inputClass = "min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10";
   return <main className="min-h-screen bg-[#f4f8fc] px-5 py-10 text-slate-800 sm:px-8">
     <div className="mx-auto max-w-3xl">
-      <Link href="/dashboard" className="text-sm font-semibold text-blue-700 hover:underline">← Volver al panel</Link>
+      <BrandLogo href="/dashboard" className="mb-8" />
       <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-9">
         <p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-600">Mi cuenta</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-900">Mi perfil</h1>
@@ -125,6 +126,7 @@ export default function AccountProfilePage() {
           </div>
         </form>}
       </section>
+      <Link href="/dashboard" className="mt-6 inline-flex text-sm font-semibold text-blue-700 hover:underline">← Volver al panel</Link>
     </div>
   </main>;
 }

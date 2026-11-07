@@ -61,8 +61,15 @@ function renderReport(report) {
 }
 async function submit(download = false) {
   if (busy) return;
-  const token = tokenField.value.trim(), file = input.files?.[0];
-  if (!token || (!download && !file)) { showMessage("Select a CSV file and enter an API access token.", true); return; }
+  const token = tokenField
+    ? tokenField.value.trim()
+    : window.localStorage.getItem("healthcore_access_token") || "";
+  const file = input.files?.[0];
+  if (!token || (!download && !file)) {
+    showMessage(token ? "Select a CSV file." : "Sign in again to continue.", true);
+    if (!token) window.location.assign("/login?next=%2Fbackoffice%23incident-analysis");
+    return;
+  }
   if (!download && (!file.name.toLowerCase().endsWith(".csv") || file.size > 25_000_000)) {
     showMessage("Select a CSV file no larger than 25 MB.", true); return;
   }
@@ -88,4 +95,4 @@ async function submit(download = false) {
   finally { busy = false; form.setAttribute("aria-busy", "false"); form.querySelector('button[type="submit"]').disabled = false; }
 }
 form.addEventListener("submit", event => { event.preventDefault(); void submit(); });
-tokenField.addEventListener("input", () => { if (!busy) result.replaceChildren(); });
+tokenField?.addEventListener("input", () => { if (!busy) result.replaceChildren(); });

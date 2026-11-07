@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { Activity, ArrowUpRight, BriefcaseMedical, CircleUserRound, LogOut, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import { apiRequest, clearAccessToken, getAccessToken, isUnauthorized, hasStatus } from "../auth/session";
+import BrandLogo from "../components/brand-logo";
 
 type Profile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 type UserInfo = { email: string; role: string; profile: Profile | null };
@@ -120,13 +121,11 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-[#f4f8fc] text-slate-800">
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-8">
-          <Link href="/dashboard" className="flex items-center gap-3 text-xl font-extrabold tracking-tight text-[#2563EB]" aria-label="HealthCore dashboard">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-700">✚</span>
-            <span>Health<span className="text-teal-500">Core</span></span>
-          </Link>
+          <BrandLogo href="/" size="md" />
           <div className="flex items-center gap-3">
             <Link href="/account/change-password" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 sm:inline-flex">Cambiar contraseña</Link>
             <Link href="/account/profile" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Mi perfil</Link>
+            <Link href="/talents" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 sm:inline-flex">Nuevos talentos</Link>
             {me?.role === "admin" && <Link href="/admin/users" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 sm:inline-flex">Usuarios</Link>}
             <button type="button" onClick={signOut} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"><LogOut size={16} />Salir</button>
           </div>
@@ -189,6 +188,16 @@ export default function DashboardPage() {
               <h2 className="mt-4 text-xl font-bold text-slate-900">Herramientas de cuenta</h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">Administra el acceso a tu cuenta y mantén tus credenciales al día.</p>
               <Link href="/account/change-password" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700">Cambiar contraseña <ArrowUpRight size={16} /></Link>
+            </article>
+          </section>
+
+          <section className="mt-8" aria-label="Herramientas internas">
+            <article className="flex flex-col justify-between gap-5 rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:p-7">
+              <div className="flex items-start gap-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Activity size={23} /></span>
+                <div><h2 className="text-xl font-bold text-slate-900">Backoffice de HealthCore</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Accede al espacio de operaciones y al análisis agregado de incidentes. Disponible mientras tu sesión esté activa.</p></div>
+              </div>
+              <a href="/backoffice#incident-analysis" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-800">Abrir backoffice <ArrowUpRight size={16} /></a>
             </article>
           </section>
 
