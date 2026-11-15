@@ -2,7 +2,7 @@
 
 ## Project and context source
 
-This repository is 4Geeks Academy's cross-cutting AI Engineering project for **HealthCore**. The primary source of truth for the business is [`CONTEXT.es.md`](../CONTEXT.es.md). The project must preserve the separation between business context, technical implementation, and milestone-based evolution.
+This repository is 4Geeks Academy's cross-cutting AI Engineering project for **HealthCore**. The primary source of truth for the business is [`CONTEXT.md`](../CONTEXT.md). The project must preserve the separation between business context, technical implementation, and milestone-based evolution.
 
 ## What HealthCore is
 

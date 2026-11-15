@@ -1,10 +1,13 @@
 "use client";
+import { PhoneInput } from "../components/phone-input";
+import { phoneError, normalizePhone } from "../auth/phone";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { Activity, ArrowUpRight, BriefcaseMedical, CircleUserRound, LogOut, RefreshCw, ShieldCheck, Users } from "lucide-react";
-import { apiRequest, clearAccessToken, getAccessToken } from "../auth/session";
+import { apiRequest, clearAccessToken, getAccessToken, isUnauthorized, hasStatus } from "../auth/session";
+import BrandLogo from "../components/brand-logo";
 
 type Profile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 type UserInfo = { email: string; role: string; profile: Profile | null };
@@ -36,6 +39,7 @@ export default function DashboardPage() {
     setError("");
     try {
       const userInfo = await apiRequest<UserInfo>("/auth/me", { signal });
+      if (!userInfo.profile) { router.replace("/account/profile"); return; }
       setMe(userInfo);
       setProfileForm({ name: userInfo.profile?.name ?? "", phone: userInfo.profile?.phone ?? "", address: userInfo.profile?.address ?? "" });
       setState("ready");
@@ -54,7 +58,7 @@ export default function DashboardPage() {
     } catch (requestError) {
       if (signal?.aborted) return;
       const message = errorText(requestError);
-      if (message.includes("HTTP 401") || message.includes("HTTP 403")) {
+      if (isUnauthorized(requestError)) {
         clearAccessToken();
         router.replace("/login");
         return;
@@ -79,13 +83,13 @@ export default function DashboardPage() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!me) return;
+    if (!me || savingProfile || phoneError(profileForm.phone)) return;
     setSavingProfile(true);
     setProfileError("");
     setProfileNotice("");
     const body = {
       name: profileForm.name.trim() || null,
-      phone: profileForm.phone.trim() || null,
+      phone: normalizePhone(profileForm.phone),
       address: profileForm.address.trim() || null,
     };
     try {
@@ -99,7 +103,7 @@ export default function DashboardPage() {
       setProfileNotice("Tu información se guardó correctamente.");
     } catch (cause) {
       const message = errorText(cause);
-      if (message.includes("HTTP 401") || message.includes("HTTP 403")) {
+      if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
         return;
@@ -117,13 +121,11 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-[#f4f8fc] text-slate-800">
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-8">
-          <Link href="/dashboard" className="flex items-center gap-3 text-xl font-extrabold tracking-tight text-[#2563EB]" aria-label="HealthCore dashboard">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-700">✚</span>
-            <span>Health<span className="text-teal-500">Core</span></span>
-          </Link>
+          <BrandLogo href="/" size="md" />
           <div className="flex items-center gap-3">
             <Link href="/account/change-password" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 sm:inline-flex">Cambiar contraseña</Link>
             <Link href="/account/profile" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Mi perfil</Link>
+            <Link href="/talents" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 sm:inline-flex">Nuevos talentos</Link>
             {me?.role === "admin" && <Link href="/admin/users" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 sm:inline-flex">Usuarios</Link>}
             <button type="button" onClick={signOut} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"><LogOut size={16} />Salir</button>
           </div>
@@ -173,7 +175,7 @@ export default function DashboardPage() {
               </dl> : !editingProfile && <div className="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Todavía no hay un perfil asociado a tu cuenta.</div>}
               {editingProfile ? <form onSubmit={saveProfile} className="mt-6 grid gap-4 border-t border-slate-100 pt-5">
                 <label className="grid gap-2 text-sm font-semibold text-slate-700">Nombre<input maxLength={200} autoComplete="name" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
-                <label className="grid gap-2 text-sm font-semibold text-slate-700">Teléfono<input maxLength={40} type="tel" autoComplete="tel" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
+                <label className="grid gap-2 text-sm font-semibold text-slate-700">Teléfono<PhoneInput maxLength={40} type="tel" autoComplete="tel" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
                 <label className="grid gap-2 text-sm font-semibold text-slate-700">Dirección<input maxLength={500} autoComplete="street-address" value={profileForm.address} onChange={(event) => setProfileForm({ ...profileForm, address: event.target.value })} className="min-h-11 rounded-lg border border-slate-200 px-3 outline-none focus:border-blue-500" /></label>
                 {profileError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{profileError}</p>}
                 <div className="flex flex-wrap gap-3"><button disabled={savingProfile} className="rounded-lg bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">{savingProfile ? "Guardando…" : "Guardar información"}</button><button type="button" disabled={savingProfile} onClick={() => { setEditingProfile(false); setProfileError(""); setProfileForm({ name: me.profile?.name ?? "", phone: me.profile?.phone ?? "", address: me.profile?.address ?? "" }); }} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancelar</button></div>
@@ -186,6 +188,16 @@ export default function DashboardPage() {
               <h2 className="mt-4 text-xl font-bold text-slate-900">Herramientas de cuenta</h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">Administra el acceso a tu cuenta y mantén tus credenciales al día.</p>
               <Link href="/account/change-password" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700">Cambiar contraseña <ArrowUpRight size={16} /></Link>
+            </article>
+          </section>
+
+          <section className="mt-8" aria-label="Herramientas internas">
+            <article className="flex flex-col justify-between gap-5 rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:p-7">
+              <div className="flex items-start gap-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Activity size={23} /></span>
+                <div><h2 className="text-xl font-bold text-slate-900">Backoffice de HealthCore</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Accede al espacio de operaciones y al análisis agregado de incidentes. Disponible mientras tu sesión esté activa.</p></div>
+              </div>
+              <a href="/backoffice#incident-analysis" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-800">Abrir backoffice <ArrowUpRight size={16} /></a>
             </article>
           </section>
 

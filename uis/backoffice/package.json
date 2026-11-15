@@ -1,0 +1,7 @@
+{
+  "name": "healthcore-backoffice",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs"
+  }
+}

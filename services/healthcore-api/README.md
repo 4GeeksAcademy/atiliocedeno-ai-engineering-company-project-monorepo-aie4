@@ -59,7 +59,7 @@ Crea `uis/talent-pipeline-tracker/.env.local` y añade las variables del fronten
 npm run dev
 ```
 
-Abre <http://localhost:3000>. La página inicial redirige a la landing de HealthCore (`/index.html`). El botón **“Ingresar”** está en el **footer**, junto a los iconos de redes sociales; en inglés aparece como **“Sign in”**. Ese botón lleva a `/login`. También se puede abrir directamente <http://localhost:3000/login>. El formulario permite registrarse desde el enlace “Regístrate”/“Sign up” y luego iniciar sesión.
+Abre <http://localhost:3000>. La landing de HealthCore en español se sirve en `/` y la versión inglesa en `/en`. El botón **“Ingresar”** (en inglés, **“Sign in”**) lleva a `/login`; también se puede abrir directamente <http://localhost:3000/login>. El formulario permite registrarse desde el enlace “Regístrate”/“Sign up” y luego iniciar sesión. Las rutas históricas `/index.html`, `/index.en.html`, `/aplication.html` y `/aplication.en.html` redirigen a sus rutas actuales.
 
 ### 3. Crear la cuenta administradora inicial
 
@@ -100,7 +100,7 @@ RESEND_FROM_EMAIL=
 | --- | --- | --- |
 | `HEALTHCORE_JWT_SECRET` | Sí | Secreto fuerte que firma los tokens. Genera uno localmente con `python -c 'import secrets; print(secrets.token_urlsafe(48))'` y pega el resultado como valor. No publiques ni reutilices el valor del ejemplo. El backend también admite `SECRET_KEY` como alternativa heredada, pero si ambas están definidas prevalece `HEALTHCORE_JWT_SECRET`. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | No | Duración del token de acceso; por defecto, 30 minutos. También se reconoce `HEALTHCORE_ACCESS_TOKEN_MINUTES` como nombre alternativo heredado. |
-| `HEALTHCORE_FRONTEND_URL` | No en desarrollo local | Origen del frontend, sin ruta final; por defecto `http://localhost:3000`. Se usa para CORS y para construir enlaces de restablecimiento de contraseña. En otro host, reemplázalo por el origen real del frontend. |
+| `HEALTHCORE_FRONTEND_URL` | No en desarrollo local | Único origen del frontend, sin ruta final; por defecto `http://localhost:3000`. Se usa tanto para el permiso CORS como para construir enlaces de restablecimiento de contraseña. Un proceso API admite solo este origen en CORS: configura `http://localhost:4174` para el backoffice o `http://localhost:3000` para el portal. Para servir ambos simultáneamente desde otro origen se necesita un cambio explícito a una lista de orígenes segura; no uses `*`, especialmente al considerar credenciales. |
 | `RESEND_API_KEY` | No | Clave privada de Resend. Necesaria para enviar emails de notificación y recuperación de contraseña. |
 | `RESEND_FROM_EMAIL` | No | Dirección remitente verificada en Resend. Configúrala junto con la clave anterior. Si falta cualquiera de las dos, el envío se omite. |
 | `HEALTHCORE_BOOTSTRAP_ADMIN_EMAIL` | No | Correo para crear automáticamente el primer admin al arrancar la API. Se recomienda usar `scripts.manage_admin` en vez de almacenar credenciales en el `.env`. |
@@ -144,6 +144,71 @@ Los esquemas y ejemplos completos están disponibles en `/docs` mientras la API 
 - `GET`, `POST` y `PUT /profiles/me`: consultar, crear o actualizar el perfil de la cuenta autenticada.
 - `/profiles/{user_id}`: operaciones por usuario protegidas; el propietario gestiona su perfil y admin puede gestionar perfiles de cualquier cuenta. Crear un perfil ajeno requiere admin.
 - `GET /health`: verificación básica de disponibilidad.
+
+## Incident Analysis: ejecución local
+
+El briefing suministrado por el usuario define nueve columnas exactas: `incident_id,date,clinic_id,country,category,description,status,patient_id,satisfaction_score`. Se utiliza la tabla de aceptación de **100** filas; la introducción menciona 1.000, pero no corresponde al dataset de aceptación. El archivo de briefing no estaba en este checkout; su contenido fue proporcionado directamente durante la implementación.
+
+El servicio real está en `services/healthcore-api` (no `services/api`). Se reutiliza FastAPI y la autenticación JWT existentes.
+
+### Arquitectura y reglas
+
+`app/schemas/incidents.py` centraliza `IncidentRecord`, `SatisfactionSummary`, `ValidationSummary`, `AnalysisResult`, `AnalysisAPIResponse` y `ExportState`, con Pydantic v2. Valida IDs ASCII de seis dígitos, fecha ISO/calendario, doce clínicas y país compatible, cinco categorías, tres estados, descripción de al menos cinco caracteres y satisfacción entera 1–5 obligatoria en cerrados. Las validaciones cruzadas se ejecutan por campo para recoger errores independientes incluso si otro campo falla.
+
+`app/services/incident_analysis.py` itera CSV UTF-8 (BOM permitido), valida cada fila, detecta duplicados normalizados y suma exclusivamente registros válidos. Una fila inválida se cuenta una vez, pero puede contribuir a varias reglas. Las categorías, estados, países y puntuaciones incluyen los valores con conteo cero. `total_records = valid_records + invalid_records`; promedio y distribución de satisfacción solo usan incidentes válidos CLOSED.
+
+`app/services/incident_reporting.py` comparte el informe de consola y exportación `metric,value,percentage` entre CLI y API. Porcentajes de categoría/estado/país: denominador de registros válidos; satisfacción: cerrados con score. Sin denominador, porcentaje 0; sin scores, promedio null/N/A.
+
+### CLI
+
+Desde la raíz con el entorno Python activo:
+
+```bash
+python scripts/analyze.py scripts/incidents-healthcore.csv
+python scripts/analyze.py scripts/incidents-healthcore.csv --no-prompt
+python scripts/analyze.py /ruta/a/archivo.csv --export /ruta/nueva/results.csv
+python scripts/analyze.py scripts/incidents-healthcore.csv --json --no-prompt
+```
+
+El dataset versionado tiene una única ubicación canónica: `scripts/incidents-healthcore.csv`. No se confirmó su procedencia sintética: no redistribuir su contenido ni crear copias adicionales en Git.
+
+La CLI acepta cualquier ruta. En una terminal interactiva pregunta `¿Deseas exportar los resultados a CSV? [s / n]`; `s` crea `results.csv`. Sin terminal, con `--no-prompt`, `--json` o `--export`, no bloquea esperando entrada. La exportación no sobrescribe archivos existentes. Código 0: análisis completado, aunque incluya registros inválidos; código 2: error operativo. `--max-bytes` permite ajustar el límite de 25.000.000 bytes para procesamiento local de históricos.
+
+### API
+
+| Método y ruta | Comportamiento |
+| --- | --- |
+| `POST /api/incidents/analyze` | Bearer JWT + multipart `file`; valida CSV, devuelve todos los agregados y guarda el último resultado de la cuenta. |
+| `GET /api/incidents/results/export` | Bearer JWT; descarga `results.csv` del último análisis de esa cuenta, sin volver a enviar el CSV. 404 si no existe. |
+
+Los endpoints provisionales `/incidents/analyze` y `/incidents/export` se retiraron; todos los consumidores del repositorio usan las rutas requeridas. Errores: 400 entrada vacía/encoding/CSV/encabezados, 401 autenticación, 404 sin resultados, 413 tamaño excesivo, 415 extensión no CSV, 422 falta archivo o multipart incorrecto, 500 fallo interno sanitizado. Las filas con errores de negocio retornan 200 con sus conteos.
+
+El repositorio TinyDB guarda únicamente un agregado por cuenta, bajo una clave de ID y fecha de creación; esto impide acceder al resultado de otra cuenta o de una cuenta eliminada cuyo ID se reutilice. No hay selector de usuario en el endpoint de exportación. Cargas fallidas conservan el último resultado exitoso.
+
+### Backoffice
+
+El Backoffice es ahora la ruta protegida `/backoffice` de la aplicación Next.js `uis/talent-pipeline-tracker`. Ejecuta el portal (por defecto `http://localhost:3000`) y configura `HEALTHCORE_FRONTEND_URL` para ese mismo origen si difiere. El navegador usa el proxy same-origin `/api/healthcore`; el servicio FastAPI sigue validando, analizando y exportando datos. Ya no se sirve `uis/backoffice` con `python -m http.server`. CORS mantiene la restricción del único origen configurable; no se modificaron archivos `.env`.
+
+### Pruebas y resultados
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q
+python -m compileall -q app ../../scripts/analyze.py
+npm --prefix uis/backoffice ci
+npm --prefix uis/backoffice test
+npm --prefix uis/backoffice run check
+```
+
+**Resultados históricos de la entrega de análisis:** 59 tests Python y 5 frontend pasaron entonces; también pasó un caso de 100.000 filas sintéticas y la descarga verificada coincidió byte por byte con la exportación CLI. Los agregados de aceptación fueron 100/94/6, categorías 30/20/14/17/13, estados 28/52/14, países 61/33, satisfacción 3/5/12/23/9, 52 casos cerrados puntuados y media 3.58. Estas cifras son un registro histórico, no una ejecución actual.
+
+**Registro histórico de validación del monorepo (2026-10-31; previo a la migración de UI):** 76 pruebas backend pasaron con dos avisos deprecados; las 5 pruebas del Backoffice estático y su chequeo de sintaxis pasaron. El typecheck y build de Next pasaron (18 rutas, con aviso de múltiples lockfiles). Estos resultados no validan la nueva ruta React. Consulta [`memory-bank/progress.md`](../../memory-bank/progress.md) para el estado más reciente y no reportes resultados históricos como una ejecución actual.
+
+### Privacidad y límites
+
+No se imprimen valores de origen, filas, IDs, descripciones ni objetos de error Pydantic. Las pruebas usan sentinelas sintéticos y comprueban API, exportación, consola, almacenamiento y logs. El procesamiento es local; no llama a LLMs. El archivo subido puede usar almacenamiento temporal de Starlette durante multipart; se cierra y descarta al terminar. El límite se comprueba después del parsing multipart y también durante el análisis: no es un límite del tráfico recibido por el servidor.
+
+La detección de duplicados conserva hashes de IDs en memoria O(n); no se promete memoria constante para un millón de filas. TinyDB conserva solo agregados, pero sigue siendo almacenamiento local en un único proceso: no se implementaron TTL ni purga de agregados de cuentas eliminadas. Revisar política de retención, límites de petición y persistencia antes de producción. No hay certificación regulatoria. No se requiere Render ni otro proveedor cloud.
 
 ## Estructura y persistencia
 

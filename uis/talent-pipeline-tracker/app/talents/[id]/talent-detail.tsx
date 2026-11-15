@@ -24,7 +24,7 @@ type TalentForm = {
   experience_years: string;
 };
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+import { trackerApiUrl } from "../api-url";
 
 function recordsFromPayload(payload: unknown, key: string): TalentRecord[] {
   if (Array.isArray(payload)) {
@@ -85,8 +85,8 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
 
   async function loadDetail(signal?: AbortSignal) {
     const [recordResponse, notesResponse] = await Promise.all([
-      fetch(`${API_URL}/records/${encodeURIComponent(id)}`, { signal }),
-      fetch(`${API_URL}/records/${encodeURIComponent(id)}/notes`, { signal }),
+      fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}`, isEnglish), { signal }),
+      fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}/notes`, isEnglish), { signal }),
     ]);
 
     if (!recordResponse.ok || !notesResponse.ok) {
@@ -146,7 +146,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
       if (payload.experience_years !== null && !Number.isFinite(payload.experience_years)) {
         throw new Error(isEnglish ? "Experience must be a valid number." : "La experiencia debe ser un número válido.");
       }
-      const response = await fetch(`${API_URL}/records/${encodeURIComponent(id)}`, {
+      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}`, isEnglish), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -174,7 +174,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
       setSaving(true);
       setError("");
       setMessage("");
-      const response = await fetch(`${API_URL}/records/${encodeURIComponent(id)}`, {
+      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}`, isEnglish), {
         method: "DELETE",
       });
       if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
@@ -194,7 +194,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
     try {
       setSaving(true);
       setError("");
-      const response = await fetch(`${API_URL}/records/${encodeURIComponent(id)}/notes`, {
+      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}/notes`, isEnglish), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: noteText.trim() }),
@@ -217,7 +217,7 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
     try {
       setSaving(true);
       setError("");
-      const response = await fetch(`${API_URL}/records/${encodeURIComponent(id)}/notes/${encodeURIComponent(String(noteId))}`, {
+      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}/notes/${encodeURIComponent(String(noteId))}`, isEnglish), {
         method: "DELETE",
       });
       if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);

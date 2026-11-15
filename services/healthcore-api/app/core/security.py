@@ -33,14 +33,22 @@ def create_access_token(subject: str) -> str:
     if not _JWT_SECRET:
         raise RuntimeError("HEALTHCORE_JWT_SECRET must be configured")
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=_ACCESS_TOKEN_MINUTES)
-    return jwt.encode({"sub": subject, "exp": expires_at}, _JWT_SECRET, algorithm=_JWT_ALGORITHM)
+    return jwt.encode({"sub": subject, "exp": expires_at, "purpose": "access"}, _JWT_SECRET, algorithm=_JWT_ALGORITHM)
 
 
-def decode_access_token(token: str) -> dict:
-    """Validate a signed JWT and return its claims."""
+def _decode_signed_token(token: str) -> dict:
+    """Verify signature and expiration independently of token purpose."""
     if not _JWT_SECRET:
         raise RuntimeError("HEALTHCORE_JWT_SECRET must be configured")
     return jwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
+
+
+def decode_access_token(token: str) -> dict:
+    """Accept access tokens, including legacy sessions issued without purpose."""
+    claims = _decode_signed_token(token)
+    if "purpose" in claims and claims["purpose"] != "access":
+        raise jwt.InvalidTokenError("Token is not an access token")
+    return claims
 
 
 def create_password_reset_token(subject: str, token_id: str, expires_at: datetime) -> str:
@@ -56,7 +64,7 @@ def create_password_reset_token(subject: str, token_id: str, expires_at: datetim
 
 def decode_password_reset_token(token: str) -> dict[str, Any]:
     """Verify JWT signature/expiry and reject tokens issued for other purposes."""
-    claims = decode_access_token(token)
+    claims = _decode_signed_token(token)
     if claims.get("purpose") != "password_reset":
         raise jwt.InvalidTokenError("Token is not a password reset token")
     return claims

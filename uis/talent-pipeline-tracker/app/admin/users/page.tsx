@@ -1,9 +1,12 @@
 "use client";
+import { PhoneInput } from "../../components/phone-input";
+import { phoneError, normalizePhone } from "../../auth/phone";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { apiRequest, clearAccessToken, getAccessToken } from "../../auth/session";
+import { apiRequest, clearAccessToken, getAccessToken, isUnauthorized, hasStatus } from "../../auth/session";
+import BrandLogo from "../../components/brand-logo";
 
 type Profile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 type UserRecord = { id: number; email: string; is_active: boolean; role: "admin" | "manager" | "user"; created_at: string; profile: Profile | null };
@@ -31,7 +34,7 @@ export default function AdminUsersPage() {
     } catch (cause) {
       if (signal?.aborted) return;
       const text = cause instanceof Error ? cause.message : "No se pudo cargar usuarios.";
-      if (text.includes("HTTP 401") || text.includes("HTTP 403")) {
+      if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
         return;
@@ -99,12 +102,13 @@ export default function AdminUsersPage() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (phoneError(profile.phone)) return;
     if (!selected) return;
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      const body = { name: profile.name.trim() || null, phone: profile.phone.trim() || null, address: profile.address.trim() || null };
+      const body = { name: profile.name.trim() || null, phone: normalizePhone(profile.phone), address: profile.address.trim() || null };
       const saved = await apiRequest<Profile>(`/profiles/${selected.id}`, { method: hasProfile ? "PUT" : "POST", body });
       setHasProfile(true);
       setProfile({ name: saved.name ?? "", phone: saved.phone ?? "", address: saved.address ?? "" });
@@ -157,6 +161,7 @@ export default function AdminUsersPage() {
   const input = "min-h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10";
   return <main className="min-h-screen bg-[#f4f8fc] px-5 py-9 text-slate-800 sm:px-8">
     <div className="mx-auto max-w-7xl">
+      <BrandLogo href="/dashboard" className="mb-7" />
       <Link href="/dashboard" className="text-sm font-semibold text-blue-700 hover:underline">← Volver al panel</Link>
       <header className="mb-7 mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div><p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-600">Administración</p><h1 className="mt-2 text-3xl font-bold text-slate-900">Usuarios y perfiles</h1><p className="mt-2 text-slate-500">Gestiona las cuentas y los perfiles de HealthCore.</p></div>
@@ -182,7 +187,7 @@ export default function AdminUsersPage() {
             <form onSubmit={saveProfile} className="mt-6 grid gap-3">
               <h3 className="font-bold text-slate-800">Perfil personal</h3>
               <label className="grid gap-1 text-xs font-semibold text-slate-600">Nombre<input maxLength={200} value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} className={input} /></label>
-              <label className="grid gap-1 text-xs font-semibold text-slate-600">Teléfono<input maxLength={40} value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} className={input} /></label>
+              <label className="grid gap-1 text-xs font-semibold text-slate-600">Teléfono<PhoneInput type="tel" autoComplete="tel" maxLength={40} value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} className={input} /></label>
               <label className="grid gap-1 text-xs font-semibold text-slate-600">Dirección<input maxLength={500} value={profile.address} onChange={(event) => setProfile({ ...profile, address: event.target.value })} className={input} /></label>
               <div className="flex flex-wrap gap-3"><button disabled={busy} className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-60">{hasProfile ? "Guardar perfil" : "Crear perfil"}</button>{hasProfile && <button type="button" disabled={busy} onClick={() => void deleteProfile()} className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-60">Eliminar perfil</button>}</div>
             </form>

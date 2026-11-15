@@ -9,7 +9,7 @@ import { STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LABELS_EN } from "
 import GlobalNavbar from "../../components/global-navbar";
 import { useLanguage } from "../../components/language-context";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+import { trackerApiUrl } from "../api-url";
 
 type TalentForm = {
   full_name: string;
@@ -67,7 +67,7 @@ export default function NewTalent({ languageHref }: { languageHref?: string }) {
         throw new Error(isEnglish ? "Experience must be a valid number." : "Los años de experiencia deben ser un número válido.");
       }
 
-      const response = await fetch(`${API_URL}/records`, {
+      const response = await fetch(trackerApiUrl(`/records`, isEnglish), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
