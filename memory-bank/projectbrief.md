@@ -41,3 +41,9 @@ The project aims to provide interfaces and services that make HealthCore's proce
 - **`/services`**: space for backend services supporting HealthCore's interfaces and processes. Its concrete implementation and technologies must be based on Milestone 4 requirements; no implementation that does not yet exist is declared here.
 
 Milestone 1 and Talent Pipeline Tracker are relevant prior work, not the primary focus of Milestone 4.
+
+## Milestone 09 — HealthCore supplier directory requirements
+
+The supplier directory is intended to replace department-specific spreadsheets with one shared record for HealthCore's external clinical, operational, and technology suppliers. It addresses fragmented supplier information and gives Diane Foster (VP of People) and Claire Whitfield (Chief Compliance Officer) a shared view; Claire needs particular visibility into technology suppliers and their required compliance agreements.
+
+As milestone requirements, the backoffice directory must let Diane and Claire view suppliers with their category, monthly rate, compliance agreement, and status; filter by country and category; distinguish active from suspended suppliers; register a supplier; update its monthly rate with the change reflected immediately; and activate or suspend a supplier from its row. These are requirements, not claims that the feature is implemented. See the [official Milestone 09 briefing](https://github.com/4GeeksAcademy/ai-engineering-syllabus/blob/main/content/contexts/supplier-directory/healthcore-BRIEFING.es.md).

@@ -164,3 +164,8 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 - Root `serve:website` now starts Next.js locally on 4173; `serve:historical` preserves the independent HTML server on configurable port 4187. Root dev/build/start delegate to Next. No production navigation URL is hardcoded.
 - Browser verification: clicked Ingresar from the Spanish landing on 4173; Next login rendered at `/login`. Application READMEs explain commands and backend origin configuration; institutional root README and protected agent files untouched.
+
+## Milestone 09 — Requirements and pending decision
+
+- The official [HealthCore supplier-directory briefing](https://github.com/4GeeksAcademy/ai-engineering-syllabus/blob/main/content/contexts/supplier-directory/healthcore-BRIEFING.es.md) requires that suppliers be suspended rather than deleted, preserving supplier history for regulatory audits.
+- **Decision pending:** the general assignment requests a `DELETE` operation, which conflicts with HealthCore's domain requirement to retain supplier records. Resolve the API/UI contract before implementation; do not claim deletion or supplier-directory behavior is implemented in the current repository based on this briefing alone.
