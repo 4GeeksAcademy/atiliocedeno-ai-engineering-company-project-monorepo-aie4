@@ -201,6 +201,7 @@ export default function BackofficeWorkspace() {
           <a className={`nav-link${activeSection === "operations" ? " active" : ""}`} href="#operations" onClick={() => setActiveSection("operations")} aria-current={activeSection === "operations" ? "location" : undefined}><span aria-hidden="true">⌁</span>{isEn ? "Operations" : "Operaciones"}</a>
           <Link className="nav-link" href="/talents"><span aria-hidden="true">♙</span>{isEn ? "People & workforce" : "Personas y equipo"}</Link>
           <a className={`nav-link${activeSection === "compliance" ? " active" : ""}`} href="#compliance" onClick={() => setActiveSection("compliance")} aria-current={activeSection === "compliance" ? "location" : undefined}><span aria-hidden="true">◇</span>{isEn ? "Digital priorities" : "Prioridades digitales"}</a>
+          <Link className="nav-link" href="/backoffice/suppliers"><span aria-hidden="true">▤</span>{isEn ? "Suppliers" : "Proveedores"}</Link>
           <a className={`nav-link${activeSection === "incident-analysis" ? " active" : ""}`} href="#incident-analysis" onClick={() => setActiveSection("incident-analysis")} aria-current={activeSection === "incident-analysis" ? "location" : undefined}><span aria-hidden="true">⚑</span>{isEn ? "Incident analysis" : "Análisis de incidentes"}</a>
         </nav>
         <div className="sidebar-note"><span className="status-dot" /><div><strong>{isEn ? "Digital workspace" : "Espacio digital"}</strong><small>{isEn ? "Authenticated session" : "Sesión autenticada"}</small></div></div>

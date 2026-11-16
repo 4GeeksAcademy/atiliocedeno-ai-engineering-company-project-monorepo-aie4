@@ -18,6 +18,14 @@ VALID_CATEGORIES = (
     "billing_and_coding_software",
     "training_platforms",
 )
+SupplierStatus = Literal["active", "suspended"]
+
+
+def validate_monthly_rate_input(value: object) -> object:
+    """Reject booleans before Pydantic coerces them to numeric rates."""
+    if isinstance(value, bool):
+        raise ValueError("monthly_rate_must_be_positive_finite_number")
+    return value
 
 
 class SupplierFields(BaseModel):
@@ -30,7 +38,7 @@ class SupplierFields(BaseModel):
     categories: list[str] = Field(min_length=1)
     monthly_rate: float = Field(gt=0, allow_inf_nan=False)
     currency: Literal["USD", "GBP"]
-    status: Literal["active", "suspended"]
+    status: SupplierStatus
     compliance_agreement: Literal["BAA", "DPA", "both"] | None = None
     contract_renewal_date: str | None = None
     contact_email: EmailStr | None = None
@@ -54,9 +62,7 @@ class SupplierFields(BaseModel):
     @field_validator("monthly_rate", mode="before")
     @classmethod
     def reject_boolean_monthly_rate(cls, value: object) -> object:
-        if isinstance(value, bool):
-            raise ValueError("monthly_rate_must_be_positive_finite_number")
-        return value
+        return validate_monthly_rate_input(value)
 
     @field_validator("contract_renewal_date")
     @classmethod
@@ -81,6 +87,27 @@ class SupplierFields(BaseModel):
 
 class SupplierCreate(SupplierFields):
     """Supplier data accepted from a client when creating a record."""
+
+
+class SupplierRateUpdate(BaseModel):
+    """Request body for changing only a supplier's monthly rate."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    monthly_rate: float = Field(gt=0, allow_inf_nan=False)
+
+    @field_validator("monthly_rate", mode="before")
+    @classmethod
+    def reject_boolean_monthly_rate(cls, value: object) -> object:
+        return validate_monthly_rate_input(value)
+
+
+class SupplierStatusUpdate(BaseModel):
+    """Request body for changing only a supplier's lifecycle status."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: SupplierStatus
 
 
 class Supplier(SupplierCreate):

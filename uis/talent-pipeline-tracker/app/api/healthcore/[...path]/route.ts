@@ -45,5 +45,6 @@ async function forward(request: Request, context: RouteContext): Promise<Respons
 
 export const GET = forward;
 export const POST = forward;
+export const PATCH = forward;
 export const PUT = forward;
 export const DELETE = forward;

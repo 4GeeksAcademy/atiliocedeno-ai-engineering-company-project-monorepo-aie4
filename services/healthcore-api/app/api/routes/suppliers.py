@@ -6,7 +6,12 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.db.tinydb import get_db, get_db_lock
-from app.models.supplier import Supplier, SupplierCreate
+from app.models.supplier import (
+    Supplier,
+    SupplierCreate,
+    SupplierRateUpdate,
+    SupplierStatusUpdate,
+)
 
 router = APIRouter(prefix="/suppliers", tags=["suppliers"])
 
@@ -53,3 +58,43 @@ def get_supplier(supplier_id: int) -> Supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
 
     return Supplier.model_validate({**document, "id": document.doc_id})
+
+
+@router.patch("/{supplier_id}/rate", response_model=Supplier)
+def update_supplier_rate(supplier_id: int, payload: SupplierRateUpdate) -> Supplier:
+    """Update a supplier's monthly rate and audit timestamp together."""
+    table = get_db().table("suppliers")
+    with get_db_lock():
+        document = table.get(doc_id=supplier_id)
+        if document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Supplier not found",
+            )
+
+        data = {
+            "monthly_rate": payload.monthly_rate,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        table.update(data, doc_ids=[supplier_id])
+        updated_document = table.get(doc_id=supplier_id)
+
+    return Supplier.model_validate({**updated_document, "id": updated_document.doc_id})
+
+
+@router.patch("/{supplier_id}/status", response_model=Supplier)
+def update_supplier_status(supplier_id: int, payload: SupplierStatusUpdate) -> Supplier:
+    """Update only a supplier's active/suspended status."""
+    table = get_db().table("suppliers")
+    with get_db_lock():
+        document = table.get(doc_id=supplier_id)
+        if document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Supplier not found",
+            )
+
+        table.update({"status": payload.status}, doc_ids=[supplier_id])
+        updated_document = table.get(doc_id=supplier_id)
+
+    return Supplier.model_validate({**updated_document, "id": updated_document.doc_id})
