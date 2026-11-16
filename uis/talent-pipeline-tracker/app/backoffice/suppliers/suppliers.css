@@ -15,6 +15,20 @@
 .supplier-form-field { display: grid; min-width: 0; align-content: start; gap: 8px; color: #475569; font-size: 12px; font-weight: 700; }
 .supplier-field-label { display: block; min-height: 17px; color: #475569; font-size: 12px; font-weight: 700; line-height: 1.4; }
 .supplier-form-field input:not([type="checkbox"]),.supplier-form-field select,.supplier-form-field textarea,.supplier-currency { box-sizing: border-box; width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; color: #1f2937; background: #fff; font: inherit; font-weight: 400; }
+.supplier-shell select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m3 6 5 5 5-5' fill='none' stroke='%23475569' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+}
+@media (forced-colors: active) {
+  .supplier-shell select {
+    appearance: auto;
+    background-image: none;
+    padding-right: 12px;
+  }
+}
 .supplier-form-field textarea { min-height: 86px; resize: vertical; }
 .supplier-form-field [aria-invalid="true"] { border-color: #dc2626; }
 .supplier-required { display: inline; margin-left: 3px; color: #b91c1c; }

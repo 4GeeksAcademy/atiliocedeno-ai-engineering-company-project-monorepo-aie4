@@ -8,7 +8,21 @@ export default function BackofficeWorkspace() {
   const isEn = useLanguage().language === "en";
   const router = useRouter();
   useEffect(() => {
-    if (window.location.hash === "#incident-analysis") router.replace("/backoffice/incidents");
+    function redirectLegacyIncidentLink() {
+      if (window.location.hash === "#incident-analysis") {
+        router.replace("/backoffice/incidents");
+      }
+    }
+
+    redirectLegacyIncidentLink();
+    window.addEventListener("hashchange", redirectLegacyIncidentLink);
+    const frame = window.requestAnimationFrame(() => {
+      if (!window.location.hash) window.scrollTo({ top: 0, behavior: "instant" });
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", redirectLegacyIncidentLink);
+    };
   }, [router]);
   return (
     <div className="backoffice-shell">
