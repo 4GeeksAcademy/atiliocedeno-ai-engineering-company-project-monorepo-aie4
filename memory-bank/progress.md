@@ -185,3 +185,9 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 - The official [HealthCore supplier-directory briefing](https://github.com/4GeeksAcademy/ai-engineering-syllabus/blob/main/content/contexts/supplier-directory/healthcore-BRIEFING.es.md) requires that suppliers be suspended rather than deleted, preserving supplier history for regulatory audits.
 - **Decision pending:** the general assignment requests a `DELETE` operation, which conflicts with HealthCore's domain requirement to retain supplier records. Resolve the API/UI contract before implementation; do not claim deletion or supplier-directory behavior is implemented in the current repository based on this briefing alone.
+
+## Public website and private portal split — 2026-11-16
+
+- Extracted the bilingual landing and demo care request into the standalone Next.js app in `uis/website`. The existing Next.js app serves the staff portal, including the supplier directory and dedicated incident analysis route.
+- Verified the two production builds, TypeScript checks, 30 frontend/Backoffice tests and 93 FastAPI tests.
+- Browser checks used an isolated FastAPI database and synthetic accounts/CSV. Verified public links in both languages, sign-in return navigation, expired sessions, supplier access, CSV analysis/export, mobile navigation, dashboard language switching and profile phone errors. Tracker list/detail used a local upstream fixture. The external Tracker service was not modified or validated.

@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  padding: 5.5rem 1.25rem 3rem;
+  padding: 2.5rem 1.25rem 3rem;
   background: #f8fafc;
   color: #1f2937;
 }
@@ -338,7 +338,7 @@
 
 .detailPage {
   min-height: 100vh;
-  padding: 6rem 1.25rem 3rem;
+  padding: 2.5rem 1.25rem 3rem;
   background: #f8fafc;
   color: #1f2937;
 }
@@ -546,6 +546,6 @@
 
 @media (min-width: 768px) {
   .detailPage {
-    padding-top: 6.5rem;
+    padding-top: 2.5rem;
   }
 }

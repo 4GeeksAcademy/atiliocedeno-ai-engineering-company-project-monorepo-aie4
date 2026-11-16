@@ -223,3 +223,5 @@ La detección de duplicados conserva hashes de IDs en memoria O(n); no se promet
 TinyDB crea el archivo configurado en `HEALTHCORE_DB_PATH` o, por defecto, `data/healthcore.json`. Conserva ese archivo si necesitas mantener las cuentas locales; no lo incluyas en una distribución pública si contiene datos reales. Las contraseñas se almacenan con bcrypt y nunca se devuelven en respuestas de la API.
 
 Este proyecto es una base de desarrollo y no está aprobado para almacenar datos reales de pacientes. Antes de cualquier uso con información sanitaria, se requiere revisión de seguridad y cumplimiento HIPAA/UK GDPR.
+
+Supplier directory routes under `/suppliers` require a valid HealthCore bearer token for reads and writes. The private portal sends the signed-in user's token through its same-origin API proxy.

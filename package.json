@@ -3,8 +3,10 @@
   "private": true,
   "scripts": {
     "dev": "npm --prefix uis/talent-pipeline-tracker run dev",
-    "build": "npm --prefix uis/talent-pipeline-tracker run build",
+    "build": "npm --prefix uis/website run build && npm --prefix uis/talent-pipeline-tracker run build",
     "start": "npm --prefix uis/talent-pipeline-tracker run start",
-    "serve:website": "npm --prefix uis/talent-pipeline-tracker run dev -- --port 4173"
+    "serve:website": "npm --prefix uis/website run dev -- --port 4173",
+    "start:website": "npm --prefix uis/website run start -- --port 4173",
+    "serve:admin": "npm --prefix uis/talent-pipeline-tracker run dev"
   }
 }

@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import BrandLogo from "../../components/brand-logo";
 import { useLanguage } from "../../components/language-context";
 import "../backoffice.css";
 import "./suppliers.css";
@@ -424,18 +422,6 @@ export default function SuppliersDirectory() {
 
   return (
     <div className="backoffice-shell supplier-shell">
-      <aside className="sidebar" aria-label={isEn ? "Internal navigation" : "Navegación interna"}>
-        <div className="brand"><BrandLogo href="/dashboard" size="sm" inverse ariaLabel={isEn ? "HealthCore - Go to dashboard" : "HealthCore - Ir al panel"} /></div>
-        <p className="nav-label">{isEn ? "Workspace" : "Espacio de trabajo"}</p>
-        <nav aria-label={isEn ? "Workspace" : "Espacio de trabajo"}>
-          <Link className="nav-link" href="/backoffice"><span aria-hidden="true">⌁</span>{isEn ? "Operations" : "Operaciones"}</Link>
-          <Link className="nav-link" href="/talents"><span aria-hidden="true">♙</span>{isEn ? "People & workforce" : "Personas y equipo"}</Link>
-          <Link className="nav-link" href="/backoffice#compliance"><span aria-hidden="true">◇</span>{isEn ? "Digital priorities" : "Prioridades digitales"}</Link>
-          <Link className="nav-link active" href="/backoffice/suppliers" aria-current="page"><span aria-hidden="true">▤</span>{isEn ? "Suppliers" : "Proveedores"}</Link>
-          <Link className="nav-link" href="/backoffice#incident-analysis"><span aria-hidden="true">⚑</span>{isEn ? "Incident analysis" : "Análisis de incidentes"}</Link>
-        </nav>
-        <div className="sidebar-note"><span className="status-dot" /><div><strong>{isEn ? "Digital workspace" : "Espacio digital"}</strong><small>{isEn ? "Authenticated session" : "Sesión autenticada"}</small></div></div>
-      </aside>
       <main className="main-content">
         <header className="topbar">
           <div><span className="eyebrow">HealthCore Digital</span><span className="breadcrumb"> / {isEn ? "Supplier directory" : "Directorio de proveedores"}</span></div>

@@ -12,7 +12,7 @@ test('Tracker rejects missing configuration and preserves API paths',()=>{
   assert.throws(()=>trackerApiUrl('/records',true),/not configured/);
  }
  const {trackerApiUrl}=load('app/talents/api-url.ts',{process:{env:{NEXT_PUBLIC_API_URL:'https://example.test/api/'}}});
- assert.equal(trackerApiUrl('/records/123/notes',true),'https://example.test/api/records/123/notes');
+ assert.equal(trackerApiUrl('/records/123/notes',true),'/api/tracker/records/123/notes');
 });
 test('document language follows routes and retains preference on auth pages',async()=>{
  const React=require('react'),{act}=React,{createRoot}=require('react-dom/client');
@@ -20,17 +20,17 @@ test('document language follows routes and retains preference on auth pages',asy
  Object.assign(global,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true});
  let pathname='/en';const {LanguageProvider}=load('app/components/language-context.tsx',{document,sessionStorage:dom.window.sessionStorage},{'next/navigation':{usePathname:()=>pathname}});
  const root=createRoot(document.querySelector('#root'));
- for(const [route,expected] of [['/en','en'],['/en/care-request','en'],['/login','en'],['/care-request','es'],['/talents/en/new','en'],['/talents/new','es'],['/talents/123','es'],['/','es']]){
+ for(const [route,expected] of [['/talents/en','en'],['/login','en'],['/talents','es'],['/talents/en/new','en'],['/talents/new','es'],['/talents/123','es'],['/','es']]){
   pathname=route;await act(async()=>root.render(React.createElement(LanguageProvider,null,route)));assert.equal(document.documentElement.lang,expected,route);
  }
  await act(async()=>root.unmount());dom.window.close();
 });
 
-test('proxy supplies initial language for all Tracker routes',()=>{
- const {proxy,config}=load('proxy.ts',{Headers},{'next/server':{NextResponse:{next:options=>options}}});
+test('proxy supplies initial language for all Tracker routes',async()=>{
+ const {proxy,config}=load('proxy.ts',{Headers,process:{env:{}},fetch:async()=>({ok:true,json:async()=>({role:'user'})})},{'next/server':{NextResponse:{next:options=>options}}});
  assert.ok(config.matcher.includes('/talents/:path*'));
  for(const [pathname,expected] of [['/talents','es'],['/talents/en','en'],['/talents/new','es'],['/talents/en/new','en'],['/talents/test-123','es'],['/talents/en/test-123','en']]){
-  const result=proxy({headers:new Headers({'x-healthcore-language':'wrong'}),nextUrl:{pathname}});
+  const result=await proxy({cookies:{get:()=>({value:'synthetic'})},headers:new Headers({'x-healthcore-language':'wrong'}),nextUrl:{pathname}});
   assert.equal(result.request.headers.get('x-healthcore-language'),expected);
  }
 });
@@ -60,6 +60,6 @@ for(const english of [false,true]) for(const configured of [false,true]) test(`T
   const operation=load(file,globals)[name];
   try {await operation(name==='fetchAllRecords'?undefined:name==='deleteNote'?{id:'n/1'}:{preventDefault:noop},english);}catch(error){errors.push(error.message);}
   if(!configured){assert.equal(calls.length,0,name);assert.equal(errors.length,1,name);assert.match(errors[0],english?/not configured/:/no está configurado/);}
-  else {assert.equal(errors.length,0,name);assert.equal(calls[0].url,'https://example.test/api'+path,name);assert.equal(calls[0].method,method,name);assert.deepEqual(calls[0].body?JSON.parse(calls[0].body):undefined,body,name);if(name==='loadDetail')assert.equal(calls[1].url,'https://example.test/api/records/test%2F123/notes');}
+  else {assert.equal(errors.length,0,name);assert.equal(calls[0].url,'/api/tracker'+path,name);assert.equal(calls[0].method,method,name);assert.deepEqual(calls[0].body?JSON.parse(calls[0].body):undefined,body,name);if(name==='loadDetail')assert.equal(calls[1].url,'/api/tracker/records/test%2F123/notes');}
  }
 });

@@ -156,3 +156,7 @@ The supplier record requirements are: required `name`; required `country` (`USA`
 Country and currency must agree; the API rejects mismatched combinations. Every monthly-rate update must record `updated_at` for audit traceability. A compliance agreement is optional, but should be recorded for `clinical_software`, `it_infrastructure`, `patient_communication`, and `billing_and_coding_software`; this is the registrar's responsibility, not an automatic API validation rule. The supplier lifecycle uses `active` and `suspended`; suppliers are suspended, not deleted, so the directory retains auditable history.
 
 The seeder is required to load exactly the 15 suppliers in the official briefing, including the specified initial status, rates, agreements, and optional data. Consult the [official Milestone 09 briefing](https://github.com/4GeeksAcademy/ai-engineering-syllabus/blob/main/content/contexts/supplier-directory/healthcore-BRIEFING.es.md) for the authoritative valid-category list and exact seed records; no supplier seeder or implementation is asserted here.
+
+## Current frontend boundaries
+
+Two independently built Next.js applications share the monorepo. The bilingual patient landing and demonstration care form live in `uis/website`. The staff portal in `uis/talent-pipeline-tracker` owns authentication, accounts, talents, suppliers, domain lab and the dedicated incident analysis route. FastAPI checks the staff session and governs its own resources. Tracker operations retain the external Tracker API.

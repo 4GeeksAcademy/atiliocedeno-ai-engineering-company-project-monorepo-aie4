@@ -3,8 +3,9 @@
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.api.deps import get_current_user
 from app.db.tinydb import get_db, get_db_lock
 from app.models.supplier import (
     Supplier,
@@ -13,7 +14,7 @@ from app.models.supplier import (
     SupplierStatusUpdate,
 )
 
-router = APIRouter(prefix="/suppliers", tags=["suppliers"])
+router = APIRouter(prefix="/suppliers", tags=["suppliers"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("", response_model=Supplier, status_code=status.HTTP_201_CREATED)

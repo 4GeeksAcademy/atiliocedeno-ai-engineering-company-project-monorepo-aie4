@@ -4,8 +4,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLanguage, type AppLanguage } from "./language-context";
 
 function counterpart(pathname: string, language: AppLanguage): string | null {
-  if (pathname === "/" || pathname === "/en") return language === "en" ? "/en" : "/";
-  if (pathname === "/care-request" || pathname === "/en/care-request") return language === "en" ? "/en/care-request" : "/care-request";
   if (pathname === "/talents" || pathname === "/talents/en") return language === "en" ? "/talents/en" : "/talents";
   if (pathname === "/talents/new" || pathname === "/talents/en/new") return language === "en" ? "/talents/en/new" : "/talents/new";
 
@@ -23,29 +21,10 @@ export default function LanguageSwitcher() {
   const router = useRouter();
   const nextLanguage: AppLanguage = language === "en" ? "es" : "en";
   const label = language === "en" ? "Switch to Spanish" : "Cambiar a inglés";
-  const isPublicOrTalentRoute = pathname === "/" || pathname === "/en" || pathname.startsWith("/en/") ||
-    pathname === "/care-request" || pathname === "/talents" || pathname.startsWith("/talents/");
-
-  // Public landing/care pages and Talent pages have an equivalent control in their header.
-  const hasHeaderLanguageControl = pathname === "/" || pathname === "/en" || pathname.startsWith("/en/") ||
-    pathname === "/care-request" || pathname === "/talents" || pathname.startsWith("/talents/");
-  if (hasHeaderLanguageControl) return null;
-
-  function routeTarget(language: AppLanguage): string | null {
-    if (pathname === "/care-request") return language === "en" ? "/en/care-request" : "/care-request";
-    if (pathname === "/talents" || pathname === "/talents/en") return language === "en" ? "/talents/en" : "/talents";
-    if (pathname === "/talents/new" || pathname === "/talents/en/new") return language === "en" ? "/talents/en/new" : "/talents/new";
-    const talentMatch = pathname.match(/^\/talents\/(en\/)?([^/]+)$/);
-    if (talentMatch) return language === "en" ? `/talents/en/${talentMatch[2]}` : `/talents/${talentMatch[2]}`;
-    if (pathname === "/" || pathname === "/en" || pathname.startsWith("/en/")) return language === "en" ? "/en" : "/";
-    return counterpart(pathname, language);
-  }
-
   function switchLanguage() {
     setLanguage(nextLanguage);
-    const target = routeTarget(nextLanguage);
-    if (target && target !== pathname) router.push(target);
-    else if (isPublicOrTalentRoute) router.push(nextLanguage === "en" ? "/en" : "/");
+    const target = counterpart(pathname, nextLanguage);
+    if (target) router.push(target + window.location.search);
   }
 
   return (

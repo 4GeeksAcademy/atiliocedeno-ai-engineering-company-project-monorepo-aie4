@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import styles from "./pipeline.module.css";
 import { labelForValue, STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LABELS_EN } from "./labels";
-import GlobalNavbar from "../components/global-navbar";
 import { useLanguage } from "../components/language-context";
 import type { TalentRecord } from "./types";
 
@@ -231,7 +230,6 @@ export default function TalentPipeline() {
 
   return (
     <main className={styles.page}>
-      <GlobalNavbar />
       <header className={styles.header}>
         <div className={styles.titleRow}>
           <h1>{isEnglish ? "Talent Pipeline Tracker" : "Pipeline de talentos"}</h1>

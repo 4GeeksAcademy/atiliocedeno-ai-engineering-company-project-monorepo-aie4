@@ -3,11 +3,11 @@ const swc=require('next/dist/build/swc'),{JSDOM}=require('jsdom');
 function load(file, globals={}, mocks={}){
  const source=swc.transformSync(fs.readFileSync(file,'utf8'),{filename:file,jsc:{target:'es2020',parser:{syntax:'typescript',tsx:file.endsWith('.tsx')},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}}).code;
  const module={exports:{}};
- vm.runInNewContext(source,{module,exports:module.exports,require:name=>mocks[name]??require(name),console,AbortController,...globals},{filename:file});return module.exports;
+ vm.runInNewContext(source,{module,exports:module.exports,require:name=>mocks[name]??require(name),console,URL,AbortController,...globals},{filename:file});return module.exports;
 }
 function environment(){const dom=new JSDOM('<html lang="es"><body></body></html>',{url:'http://localhost'});return {window:dom.window,document:dom.window.document};}
 test('phone validation uses US/GB metadata and preserves optional fields',()=>{
- const {normalizePhone}=load('app/auth/phone.ts');
+ const {normalizePhone}=load('app/auth/phone.ts',{}, {'../../../../packages/shared/phone':load('../../packages/shared/phone.ts')});
  for(const [input,expected] of [['',null],['202-555-0123','+12025550123'],['+44 20 7946 0018','+442079460018'],['020 7946 0018','+442079460018'],['07400 123456','+447400123456']])assert.equal(normalizePhone(input),expected);
  for(const input of ['letters','202abc5550123','123','+44123','++12025550123','+12025550123('])assert.throws(()=>normalizePhone(input));
 });
@@ -25,7 +25,11 @@ test('safe auth errors, status semantics, language and retained session',async()
  response={ok:false,status:500,json:async()=>({detail:'PRIVATE_INTERNAL_DETAIL'})};
  await assert.rejects(session.apiRequest('/auth/me'),e=>e.code==='server');
  assert.equal(session.accountDestination({profile:null,role:'user'}),'/account/profile');
- assert.equal(session.accountDestination({profile:{},role:'admin'}),'/dashboard');
+ const account={profile:{},role:'admin'};
+ assert.equal(session.accountDestination(account),'/dashboard');
+ assert.equal(session.accountDestination(account,'/backoffice/incidents'),'/backoffice/incidents');
+ assert.equal(session.accountDestination(account,'//other.example/backoffice'),'/dashboard');
+ assert.equal(session.accountDestination({profile:null,role:'user'},'/talents'),'/account/profile');
 });
 test('network errors do not expose raw exceptions or remove tokens',async()=>{
  const env=environment();const session=load('app/auth/session.ts',{...env,process:{env:{}},fetch:async()=>{throw Error('PRIVATE_URL_SECRET')}});
