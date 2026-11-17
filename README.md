@@ -1,6 +1,6 @@
 # HealthCore AI Engineering Monorepo
 
-> English documentation. See [README.es.md](./README.es.md) for Spanish.
+> English documentation. Guías en español: [interfaces de usuario](./uis/README.es.md) y [API de HealthCore](./services/healthcore-api/README.md).
 
 This repository contains HealthCore's milestone-based AI Engineering work. It is not an unconfigured starter template. The business context is maintained in the protected [`CONTEXT.md`](./CONTEXT.md).
 
@@ -8,12 +8,13 @@ This repository contains HealthCore's milestone-based AI Engineering work. It is
 
 | Path | Responsibility | Current implementation |
 | --- | --- | --- |
-| `uis/talent-pipeline-tracker/` | Unified Next.js frontend | HealthCore bilingual landing/care request, auth/profile/dashboard, protected incident-analysis Backoffice, domain utility lab, and separate Talent Tracker using the external 4Geeks API. |
-| `services/healthcore-api/` | HealthCore backend | FastAPI, JWT auth, TinyDB persistence, profile/account flows, and authenticated aggregate incident analysis/export. |
+| [uis/website](./uis/website/README.md) | Public Next.js website | Spanish and English landing pages and the demo care request form. The form validates input locally without sending or storing a request. |
+| [uis/talent-pipeline-tracker](./uis/talent-pipeline-tracker/README.md) | Staff Next.js portal | Sign-in, accounts, talent pipeline, supplier directory, incident analysis and domain lab. User administration requires the admin role. |
+| [services/healthcore-api](./services/healthcore-api/README.md) | FastAPI backend | JWT authentication, profiles, supplier records and aggregate incident analysis/export with TinyDB persistence. |
 | `src/` | Shared TypeScript domain utilities | Domain types, transformations, validation, search and collection helpers consumed by the portal and `/domain-lab`. |
 | `scripts/` | Local analysis CLI and dataset | `analyze.py` and the canonical `scripts/incidents-healthcore.csv` path; no static website server remains. |
 
-Next.js is the canonical frontend. Retired static landing/form pages redirect from their old HTML URLs to the active localized Next routes. The native Backoffice remains protected and sends analysis requests to FastAPI; incident processing has not moved into the frontend. There is no verified deployment manifest in this repository.
+Legacy landing and care-form HTML URLs redirect to the bilingual routes on the public website. The staff portal uses FastAPI for HealthCore operations and a separate external API for talent records and notes.
 
 See [`docs/ARCHITECTURE_PROPOSAL.md`](./docs/ARCHITECTURE_PROPOSAL.md) for a proposal that is explicitly separate from the architecture currently implemented.
 
@@ -30,28 +31,39 @@ cd services/healthcore-api
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-dev.txt
+# Before starting, configure HEALTHCORE_JWT_SECRET in the service .env (see the API guide).
 uvicorn app.main:app --reload
 ```
 
 The API is available at `http://127.0.0.1:8000`; interactive API docs are at `/docs`. The default TinyDB file is local application data and should not be committed if it contains real information.
 
-### Next.js frontend
+### Public website and staff portal
 
-In another terminal:
+Run each block in its own terminal from the repository root.
+
+**Public website** at `http://localhost:4173`:
 
 ```bash
-cd uis/talent-pipeline-tracker
-npm ci
-npm run dev
+npm --prefix uis/website ci
+npm run serve:website
 ```
 
-The frontend is at `http://localhost:3000`. Full auth/profile/Backoffice flows require the API. The Talent Tracker uses a separate external practice API; it is not backed by HealthCore API. Key routes include `/`, `/en`, `/care-request`, `/en/care-request`, `/backoffice`, and `/domain-lab`.
+Visit `/` or `/en` for the landing page, and `/care-request` or `/en/care-request` for the form. These pages work without FastAPI or a staff account.
 
-Use the same Next.js frontend for public pages and protected Backoffice. The API's configured `HEALTHCORE_FRONTEND_URL` should match this origin (default `http://localhost:3000`).
+**Staff portal** at `http://localhost:3000`:
+
+```bash
+npm --prefix uis/talent-pipeline-tracker ci
+npm run serve:admin
+```
+
+With FastAPI running, sign in at `/login`. Open `/talents` for the pipeline, `/backoffice/suppliers` to manage supplier rates and status, and `/backoffice/incidents` to upload a CSV, review results and export aggregates.
 
 ## Configuration and secrets
 
-- Backend local settings belong in `services/healthcore-api/.env`; frontend local settings belong in `uis/talent-pipeline-tracker/.env.local`.
+- Configure `HEALTHCORE_JWT_SECRET` in `services/healthcore-api/.env`. Set `HEALTHCORE_FRONTEND_URL` to the staff portal origin for password reset links and CORS (default `http://localhost:3000`).
+- In `uis/talent-pipeline-tracker/.env.local`, set `NEXT_PUBLIC_API_URL` to the external Tracker API. The portal uses `HEALTHCORE_API_URL` for FastAPI (default `http://127.0.0.1:8000`).
+- Optionally set `HEALTHCORE_PORTAL_URL` in `uis/website/.env.local` to display a staff sign-in link in the landing page footer.
 - `.env.example` files are templates, not credentials. Copy their variable names and replace sample values locally.
 - Never commit, paste into documentation, or expose real `.env`/`.env.local` values. In Codespaces, configure secrets through Codespaces secrets/environment settings or the runtime environment rather than Git-tracked files.
 - `NEXT_PUBLIC_*` values are embedded in browser-visible frontend code; they must never contain secrets.
@@ -59,23 +71,19 @@ Use the same Next.js frontend for public pages and protected Backoffice. The API
 
 ## Validation commands
 
-Run each suite from the indicated working directory:
+After installing the dependencies above, run these commands from the repository root:
 
 ```bash
-# Backend (activate the existing service environment first)
-cd services/healthcore-api
-source .venv/bin/activate
-python -m pytest tests -q
-
-# Backoffice navigation and incident-analysis contract tests
+services/healthcore-api/.venv/bin/python -m pytest services/healthcore-api/tests -q
 npm --prefix uis/backoffice test
-
-# Next.js tracker package; all its npm scripts are package-local
-cd uis/talent-pipeline-tracker
-npm test
-npm run typecheck
+npm --prefix uis/website test
+npm --prefix uis/talent-pipeline-tracker test
+npm --prefix uis/website run typecheck
+npm --prefix uis/talent-pipeline-tracker run typecheck
 npm run build
 ```
+
+The root build compiles both Next.js apps. To serve the production builds locally, run `npm run start:website` and `npm start` in separate terminals.
 
 The current validation record, including known failures and limitations, is in [`memory-bank/progress.md`](./memory-bank/progress.md) and the dated [`memory-bank/AUDIT.md`](./memory-bank/AUDIT.md). Do not infer that a test passed merely because it is documented historically.
 

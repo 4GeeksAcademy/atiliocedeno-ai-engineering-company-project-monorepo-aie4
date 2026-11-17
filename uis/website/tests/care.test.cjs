@@ -8,7 +8,7 @@ for(const language of ['es','en'])test(`care ${language}: empty defaults, clinic
  const Component=load(`app/public-site/Care${language==='en'?'En':'Es'}.tsx`,{'./care-shell':{CareShell:({children})=>React.createElement('div',{},children)},'./public-site.css':{}}).default;
  const dom=new JSDOM(renderToStaticMarkup(React.createElement(Component)),{url:`http://localhost/${language==='en'?'en/':''}care-request`});
  const d=dom.window.document;dom.window.HTMLElement.prototype.scrollIntoView=function(){};
- const {initializeCareForm}=load('app/public-site/care-behavior.js',{'../auth/phone':load('app/auth/phone.ts')});
+ const {initializeCareForm}=load('app/public-site/care-behavior.js',{'../lib/phone':load('app/lib/phone.ts',{'../../../../packages/shared/phone':load('../../packages/shared/phone.ts')})});
  const cleanup=initializeCareForm(d.body,language),form=d.querySelector('form');
  assert.equal(d.querySelector('#sex').value,'');assert.equal(d.querySelector('#clinicCountry').value,'');assert.equal(d.querySelector('#clinic').disabled,true);
  const submit=()=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));

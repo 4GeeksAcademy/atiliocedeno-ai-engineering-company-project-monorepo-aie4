@@ -12,6 +12,7 @@ function LoginForm() {
   const en = language === "en";
   const router = useRouter();
   const params = useSearchParams();
+  const returnTo = params.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,12 +21,12 @@ function LoginForm() {
   useEffect(() => {
     if (!getAccessToken()) return;
     const controller = new AbortController();
-    apiRequest<Account>("/auth/me", {signal: controller.signal}).then(account => router.replace(accountDestination(account))).catch(error => {
+    apiRequest<Account>("/auth/me", {signal: controller.signal}).then(account => router.replace(accountDestination(account, returnTo))).catch(error => {
       if (controller.signal.aborted) return;
       if (isUnauthorized(error)) clearAccessToken();
     });
     return () => controller.abort();
-  }, [router]);
+  }, [router, returnTo]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,7 +37,7 @@ function LoginForm() {
       const result = await authRequest<{ access_token: string }>("/auth/login", { email, password }, "");
       saveAccessToken(result.access_token);
       const account = await apiRequest<Account>("/auth/me", {token: result.access_token});
-      router.replace(accountDestination(account));
+      router.replace(accountDestination(account, returnTo));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : en ? "Unable to sign in." : "No se pudo iniciar sesión.");
     } finally {

@@ -6,5 +6,5 @@ export function trackerApiUrl(path: string, isEnglish: boolean): string {
       ? "The Talent Tracker is not configured. Contact the administrator."
       : "El Tracker de talentos no está configurado. Contacta al administrador.");
   }
-  return `${base}${path}`;
+  return `/api/tracker${path}`;
 }

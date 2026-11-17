@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { invalidateRecordsCache } from "../talent-pipeline";
 import { STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LABELS_EN } from "../labels";
-import GlobalNavbar from "../../components/global-navbar";
 import { useLanguage } from "../../components/language-context";
 
 import { trackerApiUrl } from "../api-url";
@@ -43,7 +42,7 @@ const initialForm: TalentForm = {
   stage: "pending",
 };
 
-export default function NewTalent({ languageHref }: { languageHref?: string }) {
+export default function NewTalent() {
   const { language } = useLanguage();
   const isEnglish = language === "en";
   const statusLabels = isEnglish ? STATUS_LABELS_EN : STATUS_LABELS;
@@ -86,8 +85,7 @@ export default function NewTalent({ languageHref }: { languageHref?: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 pb-8 pt-24 text-slate-800 sm:px-8 sm:pt-24 lg:px-12">
-      <GlobalNavbar backLabel languageHref={languageHref} />
+    <main className="min-h-screen bg-slate-50 px-5 pb-8 pt-10 text-slate-800 sm:px-8 sm:pt-10 lg:px-12">
       <header className="mx-auto mb-8 w-full max-w-5xl">
         <Link
           href={isEnglish ? "/talents/en" : "/talents"}

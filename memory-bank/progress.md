@@ -1,6 +1,22 @@
 # Progress
 
-> **Current snapshot — 2026-11-05:** Frontend consolidation migrated public pages, protected Backoffice, and the domain utility panel to Next.js and removed static HTML copies. Backoffice tests (5/5), tracker typecheck, and production build pass. Tracker tests remain 11/15 because three auth tests cannot resolve `app/components/brand-logo.tsx` through the current test harness and the proxy-language test fails on a missing mock request. Runtime HTTP/protection checks and backend tests were not rerun; no commit or deployment was performed.
+> **Current snapshot — 2026-11-16:** The protected Next.js Backoffice now includes `/backoffice/suppliers`, a bilingual supplier directory with country/category API filters. `npm run typecheck` and `npm run build` pass (22 routes). `npm test` remains 11/15 with the same three pre-existing auth test harness resolution failures and proxy-language mock failure. The API's seeded supplier list/filter contracts and Next proxy/protected route were checked over HTTP with a temporary database/session; no browser automation was available, so no visual interaction or screenshot is claimed. No commit or deployment was performed.
+
+## Supplier directory create-form UX follow-up
+
+- Reordered `/backoffice/suppliers` so the directory and filters are primary; the create form is closed by default and opens from an Add supplier button beside the directory heading. Cancel clears and closes the draft; server/client failures leave the form open and preserve entered values; success closes the form, announces the result in the directory, reloads records, and preserves active filters.
+- Corrected explicit form label/control associations and inline required markers. Currency remains read-only, derives from country, and shows “Se completa al elegir el país” (localized English equivalent before selection). Categories now occupy a full responsive row, use clickable labels, and wrap long localized text; the category position prevents an empty Status grid gap.
+- Supplier component tests pass 9/9, including open/cancel, required validation, country/currency, associations, successful save/refresh/filter preservation, existing rate edits, and status toggles. `npm run typecheck`, `npm run build` (22 routes), and `git diff --check` pass. Full frontend suite remains 20/24: the same three auth test-harness module-resolution failures and one proxy-language mock failure.
+- HTTP request to `/backoffice/suppliers` on the running local frontend returned 307, consistent with the protected route redirect. No authenticated browser session or browser automation was available; visual desktop/mobile and post-login interaction review remains pending. No commit or push was performed.
+
+## Supplier directory in Backoffice (2026-11-16)
+
+- Added a predictive supplier-name filter to the directory, combined with the existing country/category filters. Name suggestions come from the currently loaded supplier list; matching is local and case-insensitive. The seven existing directory tests, a targeted component check, and frontend typecheck passed; browser behavior was not verified.
+- Added `/backoffice/suppliers` to the canonical `uis/talent-pipeline-tracker` app and linked it from the existing Backoffice navigation. The view is protected by the existing `/backoffice/:path*` proxy rule, uses the same-origin `/api/healthcore` proxy and session token, and follows the shared ES/EN language context.
+- The read-only table displays supplier name, country, categories, monthly rate/currency, compliance agreement, and a visible localized active/suspended status badge. Country and category filters can be combined and cleared without a full page reload; loading, error/retry, and empty-result states are distinct. No create/update/delete actions were added.
+- Seeded a temporary TinyDB with 15 suppliers and verified the API responses: unfiltered list 15 including suspended Healthstream LMS; UK + `medical_supplies` returns NHS Supply Chain and Nuffield Health Supplies; UK + `training_platforms` returns an empty list. Also verified the Next same-origin proxy returns the two expected filtered suppliers and that a temporary authenticated session passes protection for the new route.
+- Frontend verification on 2026-11-16: `npm run typecheck` passed; `npm run build` passed and included `/backoffice/suppliers` among 22 routes. `npm test` passed 11/15; four existing failures remain: three auth tests cannot resolve `../../components/brand-logo` from the test harness, and the proxy-language test accesses missing mocked `headers`. No test failures were introduced or fixed here. `git diff --check` passed.
+- No browser executable or Playwright/Puppeteer/Selenium package was available, so the UI was not visually exercised and no screenshot was produced. HTTP checks are not a substitute for browser verification. No commit or push was performed. The pre-existing uncommitted supplier rate/status API edits were preserved.
 
 ## Frontend consolidation in progress (2026-11-05)
 
@@ -164,3 +180,14 @@ The canonical source of business context for agents is [`CONTEXT.md`](../CONTEXT
 
 - Root `serve:website` now starts Next.js locally on 4173; `serve:historical` preserves the independent HTML server on configurable port 4187. Root dev/build/start delegate to Next. No production navigation URL is hardcoded.
 - Browser verification: clicked Ingresar from the Spanish landing on 4173; Next login rendered at `/login`. Application READMEs explain commands and backend origin configuration; institutional root README and protected agent files untouched.
+
+## Milestone 09 — Requirements and pending decision
+
+- The official [HealthCore supplier-directory briefing](https://github.com/4GeeksAcademy/ai-engineering-syllabus/blob/main/content/contexts/supplier-directory/healthcore-BRIEFING.es.md) requires that suppliers be suspended rather than deleted, preserving supplier history for regulatory audits.
+- **Decision pending:** the general assignment requests a `DELETE` operation, which conflicts with HealthCore's domain requirement to retain supplier records. Resolve the API/UI contract before implementation; do not claim deletion or supplier-directory behavior is implemented in the current repository based on this briefing alone.
+
+## Public website and private portal split — 2026-11-16
+
+- Extracted the bilingual landing and demo care request into the standalone Next.js app in `uis/website`. The existing Next.js app serves the staff portal, including the supplier directory and dedicated incident analysis route.
+- Verified the two production builds, TypeScript checks, 30 frontend/Backoffice tests and 93 FastAPI tests.
+- Browser checks used an isolated FastAPI database and synthetic accounts/CSV. Verified public links in both languages, sign-in return navigation, expired sessions, supplier access, CSV analysis/export, mobile navigation, dashboard language switching and profile phone errors. Tracker list/detail used a local upstream fixture. The external Tracker service was not modified or validated.

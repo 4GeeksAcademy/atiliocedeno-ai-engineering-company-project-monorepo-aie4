@@ -4,10 +4,7 @@ The active, authenticated Backoffice is the native Next.js route `/backoffice` i
 
 ## Sidebar navigation
 
-- **Operations / Operaciones** scrolls to the operations snapshot on the Backoffice page.
-- **People & workforce / Personas y equipo** opens the existing `/talents` Talent Pipeline feature. It is not an HR staff directory.
-- **Digital priorities / Prioridades digitales** scrolls to the priorities panel (privacy-by-design and other product priorities).
-- **Incident analysis / Análisis de incidentes** scrolls to the CSV analysis form and results.
+The shared private sidebar provides direct routes to operations, talents, suppliers, and incident analysis. The CSV form, results and export are on `/backoffice/incidents`.
 
 The workspace snapshot, counts, rates, and priorities are illustrative content, not live clinic/business data. Incident analysis is the operational feature: the UI sends CSVs through the same-origin `/api/healthcore` proxy to FastAPI and can download aggregate results. Authentication and route protection remain in the portal; the backend validates and analyzes the data. Do not use this prototype with real patient data. See the [HealthCore API README](../../services/healthcore-api/README.md) for privacy, persistence, and compliance limitations.
 

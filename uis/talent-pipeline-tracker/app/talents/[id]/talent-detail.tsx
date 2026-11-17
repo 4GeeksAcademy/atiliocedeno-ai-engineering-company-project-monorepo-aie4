@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import styles from "../pipeline.module.css";
 import { invalidateRecordsCache } from "../talent-pipeline";
 import { STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LABELS_EN } from "../labels";
-import GlobalNavbar from "../../components/global-navbar";
 import { useLanguage } from "../../components/language-context";
 import type { TalentNote, TalentRecord } from "../types";
 
@@ -57,7 +56,7 @@ function recordFromPayload(payload: unknown): TalentRecord {
   return payload as TalentRecord;
 }
 
-export default function TalentDetail({ id, languageHref }: { id: string; languageHref?: string }) {
+export default function TalentDetail({ id }: { id: string }) {
   const { language } = useLanguage();
   const isEnglish = language === "en";
   const statusLabels = isEnglish ? STATUS_LABELS_EN : STATUS_LABELS;
@@ -235,7 +234,6 @@ export default function TalentDetail({ id, languageHref }: { id: string; languag
 
   return (
     <main className={styles.detailPage}>
-      <GlobalNavbar backLabel languageHref={languageHref} />
       <header className={styles.detailHeader}>
         <Link
           href={isEnglish ? "/talents/en" : "/talents"}

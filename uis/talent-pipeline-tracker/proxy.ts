@@ -4,7 +4,11 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   const pathname = request.nextUrl.pathname;
 
-  const requiresSession =
+  requestHeaders.delete("x-healthcore-role");
+  const trackerRequest = pathname.startsWith("/api/tracker/");
+  const requiresSession = trackerRequest ||
+    pathname === "/dashboard" || pathname === "/domain-lab" ||
+    pathname.startsWith("/account/") || pathname.startsWith("/admin/") ||
     pathname === "/talents" || pathname.startsWith("/talents/") ||
     pathname === "/backoffice" || pathname.startsWith("/backoffice/");
 
@@ -19,7 +23,14 @@ export async function proxy(request: NextRequest) {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
-        isAuthenticated = response.ok;
+        if (response.ok) {
+          const account = await response.json();
+          isAuthenticated = true;
+          requestHeaders.set("x-healthcore-role", account.role === "admin" ? "admin" : "user");
+          if (pathname.startsWith("/admin/") && account.role !== "admin") {
+            return NextResponse.redirect(new URL("/dashboard", request.url));
+          }
+        }
       } catch {
         // Fail closed: talent information should not be served if the session
         // cannot be verified against the authentication API.
@@ -27,6 +38,7 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!isAuthenticated) {
+      if (trackerRequest) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
       const response = NextResponse.redirect(loginUrl);
@@ -35,10 +47,9 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const routeLanguage = pathname === "/en" || pathname.startsWith("/en/") ||
-    pathname === "/talents/en" || pathname.startsWith("/talents/en/")
+  const routeLanguage = pathname === "/talents/en" || pathname.startsWith("/talents/en/")
     ? "en"
-    : pathname === "/" || pathname === "/care-request" || pathname === "/talents" || pathname.startsWith("/talents/")
+    : pathname === "/talents" || pathname.startsWith("/talents/")
       ? "es"
       : request.cookies.get("healthcore_language")?.value;
   requestHeaders.set("x-healthcore-language", routeLanguage === "en" ? "en" : "es");
@@ -48,8 +59,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/", "/care-request", "/en", "/en/:path*", "/login", "/signup", "/forgot-password", "/reset-password",
-    "/account/:path*", "/dashboard", "/admin/:path*", "/domain-lab",
+    "/", "/login", "/signup", "/forgot-password", "/reset-password",
+    "/api/tracker/:path*", "/account/:path*", "/dashboard", "/admin/:path*", "/domain-lab",
     "/talents", "/talents/:path*", "/backoffice", "/backoffice/:path*",
   ],
 };

@@ -59,7 +59,16 @@ Crea `uis/talent-pipeline-tracker/.env.local` y añade las variables del fronten
 npm run dev
 ```
 
-Abre <http://localhost:3000>. La landing de HealthCore en español se sirve en `/` y la versión inglesa en `/en`. El botón **“Ingresar”** (en inglés, **“Sign in”**) lleva a `/login`; también se puede abrir directamente <http://localhost:3000/login>. El formulario permite registrarse desde el enlace “Regístrate”/“Sign up” y luego iniciar sesión. Las rutas históricas `/index.html`, `/index.en.html`, `/aplication.html` y `/aplication.en.html` redirigen a sus rutas actuales.
+Abre <http://localhost:3000/login> para ingresar o registrarte. Después de iniciar sesión, el portal incluye el pipeline de talentos, el directorio de proveedores y el análisis de incidentes.
+
+Para abrir la landing o el formulario «Solicitar atención», inicia el [sitio público](../../uis/website/README.md) en otra terminal desde la raíz:
+
+```bash
+npm --prefix uis/website ci
+npm run serve:website
+```
+
+La aplicación pública escucha en <http://localhost:4173> y ofrece las rutas `/`, `/en`, `/care-request` y `/en/care-request`. Las URL históricas de la landing y del formulario redirigen allí a sus rutas actuales.
 
 ### 3. Crear la cuenta administradora inicial
 
@@ -75,7 +84,7 @@ El registro público siempre crea usuarios regulares. Los usuarios regulares sol
 
 ## Variables de entorno
 
-Hay **dos archivos diferentes**. Las variables del backend van en `services/healthcore-api/.env`; las que comienzan con `NEXT_PUBLIC_` van en `uis/talent-pipeline-tracker/.env.local`. En los ejemplos, reemplaza los valores de muestra en tu propia máquina. No uses secretos de ejemplo en producción.
+La API y el portal privado tienen configuraciones independientes. Las variables del backend van en `services/healthcore-api/.env`; las que comienzan con `NEXT_PUBLIC_` van en `uis/talent-pipeline-tracker/.env.local`. En los ejemplos, reemplaza los valores de muestra en tu propia máquina. No uses secretos de ejemplo en producción.
 
 ### Backend: `services/healthcore-api/.env`
 
@@ -100,7 +109,7 @@ RESEND_FROM_EMAIL=
 | --- | --- | --- |
 | `HEALTHCORE_JWT_SECRET` | Sí | Secreto fuerte que firma los tokens. Genera uno localmente con `python -c 'import secrets; print(secrets.token_urlsafe(48))'` y pega el resultado como valor. No publiques ni reutilices el valor del ejemplo. El backend también admite `SECRET_KEY` como alternativa heredada, pero si ambas están definidas prevalece `HEALTHCORE_JWT_SECRET`. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | No | Duración del token de acceso; por defecto, 30 minutos. También se reconoce `HEALTHCORE_ACCESS_TOKEN_MINUTES` como nombre alternativo heredado. |
-| `HEALTHCORE_FRONTEND_URL` | No en desarrollo local | Único origen del frontend, sin ruta final; por defecto `http://localhost:3000`. Se usa tanto para el permiso CORS como para construir enlaces de restablecimiento de contraseña. Un proceso API admite solo este origen en CORS: configura `http://localhost:4174` para el backoffice o `http://localhost:3000` para el portal. Para servir ambos simultáneamente desde otro origen se necesita un cambio explícito a una lista de orígenes segura; no uses `*`, especialmente al considerar credenciales. |
+| `HEALTHCORE_FRONTEND_URL` | No en desarrollo local | Único origen del frontend, sin ruta final; por defecto `http://localhost:3000`. Se usa tanto para el permiso CORS como para construir enlaces de restablecimiento de contraseña. Configura el origen del portal privado. El formulario público funciona localmente sin llamar a FastAPI. |
 | `RESEND_API_KEY` | No | Clave privada de Resend. Necesaria para enviar emails de notificación y recuperación de contraseña. |
 | `RESEND_FROM_EMAIL` | No | Dirección remitente verificada en Resend. Configúrala junto con la clave anterior. Si falta cualquiera de las dos, el envío se omite. |
 | `HEALTHCORE_BOOTSTRAP_ADMIN_EMAIL` | No | Correo para crear automáticamente el primer admin al arrancar la API. Se recomienda usar `scripts.manage_admin` en vez de almacenar credenciales en el `.env`. |
@@ -119,7 +128,7 @@ Resend es opcional para ejecutar el portal y registrar/iniciar sesión. Sin amba
 
 ```dotenv
 # API propia de HealthCore (no es la API del Talent Tracker)
-NEXT_PUBLIC_HEALTHCORE_API_URL=http://localhost:8000
+HEALTHCORE_API_URL=http://127.0.0.1:8000
 
 # API externa independiente, usada por la sección Talent Tracker
 NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1
@@ -127,7 +136,7 @@ NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1
 
 | Variable | Uso |
 | --- | --- |
-| `NEXT_PUBLIC_HEALTHCORE_API_URL` | URL base de la API HealthCore. En local usa `http://localhost:8000`; el código también usa esa URL si se omite. |
+| `HEALTHCORE_API_URL` | Origen de FastAPI que usa el servidor Next.js. Por defecto es `http://127.0.0.1:8000`. El navegador consulta la API mediante `/api/healthcore` en el origen del portal. |
 | `NEXT_PUBLIC_API_URL` | URL base de la API externa del Talent Tracker. No la cambies para apuntar a HealthCore; ambas aplicaciones tienen datos y endpoints distintos. La URL indicada es la de desarrollo usada por este proyecto. |
 
 Reinicia `npm run dev` después de modificar `.env.local`, porque Next.js carga estas variables al arrancar.
@@ -187,17 +196,17 @@ El repositorio TinyDB guarda únicamente un agregado por cuenta, bajo una clave 
 
 ### Backoffice
 
-El Backoffice es ahora la ruta protegida `/backoffice` de la aplicación Next.js `uis/talent-pipeline-tracker`. Ejecuta el portal (por defecto `http://localhost:3000`) y configura `HEALTHCORE_FRONTEND_URL` para ese mismo origen si difiere. El navegador usa el proxy same-origin `/api/healthcore`; el servicio FastAPI sigue validando, analizando y exportando datos. Ya no se sirve `uis/backoffice` con `python -m http.server`. CORS mantiene la restricción del único origen configurable; no se modificaron archivos `.env`.
+El resumen de operaciones está en `/backoffice`, el directorio de proveedores en `/backoffice/suppliers` y la carga, análisis y exportación de CSV en `/backoffice/incidents`. Estas rutas requieren una sesión del portal privado. FastAPI comprueba el token y procesa las operaciones.
 
 ### Pruebas y resultados
 
+Desde la raíz del repositorio, con el entorno virtual de la API ya creado:
+
 ```bash
-python -m pip install -r requirements-dev.txt
-python -m pytest tests -q
-python -m compileall -q app ../../scripts/analyze.py
-npm --prefix uis/backoffice ci
+services/healthcore-api/.venv/bin/python -m pip install -r services/healthcore-api/requirements-dev.txt
+services/healthcore-api/.venv/bin/python -m pytest services/healthcore-api/tests -q
+services/healthcore-api/.venv/bin/python -m compileall -q services/healthcore-api/app scripts/analyze.py
 npm --prefix uis/backoffice test
-npm --prefix uis/backoffice run check
 ```
 
 **Resultados históricos de la entrega de análisis:** 59 tests Python y 5 frontend pasaron entonces; también pasó un caso de 100.000 filas sintéticas y la descarga verificada coincidió byte por byte con la exportación CLI. Los agregados de aceptación fueron 100/94/6, categorías 30/20/14/17/13, estados 28/52/14, países 61/33, satisfacción 3/5/12/23/9, 52 casos cerrados puntuados y media 3.58. Estas cifras son un registro histórico, no una ejecución actual.
@@ -223,3 +232,5 @@ La detección de duplicados conserva hashes de IDs en memoria O(n); no se promet
 TinyDB crea el archivo configurado en `HEALTHCORE_DB_PATH` o, por defecto, `data/healthcore.json`. Conserva ese archivo si necesitas mantener las cuentas locales; no lo incluyas en una distribución pública si contiene datos reales. Las contraseñas se almacenan con bcrypt y nunca se devuelven en respuestas de la API.
 
 Este proyecto es una base de desarrollo y no está aprobado para almacenar datos reales de pacientes. Antes de cualquier uso con información sanitaria, se requiere revisión de seguridad y cumplimiento HIPAA/UK GDPR.
+
+Supplier directory routes under `/suppliers` require a valid HealthCore bearer token for reads and writes. The private portal sends the signed-in user's token through its same-origin API proxy.

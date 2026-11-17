@@ -1,4 +1,4 @@
-import { phoneError } from "../auth/phone";
+import { phoneError } from "../lib/phone";
 export function initializeCareForm(root, language) {
  const document = root.ownerDocument;
  const cleanups=[];

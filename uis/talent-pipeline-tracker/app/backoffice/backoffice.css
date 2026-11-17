@@ -55,3 +55,8 @@
 	cursor: wait;
 	opacity: 0.65;
 }
+
+.backoffice-shell .incident-form input[type=file]:enabled,
+.backoffice-shell .incident-form input[type=file]:enabled::file-selector-button { cursor: pointer; }
+.backoffice-shell .incident-panel h1 { font-size: 1.5rem; font-weight: 700; }
+.backoffice-shell:has(.incident-panel) .content-wrap { width: 100%; margin-block: 0; }

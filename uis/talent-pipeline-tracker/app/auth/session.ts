@@ -64,7 +64,17 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 export type AccountProfile = { id: number; user_id: number; name: string | null; phone: string | null; address: string | null };
 export type Account = { email: string; role: string; profile: AccountProfile | null };
 // All existing profile fields are optional. A persisted profile completes setup.
-export function accountDestination(account: Account): string { return account.profile ? "/dashboard" : "/account/profile"; }
+export function accountDestination(account: Account, returnTo?: string | null): string {
+  if (!account.profile) return "/account/profile";
+  if (returnTo?.startsWith("/") && !returnTo.startsWith("//") && !returnTo.includes("\\")) {
+    const origin = "https://healthcore.invalid";
+    const url = new URL(returnTo, origin);
+    if (url.origin === origin && /^\/(dashboard|account|admin|talents|backoffice|domain-lab)(\/|$)/.test(url.pathname)) {
+      return url.pathname + url.search + url.hash;
+    }
+  }
+  return "/dashboard";
+}
 
 export function authRequest<T>(path: string, body: unknown, token?: string): Promise<T> {
   return apiRequest<T>(path, { method: "POST", body, token });

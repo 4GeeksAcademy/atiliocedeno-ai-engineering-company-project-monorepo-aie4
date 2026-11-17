@@ -14,8 +14,8 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function languageFromPath(pathname: string | null): AppLanguage | null {
-  if (pathname === "/en" || pathname?.startsWith("/en/") || pathname === "/talents/en" || pathname?.startsWith("/talents/en/")) return "en";
-  if (pathname === "/" || pathname === "/care-request" || (pathname === "/talents" || pathname?.startsWith("/talents/"))) return "es";
+  if (pathname === "/talents/en" || pathname?.startsWith("/talents/en/")) return "en";
+  if ((pathname === "/talents" || pathname?.startsWith("/talents/"))) return "es";
   return null;
 }
 

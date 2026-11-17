@@ -1,0 +1,14 @@
+.private-layout { display: grid; grid-template-columns: 14rem minmax(0, 1fr); min-height: 100vh; background: #f4f8fc; }
+.private-sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; padding: 1.5rem 1rem; background: linear-gradient(155deg, #1558c0, #123d59); color: white; }
+.private-sidebar nav { display: grid; gap: .25rem; }
+.private-sidebar nav a, .private-sidebar button { padding: .65rem .75rem; border-radius: .5rem; text-align: left; color: white; }
+.private-sidebar nav a:hover, .private-sidebar nav a[aria-current], .private-sidebar button:hover { background: #ffffff26; }
+.private-sidebar :focus-visible { outline: 2px solid white; outline-offset: 2px; }
+.private-sidebar button { cursor: pointer; margin-top: auto; }
+.private-content { min-width: 0; }
+@media (max-width: 760px) {
+  .private-layout { display: block; }
+  .private-sidebar { position: static; height: auto; gap: .5rem; padding: .75rem 1rem; }
+  .private-sidebar nav { display: flex; flex-wrap: wrap; }
+  .private-sidebar nav a, .private-sidebar button { padding: .5rem; font-size: .875rem; }
+}

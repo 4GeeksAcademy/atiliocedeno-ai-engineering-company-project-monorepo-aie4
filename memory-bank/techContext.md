@@ -148,3 +148,15 @@ This section supersedes earlier historical statements that no backend exists for
 `POST /api/incidents/analyze` stores one aggregate in TinyDB per authenticated account incarnation (numeric ID + creation timestamp). `GET /api/incidents/results/export` exports that same account's latest aggregate. No raw rows are stored in that table. The static backoffice consumes these contracts without recalculating business metrics. CLI exports use exclusive file creation. Development test dependencies are isolated in `requirements-dev.txt` and a backoffice package with jsdom/Node tests; no frontend framework or production build was added.
 
 Local backoffice origin is 4174; use the existing `HEALTHCORE_FRONTEND_URL` setting for CORS. Deployment infrastructure was not added. Duplicate-ID detection uses O(n) hash memory; TinyDB still requires a single-process deployment and a separate retention strategy before production use.
+
+## Milestone 09 — Supplier directory contract requirements
+
+The supplier record requirements are: required `name`; required `country` (`USA` or `UK`); required `categories` list with at least one valid category; required positive `monthly_rate` (float); required `currency` (`USD` for USA, `GBP` for UK); system-generated `updated_at` for the latest rate update; and required `status` (`active` or `suspended`). Optional fields are `compliance_agreement` (`BAA`, `DPA`, `both`, or `null`), `contract_renewal_date` (`YYYY-MM-DD`), `contact_email`, and internal `notes`.
+
+Country and currency must agree; the API rejects mismatched combinations. Every monthly-rate update must record `updated_at` for audit traceability. A compliance agreement is optional, but should be recorded for `clinical_software`, `it_infrastructure`, `patient_communication`, and `billing_and_coding_software`; this is the registrar's responsibility, not an automatic API validation rule. The supplier lifecycle uses `active` and `suspended`; suppliers are suspended, not deleted, so the directory retains auditable history.
+
+The seeder is required to load exactly the 15 suppliers in the official briefing, including the specified initial status, rates, agreements, and optional data. Consult the [official Milestone 09 briefing](https://github.com/4GeeksAcademy/ai-engineering-syllabus/blob/main/content/contexts/supplier-directory/healthcore-BRIEFING.es.md) for the authoritative valid-category list and exact seed records; no supplier seeder or implementation is asserted here.
+
+## Current frontend boundaries
+
+Two independently built Next.js applications share the monorepo. The bilingual patient landing and demonstration care form live in `uis/website`. The staff portal in `uis/talent-pipeline-tracker` owns authentication, accounts, talents, suppliers, domain lab and the dedicated incident analysis route. FastAPI checks the staff session and governs its own resources. Tracker operations retain the external Tracker API.
