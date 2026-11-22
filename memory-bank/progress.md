@@ -1,5 +1,22 @@
 # Progress
 
+## Centralized Incident Manager — in-memory model phase (2026-11-16)
+
+- Added a manager `Incident` model with the official category, status, origin, and branch catalogues. It is distinct from the historical CSV `IncidentRecord`; generated entity IDs are separate from the CSV import identity.
+- Moved the existing historical-row `IncidentRecord` validator into `packages/shared/incident_record.py` and kept its old schema import path as a re-export, preserving the analyzer contract. Added an in-memory converter with explicit category/status/clinic-to-branch mappings; historical rows use `origin="customer"` and date-derived midnight UTC timestamps.
+- Verified the real `HC-000001` row (`2024-01-13`, `US-TX-02`, `ADMINISTRATIVE`, `CLOSED`) transforms to `other`, `austin_north`, `resolved`, and `customer`; the model received a generated ID and the CSV ID stayed in `source_incident_id`. A real `BILLING` row mapped to `billing_error`; an unknown category raised `invalid_category_mapping`.
+- Historical row validation remained at 100 total / 94 valid / 6 invalid. Targeted transformation, analyzer, and incident API tests passed 64/64. Two existing FastAPI `on_event` deprecation warnings were emitted. Pytest and Starlette's `httpx2` TestClient dependency were installed only into the local service virtualenv; no dependency manifest or lockfile changed. Python compileall, editor diagnostics, and `git diff --check` passed.
+- This phase is in-memory only: no TinyDB writes, seed script, endpoints, or UI were added. No commit was made. Browser or persistence behavior was not part of this verification.
+
+### Phase 1 complete-row and clean-environment verification (2026-11-22)
+
+- Processed the real 100-row CSV through `IncidentRecord` and `transform_incident_record()`: 100 read, 6 validation failures, 94 valid, 94 transformed, and 0 conversion failures.
+- Manager status counts were `open=28`, `resolved=52`, `discarded=14`, matching the briefing's historical CSV state distribution.
+- Manager category counts were `patient_experience=61`, `billing_error=20`, and `other=13`. The briefing's raw category distribution was `APPOINTMENT=30`, `BILLING=20`, `CLINICAL_CARE=14`, `ACCESSIBILITY=17`, and `ADMINISTRATIVE=13`; the 61 patient-experience rows result from combining the first, third, and fourth categories.
+- Manager branch counts for the 94 valid rows were `central=7`, `austin_north=9`, `houston_med_center=4`, `miami_brickell=8`, `orlando_east=4`, `tampa_bay=7`, `atlanta_midtown=12`, `savannah=10`, `london_city=9`, `london_west=9`, and `manchester_central=15`.
+- `httpx2` was installed manually only in the original local virtualenv because FastAPI/Starlette at that time required the newer TestClient package while the environment omitted the declared `httpx` dependency. It is not declared in `requirements.txt`, `requirements-dev.txt`, or `pyproject.toml`, and no dependency manifest was changed.
+- A separate temporary venv installed exactly `requirements-dev.txt` (`pytest`, `httpx`, and the runtime requirements): the full backend suite passed as `98 passed, 3 warnings in 6.28s`. One clean-environment warning says Starlette deprecates the classic `httpx` TestClient path and recommends `httpx2`; the two existing FastAPI `on_event` warnings remain.
+
 > **Current snapshot — 2026-11-16:** The protected Next.js Backoffice now includes `/backoffice/suppliers`, a bilingual supplier directory with country/category API filters. `npm run typecheck` and `npm run build` pass (22 routes). `npm test` remains 11/15 with the same three pre-existing auth test harness resolution failures and proxy-language mock failure. The API's seeded supplier list/filter contracts and Next proxy/protected route were checked over HTTP with a temporary database/session; no browser automation was available, so no visual interaction or screenshot is claimed. No commit or deployment was performed.
 
 ## Supplier directory create-form UX follow-up
