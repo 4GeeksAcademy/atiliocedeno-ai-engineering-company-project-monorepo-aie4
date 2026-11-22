@@ -8,3 +8,13 @@ Esta carpeta contiene **scripts auxiliares** del monorepo: automatizaciones de d
 ## CLI de análisis de incidentes
 
 Desde la raíz: `python scripts/analyze.py scripts/incidents-healthcore.csv`, con las dependencias del backend instaladas. El dataset versionado tiene una única ruta canónica en `scripts/`. Por compatibilidad, también funciona `python scripts/analyze.py incidents-healthcore.csv` mediante un symlink relativo en la raíz que apunta al archivo canónico; no crees ni edites una segunda copia. Acepta cualquier ruta CSV. `--no-prompt` evita preguntas; `--json` muestra agregados JSON; `--export /ruta/nueva/results.csv` exporta agregados sin sobrescribir archivos. En terminal interactiva ofrece guardar `results.csv`. Código 0: análisis completado, incluso con filas inválidas; código 2: error operativo. Reglas y límites de privacidad en el README del backend.
+
+## Carga histórica de incidentes
+
+Desde la raíz:
+
+```bash
+python scripts/seed_incidents.py
+```
+
+Usa `--csv /ruta/incidentes.csv` para seleccionar otro CSV histórico y `--db /ruta/healthcore.json` para una base temporal. El seed valida cada fila con `IncidentRecord`, transforma las filas válidas y guarda cada ticket generado con una `_import_key` interna en la tabla `incidents`. Las claves existentes se omiten sin actualizar tickets, por lo que se conservan cambios manuales de estado y ID entre ejecuciones.

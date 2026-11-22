@@ -1,5 +1,16 @@
 # Progress
 
+## Centralized Incident Manager — phase 2 seed (2026-11-22)
+
+- Added `scripts/seed_incidents.py` to load the real historical CSV into TinyDB. The seed reuses `IncidentRecord`, `transform_incident_record()`, and `TransformedIncident`; no CSV fields are written directly and no original CSV incident ID is stored in `Incident`.
+- Each new document contains the generated ticket fields plus `_import_key`, a stable SHA-256 derived from `HC-...` source identity. When the fallback is used, the key uses `title + created_at`; existing keys cause a skip without updating the document.
+- Real CSV verification: first run read 100, inserted 94, skipped 0 and rejected 6; second run read 100, inserted 0, skipped 94 and rejected 6. Rejection line numbers were 42, 44, 59, 64, 80 and 86, reported with Pydantic/mapping reasons and no descriptions or patient data.
+- First-load totals matched the briefing: status `open=28`, `resolved=52`, `discarded=14`; category `patient_experience=61`, `billing_error=20`, `other=13`; origin `customer=94`. Branch totals were `central=7`, `austin_north=9`, `houston_med_center=4`, `miami_brickell=8`, `orlando_east=4`, `tampa_bay=7`, `atlanta_midtown=12`, `savannah=10`, `london_city=9`, `london_west=9`, `manchester_central=15`.
+- Between executions, changing one existing open ticket to `in_progress` and rerunning preserved the change and ticket count. Simulating an interruption after the first insert, closing and reopening TinyDB, rerunning added the remaining tickets and preserved 94 tickets and the first ticket ID.
+- Backend validation passed 98 tests with 2 existing FastAPI `on_event` deprecation warnings. No TinyDB production file, endpoint, UI, deployment or commit was created.
+- Added regression tests for the real CSV's complete `_import_key` → ticket `id` mapping (94 entries unchanged on reimport) and for a missing `incident_id` (one insert followed by one skip using the `title + created_at` fallback). The shared `IncidentRecord` schema still rejects a missing ID; the seed supplies a validation-only placeholder and removes it from the import identity, without changing the analyzer contract.
+- Current backend verification: the seed tests pass 2/2 and the full suite passes 100/100 with the same 2 FastAPI `on_event` deprecation warnings. Tests use TinyDB under pytest's temporary directory; no production database was written.
+
 ## Centralized Incident Manager — in-memory model phase (2026-11-16)
 
 - Added a manager `Incident` model with the official category, status, origin, and branch catalogues. It is distinct from the historical CSV `IncidentRecord`; generated entity IDs are separate from the CSV import identity.
