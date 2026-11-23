@@ -153,6 +153,8 @@ Los esquemas y ejemplos completos están disponibles en `/docs` mientras la API 
 - `GET`, `POST` y `PUT /profiles/me`: consultar, crear o actualizar el perfil de la cuenta autenticada.
 - `/profiles/{user_id}`: operaciones por usuario protegidas; el propietario gestiona su perfil y admin puede gestionar perfiles de cualquier cuenta. Crear un perfil ajeno requiere admin.
 - `GET /health`: verificación básica de disponibilidad.
+- `POST /api/incidents`: registra una incidencia autenticada con `title`, `description`, `category`, `origin` y `branch`; devuelve el ticket creado con estado `open`. Los errores de campo responden 400. La sede es obligatoria incluso para incidencias internas; usa `central` cuando no corresponda otra sede. No incluyas datos identificativos de pacientes.
+- `PATCH /api/incidents/{id}/status` acepta únicamente `{ "status": "<nuevo_estado>" }`. Permite `open` → `in_progress` o `discarded`, y `in_progress` → `resolved` o `discarded`; `resolved` y `discarded` son finales. Las transiciones inválidas responden 400 con el campo `status`, los tickets inexistentes 404 y las válidas actualizan `updated_at` en UTC sin alterar otros campos.
 
 ## Incident Analysis: ejecución local
 
