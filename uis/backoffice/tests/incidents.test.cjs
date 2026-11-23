@@ -52,6 +52,6 @@ test("Backoffice and Talent Tracker routes are protected by cookie verification"
   assert.match(proxy, /pathname\.startsWith\("\/backoffice\/"\)/);
   assert.match(proxy, /"\/backoffice", "\/backoffice\/:path\*"/);
   assert.match(proxy, /request\.cookies\.get\("healthcore_access_token"\)/);
-  assert.match(proxy, /fetch\(`\$\{apiBaseUrl\}\/auth\/me`/);
+  assert.match(proxy, /fetch\(apiBaseUrl \+ "\/auth\/me"/);
   assert.match(proxy, /NextResponse\.redirect\(loginUrl\)/);
 });

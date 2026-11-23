@@ -27,7 +27,7 @@ test('document language follows routes and retains preference on auth pages',asy
 });
 
 test('proxy supplies initial language for all Tracker routes',async()=>{
- const {proxy,config}=load('proxy.ts',{Headers,process:{env:{}},fetch:async()=>({ok:true,json:async()=>({role:'user'})})},{'next/server':{NextResponse:{next:options=>options}}});
+ const {proxy,config}=load('proxy.ts',{Headers,process:{env:{}},fetch:async()=>({ok:true,json:async()=>({email:'fixture@example.com',role:'user',profile:null})})},{'next/server':{NextResponse:{next:options=>options}}});
  assert.ok(config.matcher.includes('/talents/:path*'));
  for(const [pathname,expected] of [['/talents','es'],['/talents/en','en'],['/talents/new','es'],['/talents/en/new','en'],['/talents/test-123','es'],['/talents/en/test-123','en']]){
   const result=await proxy({cookies:{get:()=>({value:'synthetic'})},headers:new Headers({'x-healthcore-language':'wrong'}),nextUrl:{pathname}});

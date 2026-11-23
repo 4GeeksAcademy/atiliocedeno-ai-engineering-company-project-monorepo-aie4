@@ -14,8 +14,8 @@ type UserInfo = { email: string; role: string; profile: Profile | null };
 type UserRecord = { id: number; email: string; is_active: boolean; role: string; created_at: string; profile: Profile | null };
 type LoadState = "loading" | "ready" | "error";
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : "No se pudo conectar con HealthCore API.";
+function errorText(error: unknown, en: boolean): string {
+  return error instanceof Error ? error.message : en ? "Unable to reach HealthCore. Try again." : "No se pudo conectar con HealthCore. Inténtalo de nuevo.";
 }
 
 export default function DashboardPage() {
@@ -23,7 +23,9 @@ export default function DashboardPage() {
   const en = language === "en";
   const router = useRouter();
   const [me, setMe] = useState<UserInfo | null>(null);
-  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [users, setUsers] = useState<UserRecord[] | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState("");
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
@@ -39,27 +41,33 @@ export default function DashboardPage() {
     }
     setState("loading");
     setError("");
+    setUsersError("");
     try {
       const userInfo = await apiRequest<UserInfo>("/auth/me", { signal });
+      if (signal?.aborted) return;
       if (!userInfo.profile) { router.replace("/account/profile"); return; }
       setMe(userInfo);
       setProfileForm({ name: userInfo.profile?.name ?? "", phone: userInfo.profile?.phone ?? "", address: userInfo.profile?.address ?? "" });
       setState("ready");
       if (userInfo.role === "admin") {
+        setUsersLoading(true);
         try {
           const userList = await apiRequest<UserRecord[]>("/users", { signal });
-          setUsers(userList);
+          if (!signal?.aborted) setUsers(userList);
         } catch (listError) {
           if (signal?.aborted) return;
-          setError(`No se pudo cargar el directorio de usuarios: ${errorText(listError)}`);
-          setUsers([]);
+          if (isUnauthorized(listError)) { clearAccessToken(); router.replace("/login"); return; }
+          setUsersError(errorText(listError, en));
+          setUsers(null);
+        } finally {
+          if (!signal?.aborted) setUsersLoading(false);
         }
       } else {
-        setUsers([]);
+        setUsers(null);
       }
     } catch (requestError) {
       if (signal?.aborted) return;
-      const message = errorText(requestError);
+      const message = errorText(requestError, en);
       if (isUnauthorized(requestError)) {
         clearAccessToken();
         router.replace("/login");
@@ -80,7 +88,7 @@ export default function DashboardPage() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!me || savingProfile || phoneError(profileForm.phone)) return;
+    if (!me || savingProfile || phoneError(profileForm.phone, language)) return;
     setSavingProfile(true);
     setProfileError("");
     setProfileNotice("");
@@ -99,7 +107,7 @@ export default function DashboardPage() {
       setEditingProfile(false);
       setProfileNotice((en ? "Your profile was saved." : "Tu información se guardó correctamente."));
     } catch (cause) {
-      const message = errorText(cause);
+      const message = errorText(cause, en);
       if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
@@ -126,7 +134,7 @@ export default function DashboardPage() {
               <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{en ? "Hello, " : "Hola, "}{displayName}</h1>
               <p className="mt-3 max-w-2xl text-blue-50/90">{en ? "Your secure space to view your account and manage HealthCore information." : "Tu espacio seguro para consultar tu cuenta y administrar la información de HealthCore."}</p>
             </div>
-            <button type="button" disabled={state === "loading"} onClick={() => void loadDashboard()} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-60"><RefreshCw size={16} className={state === "loading" ? "animate-spin" : ""} />{en ? "Refresh" : "Actualizar"}</button>
+            <button type="button" disabled={state === "loading" || usersLoading || editingProfile || savingProfile} onClick={() => void loadDashboard()} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-60"><RefreshCw size={16} className={state === "loading" ? "animate-spin" : ""} />{en ? "Refresh" : "Actualizar"}</button>
           </div>
         </section>
 
@@ -146,7 +154,9 @@ export default function DashboardPage() {
             </article>
             {me.role === "admin" && <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Users size={22} /></div>
-              <p className="mt-5 text-sm font-medium text-slate-500">{en ? "Registered users" : "Usuarios registrados"}</p><p className="mt-1 text-2xl font-bold text-slate-900">{users.length}</p><p className="mt-1 text-sm text-slate-500">{en ? "HealthCore accounts." : "Cuentas en HealthCore."}</p>
+              <p className="mt-5 text-sm font-medium text-slate-500">{en ? "Registered users" : "Usuarios registrados"}</p>{usersLoading ? <p role="status">{en ? "Loading users…" : "Cargando usuarios…"}</p>
+                : usersError ? <div role="alert"><p>{usersError}</p><button type="button" className="underline" disabled={editingProfile || savingProfile} onClick={() => void loadDashboard()}>{en ? "Retry" : "Reintentar"}</button></div>
+                : <p className="mt-1 text-2xl font-bold text-slate-900">{users?.length ?? "—"}</p>}<p className="mt-1 text-sm text-slate-500">{en ? "HealthCore accounts." : "Cuentas en HealthCore."}</p>
             </article>}
           </section>
 

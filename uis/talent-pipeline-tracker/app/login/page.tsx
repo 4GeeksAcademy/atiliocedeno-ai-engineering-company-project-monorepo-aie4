@@ -17,20 +17,30 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [sessionUnavailable, setSessionUnavailable] = useState(params.get("session") === "unavailable");
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (!getAccessToken()) return;
     const controller = new AbortController();
-    apiRequest<Account>("/auth/me", {signal: controller.signal}).then(account => router.replace(accountDestination(account, returnTo))).catch(error => {
+    setChecking(true);
+    setSessionUnavailable(false);
+    apiRequest<Account>("/auth/me", {signal: controller.signal}).then(account => {
+      if (!controller.signal.aborted) router.replace(accountDestination(account, returnTo));
+    }).catch(error => {
       if (controller.signal.aborted) return;
       if (isUnauthorized(error)) clearAccessToken();
+      else setSessionUnavailable(true);
+    }).finally(() => {
+      if (!controller.signal.aborted) setChecking(false);
     });
     return () => controller.abort();
-  }, [router, returnTo]);
+  }, [router, returnTo, retry]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || checking) return;
     setBusy(true);
     setError("");
     try {
@@ -70,6 +80,11 @@ function LoginForm() {
             <p className="mt-3 text-slate-500">{en ? "Sign in to continue to your dashboard." : "Inicia sesión para continuar a tu panel de control."}</p>
             {params.get("registered") === "success" && <p role="status" className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{en ? "Account created successfully. You can now sign in." : "Cuenta creada correctamente. Ya puedes iniciar sesión."}</p>}
             {params.get("passwordReset") === "success" && <p role="status" className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{en ? "Your password was reset successfully. Sign in with your new password." : "Tu contraseña se restableció correctamente. Inicia sesión con la nueva contraseña."}</p>}
+            {checking && <p role="status">{en ? "Checking your session…" : "Verificando tu sesión…"}</p>}
+            {sessionUnavailable && <div role="alert" className="mt-6 rounded-xl bg-amber-50 p-4">
+              <p>{en ? "HealthCore could not verify your session. Try again in a moment." : "HealthCore no pudo verificar tu sesión. Inténtalo de nuevo en un momento."}</p>
+              <button type="button" className="mt-2 underline" onClick={() => { if (getAccessToken()) setRetry(value => value + 1); else window.location.reload(); }}>{en ? "Check session again" : "Volver a verificar la sesión"}</button>
+            </div>}
             <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
               <label className="grid gap-2 text-sm font-semibold text-slate-700" htmlFor="email">{en ? "Email address" : "Correo electrónico"}
                 <input id="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder={en ? "name@email.com" : "nombre@correo.com"} className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-base font-normal outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10" />
@@ -78,7 +93,7 @@ function LoginForm() {
                 <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder={en ? "Your password" : "Tu contraseña"} className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-base font-normal outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10" />
               </label>
               {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-              <button disabled={busy} className="mt-1 min-h-12 rounded-xl bg-[#2563EB] px-5 font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60">{busy ? (en ? "Signing in…" : "Ingresando…") : (en ? "Sign in" : "Ingresar a mi cuenta")}</button>
+              <button disabled={busy || checking} className="mt-1 min-h-12 rounded-xl bg-[#2563EB] px-5 font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60">{busy ? (en ? "Signing in…" : "Ingresando…") : (en ? "Sign in" : "Ingresar a mi cuenta")}</button>
             </form>
             <Link className="mt-6 inline-block text-sm font-semibold text-blue-700 hover:text-blue-900" href="/forgot-password">{en ? "Forgot your password?" : "¿Olvidaste tu contraseña?"}</Link>
             <p className="mt-5 text-sm text-slate-500">{en ? "Don't have an account yet?" : "¿Aún no tienes una cuenta?"} <Link href="/signup" className="font-bold text-blue-700 hover:text-blue-900">{en ? "Sign up" : "Regístrate"}</Link></p>
