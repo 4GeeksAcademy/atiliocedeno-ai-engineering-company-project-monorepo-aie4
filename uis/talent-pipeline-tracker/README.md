@@ -30,4 +30,6 @@ Run `npm ci` here, then `npm run serve:admin` from the repository root (default 
 
 The shared private navigation links to the account dashboard, profile, password management, talents, suppliers, operations and incident analysis. Users administration requires the admin role. The domain lab also requires a session. Login, registration and password recovery remain accessible before signing in.
 
-The incident upload and export UI lives at `/backoffice/incidents`. The supplier directory remains at `/backoffice/suppliers`. FastAPI authorizes and processes these requests. The Tracker keeps its independent API contract. Public patient pages and historical website redirects belong to the [public app](../website/README.md).
+The incident list, registration form, and CSV upload/export UI live at `/backoffice/incidents`. The supplier directory remains at `/backoffice/suppliers`. FastAPI authorizes and processes these requests. The Tracker keeps its independent API contract. Public patient pages and historical website redirects belong to the [public app](../website/README.md).
+
+El listado y el formulario de registro de incidencias comparten `/backoffice/incidents` con el análisis y la exportación CSV. Cada fila permite cambiar el estado solo a través de las transiciones autorizadas por la API; los filtros activos se conservan al guardar. No introduzcas datos identificativos de pacientes; este prototipo no está aprobado para datos reales de pacientes.

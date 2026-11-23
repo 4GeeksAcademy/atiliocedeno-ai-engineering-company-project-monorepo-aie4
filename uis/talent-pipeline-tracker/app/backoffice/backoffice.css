@@ -60,3 +60,166 @@
 .backoffice-shell .incident-form input[type=file]:enabled::file-selector-button { cursor: pointer; }
 .backoffice-shell .incident-panel h1 { font-size: 1.5rem; font-weight: 700; }
 .backoffice-shell:has(.incident-panel) .content-wrap { width: 100%; margin-block: 0; }
+.backoffice-shell .incident-directory { margin-top: 0; }
+.backoffice-shell .incident-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 16px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+.backoffice-shell .incident-filters label { display: grid; min-width: 180px; flex: 1 1 180px; gap: 7px; color: #475569; font-size: 12px; font-weight: 700; }
+.backoffice-shell .incident-filters select { min-height: 42px; width: 100%; padding: 9px 38px 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px; color: #1f2937; background: #fff; font: inherit; }
+.backoffice-shell .incident-clear { min-height: 42px; margin: 0; }
+.backoffice-shell .incident-clear:disabled { cursor: not-allowed; opacity: .55; }
+.backoffice-shell .incident-feedback { padding: 22px 18px; margin: 0; border: 1px dashed #cbd5e1; border-radius: 12px; color: #64748b; background: #fbfdff; line-height: 1.6; }
+.backoffice-shell .incident-feedback-error { border-color: #fecaca; color: #991b1b; background: #fff7f6; }
+.backoffice-shell .incident-feedback-error p { margin: 0 0 12px; }
+.backoffice-shell .incident-feedback .button-secondary { margin-top: 8px; }
+.backoffice-shell .incident-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px; }
+.backoffice-shell .incident-table { width: 100%; min-width: 760px; border-collapse: collapse; text-align: left; }
+.backoffice-shell .incident-table th,.backoffice-shell .incident-table td { padding: 15px 14px; border-bottom: 1px solid #edf1f6; vertical-align: top; }
+.backoffice-shell .incident-table thead th { color: #64748b; background: #f8fafc; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.backoffice-shell .incident-table tbody tr:last-child th,.backoffice-shell .incident-table tbody tr:last-child td { border-bottom: 0; }
+.backoffice-shell .incident-table tbody tr:hover { background: #fbfdff; }
+.backoffice-shell .incident-title-cell { min-width: 220px; color: #1e293b; }
+.backoffice-shell .incident-status { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.backoffice-shell .incident-status-open { color: #1d4ed8; background: #dbeafe; }
+.backoffice-shell .incident-status-in_progress { color: #92400e; background: #fef3c7; }
+.backoffice-shell .incident-status-resolved { color: #047857; background: #d1fae5; }
+.backoffice-shell .incident-status-discarded { color: #64748b; background: #e2e8f0; }
+.backoffice-shell .incident-status-actions { min-width: 220px; }
+.backoffice-shell .incident-status-actions select { min-height: 38px; max-width: 190px; padding: 7px 30px 7px 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1f2937; font: inherit; }
+.backoffice-shell .incident-status-save { min-height: 38px; margin: 0 0 0 6px; padding: 8px 12px; }
+.backoffice-shell .incident-status-error { display: grid; gap: 4px; margin-top: 7px; color: #b42318; font-size: 12px; }
+.backoffice-shell .incident-status-retry { justify-self: start; padding: 0; border: 0; color: #1d4ed8; background: none; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.backoffice-shell .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.backoffice-shell .incident-create-form { max-width: 700px; }
+.backoffice-shell .incident-create-form fieldset { display: grid; gap: 8px; min-width: 0; padding: 0; margin: 0 0 18px; border: 0; }
+.backoffice-shell .incident-create-form label { margin-top: 8px; color: #475569; font-size: 12px; font-weight: 700; }
+.backoffice-shell .incident-create-form :is(input, textarea, select) { width: 100%; min-width: 0; min-height: 42px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #1f2937; font: inherit; }
+.backoffice-shell .incident-create-form textarea { resize: vertical; }
+.backoffice-shell .incident-create-form .incident-branch-highlight { border: 2px solid #0f766e; background: #f0fdfa; }
+.backoffice-shell .incident-create-form [aria-invalid="true"] { border-color: #b42318; }
+.backoffice-shell .incident-field-error,.backoffice-shell .incident-create-error { color: #b42318; }
+.backoffice-shell .incident-create-success { color: #047857; }
+.backoffice-shell .incident-create-form :is(input, textarea, select):focus-visible { outline: 3px solid rgb(37 99 235 / 25%); outline-offset: 2px; }
+@media(max-width:760px) {
+  .backoffice-shell .incident-filters { align-items: stretch; flex-direction: column; }
+  .backoffice-shell .incident-filters label { min-width: 0; }
+  .backoffice-shell .incident-clear { align-self: flex-start; }
+}
+
+/* Incident overview dashboard */
+.backoffice-shell .incident-summary { padding:24px; margin:0 0 24px; }
+.backoffice-shell .incident-summary-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+.backoffice-shell .incident-summary-heading h2 { margin:4px 0 0; color:#17243b; font-size:clamp(20px,2vw,25px); letter-spacing:-.035em; }
+.backoffice-shell .incident-summary-subtitle { margin:6px 0 0; color:#64748b; font-size:13px; line-height:1.5; }
+.backoffice-shell .incident-summary-total { padding:7px 11px; border:1px solid #dbeafe; border-radius:999px; color:#1d4ed8; background:#eff6ff; font-size:11px; font-weight:700; white-space:nowrap; }
+.backoffice-shell .incident-kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+.backoffice-shell .incident-kpi { display:flex; align-items:center; min-width:0; gap:12px; padding:14px; border:1px solid #e7edf5; border-radius:14px; background:#fff; }
+.backoffice-shell .incident-kpi-icon { display:grid; place-items:center; flex:0 0 34px; width:34px; height:34px; border-radius:11px; font-size:17px; font-weight:800; }
+.backoffice-shell .incident-kpi-label { display:block; overflow:hidden; color:#64748b; font-size:11px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.backoffice-shell .incident-kpi strong { display:block; margin-top:3px; color:#17243b; font-size:23px; line-height:1.05; font-variant-numeric:tabular-nums; }
+.backoffice-shell .incident-kpi-total .incident-kpi-icon { color:#1d4ed8; background:#eff6ff; }
+.backoffice-shell .incident-kpi-open .incident-kpi-icon { color:#a16207; background:#fef3c7; }
+.backoffice-shell .incident-kpi-progress .incident-kpi-icon { color:#1d4ed8; background:#dbeafe; }
+.backoffice-shell .incident-kpi-resolved .incident-kpi-icon { color:#047857; background:#d1fae5; }
+.backoffice-shell .incident-kpi-discarded .incident-kpi-icon { color:#475569; background:#e2e8f0; }
+.backoffice-shell .incident-summary-grid { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:14px; margin-top:14px; }
+.backoffice-shell .incident-chart-card { min-width:0; padding:17px; border:1px solid #e7edf5; border-radius:15px; background:#fff; }
+.backoffice-shell .incident-chart-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+.backoffice-shell .incident-chart-heading h3 { margin:0; color:#1e293b; font-size:14px; font-weight:750; }
+.backoffice-shell .incident-chart-heading p { margin:4px 0 0; color:#64748b; font-size:11px; line-height:1.45; }
+.backoffice-shell .incident-status-chart { display:flex; align-items:center; justify-content:center; gap:clamp(18px,4vw,44px); min-height:174px; }
+.backoffice-shell .incident-donut { display:grid; place-items:center; flex:0 0 150px; width:150px; height:150px; border-radius:50%; }
+.backoffice-shell .incident-donut>div { display:grid; place-content:center; width:102px; height:102px; border-radius:50%; background:#fff; text-align:center; }
+.backoffice-shell .incident-donut strong { color:#17243b; font-size:25px; line-height:1.1; font-variant-numeric:tabular-nums; }
+.backoffice-shell .incident-donut span { margin-top:3px; color:#64748b; font-size:10px; }
+.backoffice-shell .incident-legend { display:grid; gap:11px; min-width:145px; padding:0; margin:0; list-style:none; }
+.backoffice-shell .incident-legend li { display:grid; grid-template-columns:9px minmax(70px,1fr) auto auto; align-items:center; gap:8px; color:#475569; font-size:11px; }
+.backoffice-shell .incident-legend-dot { width:9px; height:9px; border-radius:50%; }
+.backoffice-shell .incident-legend-label { min-width:0; }
+.backoffice-shell .incident-legend strong,.backoffice-shell .incident-legend small { color:#1e293b; font-size:11px; font-variant-numeric:tabular-nums; }
+.backoffice-shell .incident-legend small { min-width:31px; color:#64748b; text-align:right; }
+.backoffice-shell .incident-bar-list,.backoffice-shell .incident-origin-list { display:grid; gap:10px; padding:0; margin:0; list-style:none; }
+.backoffice-shell .incident-bar-label,.backoffice-shell .incident-origin-list li>div:first-child { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:5px; }
+.backoffice-shell .incident-bar-label>span { min-width:0; overflow-wrap:anywhere; color:#475569; font-size:11px; line-height:1.3; }
+.backoffice-shell .incident-bar-label>strong,.backoffice-shell .incident-origin-list strong { flex:0 0 auto; color:#1e293b; font-size:11px; font-variant-numeric:tabular-nums; }
+.backoffice-shell .incident-bar-label small,.backoffice-shell .incident-origin-list strong small { margin-left:8px; color:#64748b; font-size:10px; font-weight:500; }
+.backoffice-shell .incident-bar-track,.backoffice-shell .incident-origin-track,.backoffice-shell .incident-branch-track { display:block; overflow:hidden; height:6px; border-radius:999px; background:#eef2f7; }
+.backoffice-shell .incident-bar-track>span,.backoffice-shell .incident-origin-track>span,.backoffice-shell .incident-branch-track>span { display:block; height:100%; min-width:0; border-radius:inherit; background:#4f83e3; transition:width 220ms ease; }
+.backoffice-shell .incident-bar-list .is-zero .incident-bar-track>span,.backoffice-shell .incident-branch-list .is-zero .incident-branch-track>span { width:0 !important; }
+.backoffice-shell .incident-bar-list .is-zero .incident-bar-label>span,.backoffice-shell .incident-branch-list .is-zero { color:#64748b; }
+.backoffice-shell .incident-origin-list li>div:first-child { margin-bottom:7px; }
+.backoffice-shell .incident-origin-list li>div:first-child>span { display:flex; align-items:center; gap:8px; color:#475569; font-size:12px; }
+.backoffice-shell .incident-origin-list i { display:inline-block; width:9px; height:9px; border-radius:50%; }
+.backoffice-shell .incident-origin-track { height:8px; }
+.backoffice-shell .incident-branch-list { display:grid; gap:12px; padding:0; margin:0; list-style:none; }
+.backoffice-shell .incident-branch-list li { display:grid; grid-template-columns:23px minmax(100px,1.1fr) minmax(45px,1fr) 25px; align-items:center; gap:9px; min-width:0; }
+.backoffice-shell .incident-branch-rank { display:grid; place-items:center; width:22px; height:22px; border-radius:7px; color:#64748b; background:#f1f5f9; font-size:10px; font-weight:700; }
+.backoffice-shell .incident-branch-name { overflow:hidden; color:#475569; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.backoffice-shell .incident-branch-track { height:7px; }
+.backoffice-shell .incident-branch-track>span { background:#14b8a6; }
+.backoffice-shell .incident-branch-list li>strong { color:#1e293b; font-size:11px; text-align:right; font-variant-numeric:tabular-nums; }
+.backoffice-shell .incident-branches-toggle { padding:7px 0 0; margin-top:13px; border:0; color:#1d4ed8; background:transparent; font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
+.backoffice-shell .incident-branches-toggle:hover { color:#1e40af; text-decoration:underline; }
+.backoffice-shell .incident-branches-toggle:focus-visible { outline:3px solid rgb(37 99 235 / 30%); outline-offset:3px; border-radius:3px; }
+@media(max-width:1050px) {
+	.backoffice-shell .incident-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+	.backoffice-shell .incident-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+	.backoffice-shell .incident-status-chart { flex-direction:column; gap:16px; }
+	.backoffice-shell .incident-legend { width:100%; }
+}
+@media(max-width:680px) {
+	.backoffice-shell .incident-summary { padding:17px; }
+	.backoffice-shell .incident-summary-heading { flex-direction:column; }
+	.backoffice-shell .incident-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+	.backoffice-shell .incident-kpi { gap:9px; padding:11px; }
+	.backoffice-shell .incident-kpi-icon { flex-basis:30px; width:30px; height:30px; }
+	.backoffice-shell .incident-kpi-label { font-size:10px; }
+	.backoffice-shell .incident-kpi strong { font-size:20px; }
+	.backoffice-shell .incident-summary-grid { grid-template-columns:minmax(0,1fr); }
+	.backoffice-shell .incident-status-chart { flex-direction:row; justify-content:flex-start; gap:18px; }
+	.backoffice-shell .incident-donut { flex-basis:122px; width:122px; height:122px; }
+	.backoffice-shell .incident-donut>div { width:84px; height:84px; }
+	.backoffice-shell .incident-legend { min-width:0; gap:9px; }
+	.backoffice-shell .incident-legend li { grid-template-columns:8px minmax(48px,1fr) auto auto; gap:6px; font-size:10px; }
+}
+@media(max-width:380px) {
+	.backoffice-shell .incident-status-chart { flex-direction:column; align-items:center; }
+	.backoffice-shell .incident-legend { width:100%; }
+	.backoffice-shell .incident-branch-list li { grid-template-columns:22px minmax(80px,1fr) minmax(35px,.8fr) 22px; gap:6px; }
+}
+
+/* Incident detail drawer */
+.backoffice-shell .incident-row { cursor:pointer; }
+.backoffice-shell .incident-row:focus-visible { outline:3px solid rgb(37 99 235 / 35%); outline-offset:-3px; }
+.backoffice-shell .incident-detail-trigger { padding:0; border:0; color:#1e293b; background:transparent; font:inherit; font-weight:700; text-align:left; cursor:pointer; }
+.backoffice-shell .incident-detail-trigger span { color:#2563eb; opacity:0; transition:opacity .15s ease; }
+.backoffice-shell .incident-row:hover .incident-detail-trigger span,.backoffice-shell .incident-detail-trigger:focus-visible span { opacity:1; }
+.backoffice-shell .incident-detail-trigger:focus-visible { outline:3px solid rgb(37 99 235 / 30%); outline-offset:3px; border-radius:2px; }
+.backoffice-shell .incident-detail-backdrop { position:fixed; z-index:1000; inset:0; display:flex; justify-content:flex-end; background:rgb(15 23 42 / 42%); backdrop-filter:blur(2px); }
+.backoffice-shell .incident-detail-drawer { display:flex; flex-direction:column; width:min(620px, 92vw); height:100%; min-height:0; color:#1f2937; background:#fff; box-shadow:-18px 0 48px rgb(15 23 42 / 18%); animation:incident-drawer-in .2s ease-out; }
+.backoffice-shell .incident-detail-header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:25px 28px 20px; border-bottom:1px solid #e2e8f0; }
+.backoffice-shell .incident-detail-header .eyebrow { margin:0 0 8px; color:#64748b; }
+.backoffice-shell .incident-detail-id { display:block; color:#64748b; font-size:12px; overflow-wrap:anywhere; }
+.backoffice-shell .incident-detail-close { display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; padding:0 0 3px; border:1px solid #dbe3ee; border-radius:12px; color:#334155; background:#f8fafc; font:400 30px/1 Arial,sans-serif; cursor:pointer; }
+.backoffice-shell .incident-detail-close:hover { color:#1d4ed8; background:#eff6ff; }
+.backoffice-shell .incident-detail-close:focus-visible { outline:3px solid rgb(37 99 235 / 35%); outline-offset:2px; }
+.backoffice-shell .incident-detail-content { min-height:0; padding:28px; overflow-y:auto; overscroll-behavior:contain; }
+.backoffice-shell .incident-detail-content h2 { margin:14px 0 26px; color:#17243b; font-size:clamp(23px,4vw,30px); line-height:1.25; overflow-wrap:anywhere; }
+.backoffice-shell .incident-detail-description-section { padding:21px; border:1px solid #dbeafe; border-radius:16px; background:#f8fbff; }
+.backoffice-shell .incident-detail-description-section h3 { margin:0 0 12px; color:#334155; font-size:13px; }
+.backoffice-shell .incident-detail-description { margin:0; color:#334155; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; word-break:normal; user-select:text; }
+.backoffice-shell .incident-detail-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 20px; margin:25px 0 0; }
+.backoffice-shell .incident-detail-fields>div { min-width:0; padding:15px 0; border-bottom:1px solid #edf1f6; }
+.backoffice-shell .incident-detail-fields dt { margin-bottom:6px; color:#64748b; font-size:11px; font-weight:700; }
+.backoffice-shell .incident-detail-fields dd { margin:0; color:#1e293b; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+@keyframes incident-drawer-in { from { transform:translateX(24px); opacity:.7; } to { transform:translateX(0); opacity:1; } }
+@media(max-width:620px) {
+	.backoffice-shell .incident-detail-backdrop { background:#fff; backdrop-filter:none; }
+	.backoffice-shell .incident-detail-drawer { width:100%; max-width:none; box-shadow:none; animation:none; }
+	.backoffice-shell .incident-detail-header { padding:18px 18px 15px; }
+	.backoffice-shell .incident-detail-content { padding:22px 18px; }
+	.backoffice-shell .incident-detail-description-section { padding:17px; }
+	.backoffice-shell .incident-detail-fields { grid-template-columns:minmax(0,1fr); }
+}
+@media(prefers-reduced-motion:reduce) {
+	.backoffice-shell .incident-detail-drawer { animation:none; }
+	.backoffice-shell .incident-detail-trigger span { transition:none; }
+}
