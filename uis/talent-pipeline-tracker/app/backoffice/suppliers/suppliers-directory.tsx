@@ -12,10 +12,23 @@ type Supplier = {
   categories: string[];
   monthly_rate: number;
   currency: "USD" | "GBP";
-  compliance_agreement: "BAA" | "DPA" | "both" | null;
+  compliance_agreement?: "BAA" | "DPA" | "both" | null;
   status: "active" | "suspended";
   updated_at: string;
 };
+
+function isSupplier(value: unknown): value is Supplier {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const supplier = value as Record<string, unknown>;
+  return Number.isInteger(supplier.id) && typeof supplier.name === "string"
+    && (supplier.country === "USA" || supplier.country === "UK")
+    && Array.isArray(supplier.categories) && supplier.categories.every(category => typeof category === "string")
+    && typeof supplier.monthly_rate === "number" && Number.isFinite(supplier.monthly_rate) && supplier.monthly_rate > 0
+    && (supplier.currency === "USD" || supplier.currency === "GBP")
+    && (supplier.status === "active" || supplier.status === "suspended")
+    && (supplier.compliance_agreement == null || ["BAA", "DPA", "both"].includes(String(supplier.compliance_agreement)))
+    && typeof supplier.updated_at === "string";
+}
 
 type DirectoryState = "loading" | "ready" | "error";
 type SupplierFormValues = {
@@ -85,6 +98,7 @@ export default function SuppliersDirectory() {
   const [form, setForm] = useState<SupplierFormValues>(EMPTY_FORM);
   const [formError, setFormError] = useState<FormMessage | null>(null);
   const [formSuccess, setFormSuccess] = useState("");
+  const [changeNotice, setChangeNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [editingRateId, setEditingRateId] = useState<number | null>(null);
@@ -122,14 +136,15 @@ export default function SuppliersDirectory() {
         cache: "no-store",
         signal,
       });
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         setState("error");
         window.location.assign("/login?next=%2Fbackoffice%2Fsuppliers");
         return;
       }
-      if (!response.ok) throw new Error(`Supplier request failed (${response.status})`);
-      const data = await response.json() as Supplier[];
-      if (!Array.isArray(data)) throw new Error("Unexpected supplier response");
+      if (!response.ok) throw new Error("supplier_request_failed");
+      const data: unknown = await response.json();
+      if (!Array.isArray(data) || !data.every(isSupplier)) throw new Error("invalid_supplier_response");
+      if (signal.aborted) return;
       setSuppliers(data);
       setState("ready");
     } catch {
@@ -249,16 +264,16 @@ export default function SuppliersDirectory() {
         body: JSON.stringify(payload),
         cache: "no-store",
       });
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         window.location.assign("/login?next=%2Fbackoffice%2Fsuppliers");
         return;
       }
       if (response.status === 422) {
-        const result = await response.json().catch(() => ({})) as { detail?: unknown };
-        const errors = Array.isArray(result.detail) ? result.detail as Array<{ loc?: unknown }> : [];
+        const result = await response.json().catch(() => ({})) as { detail?: unknown } | null;
+        const errors = Array.isArray(result?.detail) ? result.detail as Array<{ loc?: unknown }> : [];
         const field = errors
-          .map((item) => Array.isArray(item.loc) ? item.loc.find((part) => typeof part === "string" && part !== "body") : undefined)
-          .find((candidate): candidate is SupplierFormField => typeof candidate === "string" && candidate in EMPTY_FORM);
+          .map((item) => Array.isArray(item?.loc) ? item.loc.find((part) => typeof part === "string" && part !== "body") : undefined)
+          .find((candidate): candidate is SupplierFormField => typeof candidate === "string" && Object.prototype.hasOwnProperty.call(EMPTY_FORM, candidate));
         const fieldLabel = field ? formFieldLabel(field, isEn) : "";
         setFormError({
           field,
@@ -273,6 +288,12 @@ export default function SuppliersDirectory() {
         return;
       }
 
+      const created: unknown = await response.json().catch(() => null);
+      if (!isSupplier(created)) {
+        setFormError({ text: isEn ? "HealthCore could not confirm the result. Check the supplier list before submitting again." : "HealthCore no pudo confirmar el resultado. Revisa el directorio antes de volver a enviar." });
+        setReloadKey(value => value + 1);
+        return;
+      }
       setFormSuccess(isEn ? `${form.name.trim()} was added successfully.` : `${form.name.trim()} se añadió correctamente.`);
       setForm(EMPTY_FORM);
       setIsCreateFormOpen(false);
@@ -314,6 +335,7 @@ export default function SuppliersDirectory() {
 
     savingRateRef.current = true;
     setSavingRate(true);
+    setChangeNotice("");
     setRateError("");
     try {
       const response = await fetch(`/api/healthcore/suppliers/${supplier.id}/rate`, {
@@ -325,7 +347,7 @@ export default function SuppliersDirectory() {
         body: JSON.stringify({ monthly_rate: rate }),
         cache: "no-store",
       });
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         window.location.assign("/login?next=%2Fbackoffice%2Fsuppliers");
         return;
       }
@@ -337,14 +359,16 @@ export default function SuppliersDirectory() {
         setRateError(isEn ? "The monthly rate could not be updated. Try again." : "No se pudo actualizar la tarifa mensual. Inténtalo de nuevo.");
         return;
       }
-      const updated = await response.json() as Supplier;
-      if (updated.id !== supplier.id || !Number.isFinite(updated.monthly_rate) || updated.monthly_rate <= 0) {
-        setRateError(isEn ? "The server returned an unexpected supplier record." : "El servidor devolvió un registro de proveedor inesperado.");
+      const updated: unknown = await response.json().catch(() => null);
+      if (!isSupplier(updated) || updated.id !== supplier.id) {
+        setRateError(isEn ? "HealthCore returned an unexpected supplier record. Reload the list before trying again." : "HealthCore devolvió un registro de proveedor inesperado. Recarga el listado antes de reintentar.");
         return;
       }
-      setSuppliers((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setSuppliers(current => current.map(item => item.id === updated.id
+        ? { ...item, monthly_rate: updated.monthly_rate, updated_at: updated.updated_at } : item));
       setEditingRateId(null);
       setRateDraft("");
+      setChangeNotice(isEn ? "Monthly rate updated." : "Tarifa mensual actualizada.");
     } catch {
       setRateError(isEn ? "Unable to connect to HealthCore. Check your connection and try again." : "No se pudo conectar con HealthCore. Comprueba la conexión e inténtalo de nuevo.");
     } finally {
@@ -365,6 +389,7 @@ export default function SuppliersDirectory() {
     const nextStatus: Supplier["status"] = supplier.status === "active" ? "suspended" : "active";
     savingStatusIdsRef.current = new Set(savingStatusIdsRef.current).add(supplier.id);
     setSavingStatusIds(new Set(savingStatusIdsRef.current));
+    setChangeNotice("");
     setStatusErrors((current) => ({ ...current, [supplier.id]: "" }));
     try {
       const response = await fetch(`/api/healthcore/suppliers/${supplier.id}/status`, {
@@ -376,7 +401,7 @@ export default function SuppliersDirectory() {
         body: JSON.stringify({ status: nextStatus }),
         cache: "no-store",
       });
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         window.location.assign("/login?next=%2Fbackoffice%2Fsuppliers");
         return;
       }
@@ -390,17 +415,18 @@ export default function SuppliersDirectory() {
         return;
       }
 
-      const updated = await response.json() as Supplier;
-      if (updated.id !== supplier.id || updated.status !== nextStatus) {
+      const updated: unknown = await response.json().catch(() => null);
+      if (!isSupplier(updated) || updated.id !== supplier.id || updated.status !== nextStatus) {
         setStatusErrors((current) => ({
           ...current,
           [supplier.id]: isEn
-            ? "The server returned an unexpected supplier record."
-            : "El servidor devolvió un registro de proveedor inesperado.",
+            ? "HealthCore returned an unexpected supplier record. Reload the list before trying again."
+            : "HealthCore devolvió un registro de proveedor inesperado. Recarga el listado antes de reintentar.",
         }));
         return;
       }
-      setSuppliers((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setSuppliers(current => current.map(item => item.id === updated.id ? { ...item, status: updated.status } : item));
+      setChangeNotice(isEn ? "Supplier status updated." : "Estado del proveedor actualizado.");
     } catch {
       setStatusErrors((current) => ({
         ...current,
@@ -436,6 +462,7 @@ export default function SuppliersDirectory() {
           <section className="panel supplier-panel" aria-labelledby="supplier-list-title">
             <div className="panel-heading supplier-list-heading"><div><p className="eyebrow">{isEn ? "Procurement & compliance" : "Compras y cumplimiento"}</p><h2 id="supplier-list-title">{isEn ? "Suppliers" : "Proveedores"}</h2></div><div className="supplier-list-actions"><span className="panel-status">{state === "ready" ? `${visibleSuppliers.length} ${isEn ? "records" : "registros"}` : (isEn ? "Live directory" : "Directorio actualizado")}</span><button type="button" className="button-primary supplier-add-button" aria-expanded={isCreateFormOpen} aria-controls={isCreateFormOpen ? "supplier-create-panel" : undefined} onClick={() => { setFormError(null); setFormSuccess(""); setIsCreateFormOpen(true); }}>{isEn ? "Add supplier" : "Añadir proveedor"}</button></div></div>
             {formError && !isCreateFormOpen && <p className="supplier-form-error" role="alert">{formError.text}</p>}
+            {changeNotice && <p className="supplier-form-success" role="status">{changeNotice}</p>}
             {formSuccess && <p className="supplier-form-success supplier-list-success" role="status" aria-live="polite">{formSuccess}</p>}
             <div className="supplier-filters" aria-label={isEn ? "Supplier filters" : "Filtros de proveedores"}>
               <label>{isEn ? "Country" : "País"}
@@ -501,7 +528,7 @@ export default function SuppliersDirectory() {
           {isCreateFormOpen && <section className="panel supplier-panel supplier-create-panel" id="supplier-create-panel" aria-labelledby="supplier-create-title">
             <div className="panel-heading"><div><p className="eyebrow">{isEn ? "Procurement & compliance" : "Compras y cumplimiento"}</p><h2 id="supplier-create-title">{isEn ? "Add a supplier" : "Añadir proveedor"}</h2></div><span className="panel-status">{isEn ? "New record" : "Nuevo registro"}</span></div>
             <form className="supplier-create-form" onSubmit={submitSupplier} noValidate>
-              <div className="supplier-form-grid">
+              <fieldset disabled={submitting} className="supplier-form-grid border-0 p-0">
                 <div className="supplier-form-field"><label className="supplier-field-label" htmlFor="supplier-create-name">{isEn ? "Supplier name" : "Nombre del proveedor"}<span className="supplier-required">*</span></label>
                   <input id="supplier-create-name" name="name" value={form.name} onChange={(event) => updateForm("name", event.currentTarget.value)} autoComplete="organization" aria-required="true" aria-invalid={formError?.field === "name"} />
                 </div>
@@ -540,7 +567,7 @@ export default function SuppliersDirectory() {
                 <div className="supplier-form-field supplier-notes-field"><label className="supplier-field-label" htmlFor="supplier-create-notes">{isEn ? "Internal notes (optional)" : "Notas internas (opcional)"}</label>
                   <textarea id="supplier-create-notes" name="notes" rows={3} value={form.notes} onChange={(event) => updateForm("notes", event.currentTarget.value)} />
                 </div>
-              </div>
+              </fieldset>
               {formError && <p className="supplier-form-error" role="alert" aria-live="assertive">{formError.text}</p>}
               <div className="supplier-form-actions"><span>{isEn ? "* Required fields" : "* Campos obligatorios"}</span><div><button className="button-secondary supplier-cancel-create" type="button" onClick={cancelSupplierCreate} disabled={submitting}>{isEn ? "Cancel" : "Cancelar"}</button><button className="button-primary" type="submit" disabled={submitting}>{submitting ? (isEn ? "Saving…" : "Guardando…") : (isEn ? "Add supplier" : "Añadir proveedor")}</button></div></div>
             </form>

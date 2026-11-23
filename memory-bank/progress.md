@@ -1,5 +1,13 @@
 # Progress
 
+
+## Error handling audit corrections (2026-11-23)
+
+- Added atomic TinyDB snapshots, sanitized input validation and failure responses, and safe Resend diagnostics. Password validation counts UTF-8 bytes. Password resets update the hash and invalidate the link together.
+- The portal checks incident outcomes before retrying a PATCH and retains the registration draft when its result is uncertain. It distinguishes session outages, unavailable profiles, failed list reads, and malformed payloads. Account selection and supplier mutations handle delayed responses. Talent notes recover independently from the candidate.
+- The incident and supplier seeds, administrator command, and analysis CLI report operational errors on stderr with a nonzero exit. Historical row rejection and reimport semantics remain covered by regression tests.
+- Validation: FastAPI 148 passed, portal 50 passed, public website 2 passed, and Backoffice contracts 6 passed. Both Next.js builds and typechecks and git diff --check passed. The full incident journey uses the Next.js route handler, FastAPI TestClient and reopened temporary TinyDB. Local Chrome confirmed password recovery after a 502 using the production portal build and a temporary FastAPI environment.
+
 ## Centralized Incident Manager — incident detail drawer (2026-11-23)
 
 - Added a bilingual right-side detail drawer to the existing incident directory, using the already-loaded incident record; no API, seed, summary calculation, or status behavior changed. It presents the full multiline description, ID, status, title, category, origin, clinic, and timestamps.

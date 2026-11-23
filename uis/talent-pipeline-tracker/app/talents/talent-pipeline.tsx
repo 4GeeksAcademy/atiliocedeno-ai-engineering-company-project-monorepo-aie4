@@ -9,7 +9,7 @@ import { labelForValue, STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LAB
 import { useLanguage } from "../components/language-context";
 import type { TalentRecord } from "./types";
 
-import { trackerApiUrl } from "./api-url";
+import { trackerJson, trackerRecords } from "./api-url";
 const RECORDS_PAGE_SIZE = 1000;
 const DISPLAY_PAGE_SIZE = 20;
 
@@ -17,21 +17,10 @@ let recordsCache: TalentRecord[] | null = null;
 let recordsRequest: Promise<TalentRecord[]> | null = null;
 let recordsCacheVersion = 0;
 
-function parseRecords(payload: unknown): TalentRecord[] {
-  if (Array.isArray(payload)) return payload;
-
-  if (typeof payload === "object" && payload !== null) {
-    const collection = payload as { data?: unknown; records?: unknown };
-    const values = collection.data ?? collection.records;
-    return Array.isArray(values) ? values : [];
-  }
-
-  return [];
-}
-
 export function invalidateRecordsCache(): void {
   recordsCacheVersion += 1;
   recordsCache = null;
+  recordsRequest = null;
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("talent-records-invalidated"));
   }
@@ -46,17 +35,7 @@ async function fetchAllRecords(signal: AbortSignal, isEnglish: boolean): Promise
       page: String(page),
       limit: String(RECORDS_PAGE_SIZE),
     });
-    const response = await fetch(trackerApiUrl(`/records?${params.toString()}`, isEnglish), { signal });
-
-    if (!response.ok) {
-      throw new Error(
-        isEnglish
-          ? `The API returned status ${response.status}.`
-          : `La API respondió con estado ${response.status}.`,
-      );
-    }
-
-    const pageRecords = parseRecords(await response.json());
+    const pageRecords = await trackerJson("/records?" + params.toString(), isEnglish, trackerRecords, { signal });
     allRecords.push(...pageRecords);
 
     // A full page means there may be more records. An incomplete page is the
@@ -74,16 +53,16 @@ function fetchRecords(isEnglish: boolean): Promise<TalentRecord[]> {
 
   const controller = new AbortController();
   const requestVersion = recordsCacheVersion;
-  recordsRequest = fetchAllRecords(controller.signal, isEnglish)
+  const request = fetchAllRecords(controller.signal, isEnglish)
     .then((records) => {
       if (requestVersion === recordsCacheVersion) recordsCache = records;
       return records;
     })
     .finally(() => {
-      recordsRequest = null;
+      if (recordsRequest === request) recordsRequest = null;
     });
-
-  return recordsRequest;
+  recordsRequest = request;
+  return request;
 }
 
 function displayValue(record: TalentRecord, keys: string[], fallback = "Sin información"): string {
@@ -132,6 +111,7 @@ export default function TalentPipeline() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [searchInput, setSearchInput] = useState(query);
   const pendingSearchRef = useRef<string | null>(null);
 
@@ -164,20 +144,22 @@ export default function TalentPipeline() {
 
   useEffect(() => {
     const controller = new AbortController();
+    let sequence = 0;
 
     async function loadRecords() {
+      const version = ++sequence;
       try {
         setLoading(true);
         setError("");
         const nextRecords = await fetchRecords(isEnglish);
-        if (!controller.signal.aborted) setRecords(nextRecords);
+        if (!controller.signal.aborted && version === sequence) setRecords(nextRecords);
       } catch (requestError) {
-        if (controller.signal.aborted || (requestError instanceof DOMException && requestError.name === "AbortError")) {
+        if (controller.signal.aborted || version !== sequence || (requestError instanceof DOMException && requestError.name === "AbortError")) {
           return;
         }
         setError(requestError instanceof Error ? requestError.message : (isEnglish ? "Talents could not be loaded." : "No se pudieron cargar los talentos."));
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted && version === sequence) setLoading(false);
       }
     }
 
@@ -194,10 +176,10 @@ export default function TalentPipeline() {
       controller.abort();
       window.removeEventListener("talent-records-invalidated", refreshRecords);
     };
-  }, [isEnglish]);
+  }, [isEnglish, retry]);
 
-  const statusOptions = useMemo(() => optionValues(records, ["status"], missingValue), [missingValue, records]);
-  const stageOptions = useMemo(() => optionValues(records, ["stage"], missingValue), [missingValue, records]);
+  const statusOptions = useMemo(() => [...new Set([status, ...optionValues(records, ["status"], missingValue)])].filter(Boolean).sort(), [missingValue, records, status]);
+  const stageOptions = useMemo(() => [...new Set([stage, ...optionValues(records, ["stage"], missingValue)])].filter(Boolean).sort(), [missingValue, records, stage]);
   const filteredRecords = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -281,7 +263,11 @@ export default function TalentPipeline() {
       </section>
 
       {loading && <p className={styles.message}>{isEnglish ? "Loading talents..." : "Cargando talentos..."}</p>}
-      {error && <p className={styles.error} role="alert">{error}</p>}
+      {error && <div className={styles.error} role="alert">
+        <p>{error}</p>
+        <button type="button" onClick={() => setRetry(value => value + 1)}>{isEnglish ? "Reload talents" : "Volver a cargar talentos"}</button>
+        <Link href="/login">{isEnglish ? "Sign in" : "Iniciar sesión"}</Link>
+      </div>}
       {!loading && !error && filteredRecords.length === 0 && (
         <p className={styles.message}>{isEnglish ? "No talents match the current filters." : "No hay talentos que coincidan con los filtros actuales."}</p>
       )}

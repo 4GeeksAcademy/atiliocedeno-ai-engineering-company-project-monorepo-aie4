@@ -23,38 +23,7 @@ type TalentForm = {
   experience_years: string;
 };
 
-import { trackerApiUrl } from "../api-url";
-
-function recordsFromPayload(payload: unknown, key: string): TalentRecord[] {
-  if (Array.isArray(payload)) {
-    return payload.filter((item): item is TalentRecord => typeof item === "object" && item !== null);
-  }
-
-  if (typeof payload === "object" && payload !== null && key in payload) {
-    const values = (payload as Record<string, unknown>)[key];
-    return Array.isArray(values)
-      ? values.filter((item): item is TalentRecord => typeof item === "object" && item !== null)
-      : [];
-  }
-
-  // The real API wraps collection responses in { data: [...] }.
-  if (typeof payload === "object" && payload !== null && "data" in payload) {
-    const values = (payload as { data?: unknown }).data;
-    return Array.isArray(values)
-      ? values.filter((item): item is TalentRecord => typeof item === "object" && item !== null)
-      : [];
-  }
-
-  return [];
-}
-
-function recordFromPayload(payload: unknown): TalentRecord {
-  if (typeof payload !== "object" || payload === null) return {};
-  if ("data" in payload && typeof payload.data === "object" && payload.data !== null) {
-    return payload.data as TalentRecord;
-  }
-  return payload as TalentRecord;
-}
+import { trackerJson, trackerRecord, trackerRecords, trackerRequest } from "../api-url";
 
 export default function TalentDetail({ id }: { id: string }) {
   const { language } = useLanguage();
@@ -81,59 +50,60 @@ export default function TalentDetail({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-
-  async function loadDetail(signal?: AbortSignal) {
-    const [recordResponse, notesResponse] = await Promise.all([
-      fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}`, isEnglish), { signal }),
-      fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}/notes`, isEnglish), { signal }),
-    ]);
-
-    if (!recordResponse.ok || !notesResponse.ok) {
-      throw new Error(isEnglish ? "The talent or its notes could not be loaded." : "No se pudo cargar el talento o sus notas.");
-    }
-
-    const nextRecord = recordFromPayload(await recordResponse.json());
-    const nextNotes = recordsFromPayload(await notesResponse.json(), "notes");
-    setRecord(nextRecord);
-    setForm({
-      full_name: String(nextRecord.full_name ?? ""),
-      email: String(nextRecord.email ?? ""),
-      phone: String(nextRecord.phone ?? ""),
-      position: String(nextRecord.position ?? ""),
-      linkedin_url: String(nextRecord.linkedin_url ?? ""),
-      cv_url: String(nextRecord.cv_url ?? ""),
-      status: String(nextRecord.status ?? ""),
-      stage: String(nextRecord.stage ?? ""),
-      experience_years: String(nextRecord.experience_years ?? ""),
-    });
-    setNotes(nextNotes);
-  }
+  const [reloadRecord, setReloadRecord] = useState(0);
+  const [reloadNotes, setReloadNotes] = useState(0);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [notesError, setNotesError] = useState("");
+  const [notesSaving, setNotesSaving] = useState(false);
+  const recordPath = "/records/" + encodeURIComponent(id);
+  const notesPath = recordPath + "/notes";
 
   useEffect(() => {
     const controller = new AbortController();
-    let active = true;
-
     setLoading(true);
     setRecord(null);
     setError("");
-
-    void loadDetail(controller.signal)
-      .catch((requestError) => {
-        if (!active || (requestError instanceof DOMException && requestError.name === "AbortError")) return;
-        setError(requestError instanceof Error ? requestError.message : (isEnglish ? "The talent details could not be loaded." : "No se pudo cargar el detalle."));
+    void trackerJson(recordPath, isEnglish, trackerRecord, { signal: controller.signal })
+      .then(nextRecord => {
+        if (controller.signal.aborted) return;
+        setRecord(nextRecord);
+        setForm({
+          full_name: String(nextRecord.full_name ?? nextRecord.name ?? nextRecord.fullName ?? ""),
+          email: String(nextRecord.email ?? ""),
+          phone: String(nextRecord.phone ?? ""),
+          position: String(nextRecord.position ?? ""),
+          linkedin_url: String(nextRecord.linkedin_url ?? ""),
+          cv_url: String(nextRecord.cv_url ?? ""),
+          status: String(nextRecord.status ?? ""),
+          stage: String(nextRecord.stage ?? ""),
+          experience_years: String(nextRecord.experience_years ?? ""),
+        });
       })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      .catch(cause => {
+        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message
+          : isEnglish ? "Unable to load the talent. Try again." : "No se pudo cargar el talento. Inténtalo de nuevo.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [recordPath, isEnglish, reloadRecord]);
 
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [id]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setNotesLoading(true);
+    setNotesError("");
+    void trackerJson(notesPath, isEnglish, value => trackerRecords(value, "notes"), { signal: controller.signal })
+      .then(nextNotes => { if (!controller.signal.aborted) setNotes(nextNotes); })
+      .catch(cause => {
+        if (!controller.signal.aborted) setNotesError(cause instanceof Error ? cause.message
+          : isEnglish ? "Unable to load notes. Try again." : "No se pudieron cargar las notas. Inténtalo de nuevo.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setNotesLoading(false); });
+    return () => controller.abort();
+  }, [notesPath, isEnglish, reloadNotes]);
 
   async function saveRecord(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     try {
       setSaving(true);
       setError("");
@@ -145,14 +115,13 @@ export default function TalentDetail({ id }: { id: string }) {
       if (payload.experience_years !== null && !Number.isFinite(payload.experience_years)) {
         throw new Error(isEnglish ? "Experience must be a valid number." : "La experiencia debe ser un número válido.");
       }
-      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}`, isEnglish), {
+      const updated = await trackerJson(recordPath, isEnglish, trackerRecord, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
-      const updated = (await response.json()) as TalentRecord;
       setRecord(updated);
+      invalidateRecordsCache();
       setForm((currentForm) => ({
         ...currentForm,
         experience_years: String(updated.experience_years ?? currentForm.experience_years),
@@ -166,71 +135,70 @@ export default function TalentDetail({ id }: { id: string }) {
   }
 
   async function deleteRecord() {
-    const talentName = String(record?.full_name ?? record?.name ?? "este talento");
-    if (!window.confirm(isEnglish ? `Are you sure you want to delete ${talentName}?` : `¿Seguro que deseas eliminar a ${talentName}?`)) return;
+    const talentName = String(record?.full_name ?? record?.name ?? (isEnglish ? "this talent" : "este talento"));
+    if (saving || !window.confirm(isEnglish ? "Delete " + talentName + "?" : "¿Eliminar a " + talentName + "?")) return;
 
+    setSaving(true);
+    setError("");
+    setMessage("");
     try {
-      setSaving(true);
-      setError("");
-      setMessage("");
-      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}`, isEnglish), {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
-
+      await trackerRequest(recordPath, isEnglish, { method: "DELETE" });
       invalidateRecordsCache();
       router.push(isEnglish ? "/talents/en" : "/talents");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : (isEnglish ? "The talent could not be deleted." : "No se pudo eliminar el talento."));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : isEnglish ? "Unable to delete the talent." : "No se pudo eliminar el talento.");
+    } finally {
       setSaving(false);
     }
   }
 
   async function addNote(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!noteText.trim()) return;
+    if (notesSaving || !noteText.trim()) return;
 
+    setNotesSaving(true);
+    setNotesError("");
+    setMessage("");
     try {
-      setSaving(true);
-      setError("");
-      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}/notes`, isEnglish), {
+      await trackerRequest(notesPath, isEnglish, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: noteText.trim() }),
       });
-      if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
       setNoteText("");
-      await loadDetail();
       setMessage(isEnglish ? "Note added." : "Nota añadida.");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : (isEnglish ? "The note could not be added." : "No se pudo añadir la nota."));
+      setReloadNotes(value => value + 1);
+    } catch (cause) {
+      setNotesError(cause instanceof Error ? cause.message : isEnglish ? "Unable to add the note." : "No se pudo añadir la nota.");
     } finally {
-      setSaving(false);
+      setNotesSaving(false);
     }
   }
 
   async function deleteNote(note: Note) {
     const noteId = note.id ?? note.note_id;
-    if (noteId === undefined || noteId === null) return;
+    if (notesSaving || noteId == null) return;
 
+    setNotesSaving(true);
+    setNotesError("");
+    setMessage("");
     try {
-      setSaving(true);
-      setError("");
-      const response = await fetch(trackerApiUrl(`/records/${encodeURIComponent(id)}/notes/${encodeURIComponent(String(noteId))}`, isEnglish), {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
-      setNotes((currentNotes) => currentNotes.filter((currentNote) => String(currentNote.id ?? currentNote.note_id) !== String(noteId)));
+      await trackerRequest(notesPath + "/" + encodeURIComponent(String(noteId)), isEnglish, { method: "DELETE" });
+      setNotes(currentNotes => currentNotes.filter(item => String(item.id ?? item.note_id) !== String(noteId)));
       setMessage(isEnglish ? "Note deleted." : "Nota eliminada.");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : (isEnglish ? "The note could not be deleted." : "No se pudo eliminar la nota."));
+    } catch (cause) {
+      setNotesError(cause instanceof Error ? cause.message : isEnglish ? "Unable to delete the note." : "No se pudo eliminar la nota.");
     } finally {
-      setSaving(false);
+      setNotesSaving(false);
     }
   }
 
-  if (loading) return <main className={styles.detailPage}><p className={styles.message}>{isEnglish ? "Loading details..." : "Cargando detalle..."}</p></main>;
-  if (!record) return <main className={styles.detailPage}><p className={styles.error} role="alert">{error || (isEnglish ? "Talent not found." : "Talento no encontrado.")}</p></main>;
+  if (loading) return <main className={styles.detailPage}><p role="status" className={styles.message}>{isEnglish ? "Loading details..." : "Cargando detalle..."}</p></main>;
+  if (!record) return <main className={styles.detailPage}><div className={styles.error} role="alert">
+    <p>{error || (isEnglish ? "Talent not found." : "Talento no encontrado.")}</p>
+    <button type="button" onClick={() => setReloadRecord(value => value + 1)}>{isEnglish ? "Reload talent" : "Volver a cargar el talento"}</button>
+    <Link href={isEnglish ? "/talents/en" : "/talents"}>{isEnglish ? "Back to the list" : "Volver al listado"}</Link>
+  </div></main>;
 
   return (
     <main className={styles.detailPage}>
@@ -249,14 +217,14 @@ export default function TalentDetail({ id }: { id: string }) {
         <p>{isEnglish ? "Application date" : "Fecha de aplicación"}: {String(record.application_date ?? record.applied_at ?? record.created_at ?? record.createdAt ?? missingValue)}</p>
       </header>
 
-      {error && <p className={styles.error} role="alert">{error}</p>}
+      {error && <p className={styles.error} role="alert">{error} <Link href={isEnglish ? "/talents/en" : "/talents"}>{isEnglish ? "Back to the list" : "Volver al listado"}</Link></p>}
       {message && <p className={styles.success} role="status">{message}</p>}
 
       <section className={styles.detailGrid}>
         <form className={styles.panel} onSubmit={saveRecord}>
           <h2>{isEnglish ? "Talent information" : "Datos del talento"}</h2>
           <p>{isEnglish ? "Update the talent information." : "Actualiza la información del talento."}</p>
-          <div className={styles.fieldGrid}>
+          <fieldset disabled={saving} className={styles.fieldGrid}>
             <label>{isEnglish ? "Record ID" : "ID del registro"}<input value={String(record.id ?? id)} readOnly /></label>
             <label>{isEnglish ? "Full name" : "Nombre completo"}<input value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} /></label>
             <label>Email<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
@@ -267,7 +235,7 @@ export default function TalentDetail({ id }: { id: string }) {
             <label>{isEnglish ? "Stage" : "Etapa"}<select className={styles.fieldSelect} value={form.stage} onChange={(event) => setForm({ ...form, stage: event.target.value })} disabled={saving}>{Object.entries(stageLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label>LinkedIn<input type="url" value={form.linkedin_url} onChange={(event) => setForm({ ...form, linkedin_url: event.target.value })} /></label>
             <label>{isEnglish ? "Resume URL" : "URL del CV"}<input type="url" value={form.cv_url} onChange={(event) => setForm({ ...form, cv_url: event.target.value })} /></label>
-          </div>
+          </fieldset>
           <div className={styles.actionRow}>
             <button disabled={saving} type="submit">{saving ? (isEnglish ? "Saving..." : "Guardando...") : (isEnglish ? "Save changes" : "Guardar cambios")}</button>
             <button className={styles.deleteButton} disabled={saving} onClick={deleteRecord} type="button">
@@ -279,15 +247,20 @@ export default function TalentDetail({ id }: { id: string }) {
         <section className={styles.panel}>
           <h2>{isEnglish ? "Notes" : "Notas"}</h2>
           <form onSubmit={addNote} className={styles.noteForm}>
-            <textarea value={noteText} onChange={(event) => setNoteText(event.target.value)} rows={4} placeholder={isEnglish ? "Add a note" : "Añadir una nota"} aria-label={isEnglish ? "New note" : "Nueva nota"} />
-            <button disabled={saving || !noteText.trim()} type="submit">{isEnglish ? "Add note" : "Añadir nota"}</button>
+            <textarea disabled={notesSaving} value={noteText} onChange={(event) => setNoteText(event.target.value)} rows={4} placeholder={isEnglish ? "Add a note" : "Añadir una nota"} aria-label={isEnglish ? "New note" : "Nueva nota"} />
+            <button disabled={notesSaving || !noteText.trim()} type="submit">{notesSaving ? (isEnglish ? "Saving…" : "Guardando…") : (isEnglish ? "Add note" : "Añadir nota")}</button>
           </form>
           <div className={styles.notes}>
-            {notes.length === 0 && <p className={styles.message}>{isEnglish ? "There are no notes." : "No hay notas."}</p>}
-            {notes.map((note, index) => (
+            {notesLoading && <p role="status">{isEnglish ? "Loading notes…" : "Cargando notas…"}</p>}
+            {notesError && <div role="alert" className={styles.error}>
+              <p>{notesError}</p>
+              <button type="button" disabled={notesLoading} onClick={() => setReloadNotes(value => value + 1)}>{isEnglish ? "Reload notes" : "Volver a cargar las notas"}</button>
+            </div>}
+            {!notesLoading && !notesError && notes.length === 0 && <p className={styles.message}>{isEnglish ? "There are no notes." : "No hay notas."}</p>}
+            {!notesLoading && !notesError && notes.map((note, index) => (
               <article className={styles.note} key={String(note.id ?? note.note_id ?? index)}>
                 <p>{String(note.content ?? note.text ?? note.note ?? (isEnglish ? "No content" : "Sin contenido"))}</p>
-                {(note.id ?? note.note_id) !== undefined && <button type="button" onClick={() => deleteNote(note)} disabled={saving}>{isEnglish ? "Delete" : "Eliminar"}</button>}
+                {(note.id ?? note.note_id) !== undefined && <button type="button" onClick={() => deleteNote(note)} disabled={notesSaving}>{isEnglish ? "Delete" : "Eliminar"}</button>}
               </article>
             ))}
           </div>
