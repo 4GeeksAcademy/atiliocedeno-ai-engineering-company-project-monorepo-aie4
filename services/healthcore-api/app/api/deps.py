@@ -30,7 +30,9 @@ def get_current_user(credentials=Depends(bearer_scheme)) -> User:
 		claims = decode_access_token(credentials.credentials)
 		subject = claims.get("sub")
 		user_id = int(subject)
-	except (jwt.InvalidTokenError, TypeError, ValueError, RuntimeError) as exc:
+	except RuntimeError as exc:
+		raise HTTPException(status_code=503, detail="Authentication is not configured") from exc
+	except (jwt.InvalidTokenError, TypeError, ValueError) as exc:
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Invalid or expired authentication token",

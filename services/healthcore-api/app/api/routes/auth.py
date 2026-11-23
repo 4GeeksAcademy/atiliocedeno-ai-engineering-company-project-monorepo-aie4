@@ -1,12 +1,14 @@
 """Authentication endpoints."""
 
+import logging
 import os
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, status
 
 from app.api.deps import CurrentUser, get_user_service
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, is_auth_configured, verify_password
+from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
     AuthMeResponse,
@@ -18,9 +20,10 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.services.email_service import send_auth_notification
-from app.services.password_service import PasswordService
-from app.services.user_service import UserService
+from app.services.password_service import IncorrectPassword, PasswordService
+from app.services.user_service import AccountNotFound, UserService
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -41,23 +44,28 @@ def login(payload: LoginRequest, background_tasks: BackgroundTasks) -> TokenResp
     return TokenResponse(access_token=token)
 
 
+def prepare_password_reset(user: User) -> None:
+    try:
+        token = PasswordService().issue_reset(user)
+    except Exception:
+        logger.error("HealthCore could not prepare a password reset")
+        return
+    frontend_url = os.getenv("HEALTHCORE_FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    reset_url = f"{frontend_url}/reset-password?token={token}"
+    send_auth_notification(user.email, "password_reset", reset_url)
+
+
 @router.post("/forgot-password", response_model=AuthMessageResponse)
 def forgot_password(
     payload: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
 ) -> AuthMessageResponse:
-    """Request a reset link without revealing whether the account exists."""
+    """Accept reset requests without revealing whether the account exists."""
+    if not is_auth_configured():
+        raise HTTPException(status_code=503, detail="Authentication is not configured")
     user = UserRepository().get_by_email(str(payload.email).lower())
     if user is not None and user.is_active and user.id is not None:
-        try:
-            token = PasswordService().issue_reset(user)
-        except RuntimeError:
-            # Keep the public response indistinguishable when auth configuration is missing.
-            token = None
-        if token is not None:
-            frontend_url = os.getenv("HEALTHCORE_FRONTEND_URL", "http://localhost:3000").rstrip("/")
-            reset_url = f"{frontend_url}/reset-password?token={token}"
-            background_tasks.add_task(send_auth_notification, user.email, "password_reset", reset_url)
+        background_tasks.add_task(prepare_password_reset, user)
     return AuthMessageResponse(message="If an account exists for that email, a reset link will be sent.")
 
 
@@ -83,9 +91,9 @@ def change_password(
     """Change the authenticated user's password after verifying the current one."""
     try:
         PasswordService().change_password(current_user, payload.current_password, payload.new_password)
-    except ValueError as exc:
+    except IncorrectPassword as exc:
         raise HTTPException(status_code=400, detail="Current password is incorrect") from exc
-    except LookupError as exc:
+    except AccountNotFound as exc:
         raise HTTPException(status_code=404, detail="User not found") from exc
     return AuthMessageResponse(message="Password changed successfully.")
 

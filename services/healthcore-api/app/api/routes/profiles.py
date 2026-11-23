@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.deps import AdminUser, CurrentUser, get_user_service
 from app.models.user import UserRole
 from app.schemas.profile import ProfileCreate, ProfileRead, ProfileUpdate
-from app.services.user_service import UserService
+from app.services.user_service import AccountConflict, AccountNotFound, UserService
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -27,9 +27,9 @@ def create_my_profile(
     """Allow administrators to create a profile for their own account."""
     try:
         profile = service.create_profile(current_user.id, payload)
-    except LookupError as exc:
+    except AccountNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
+    except AccountConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return ProfileRead.model_validate(profile)
 
@@ -67,9 +67,9 @@ def create_profile(
     del current_user
     try:
         profile = service.create_profile(user_id, payload)
-    except LookupError as exc:
+    except AccountNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
+    except AccountConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return ProfileRead.model_validate(profile)
 

@@ -1,5 +1,6 @@
 """Authenticated incident analysis and latest-result export."""
 from datetime import datetime, timezone
+import logging
 from collections import Counter
 from typing import get_args
 from uuid import UUID
@@ -18,6 +19,9 @@ from app.repositories.incident_results_repository import IncidentResultsReposito
 from app.schemas.incidents import AnalysisAPIResponse
 from app.services.incident_analysis import analyze_incident_stream
 from app.services.incident_reporting import export_csv
+
+logger = logging.getLogger(__name__)
+
 
 class SafeUploadRoute(APIRoute):
     def get_route_handler(self):
@@ -48,35 +52,42 @@ async def analyze_incidents(current_user: CurrentUser, file: UploadFile = File(.
             raise HTTPException(status_code=415, detail={"code": "invalid_file_type"})
         if file.size is not None and file.size > MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail={"code": "file_too_large"})
-        report = await run_in_threadpool(analyze_incident_stream, file.file, max_bytes=MAX_UPLOAD_BYTES)
-        await run_in_threadpool(IncidentResultsRepository().save, owner_key(current_user), report)
-        return AnalysisAPIResponse.model_validate(report.model_dump())
-    except HTTPException:
-        raise
-    except ValueError as exc:
-        code = str(exc)
-        if code not in {"file_too_large", "invalid_encoding", "invalid_csv", "invalid_headers", "empty_file"}:
+        try:
+            report = await run_in_threadpool(analyze_incident_stream, file.file, max_bytes=MAX_UPLOAD_BYTES)
+        except ValueError as exc:
+            code = str(exc)
+            if code not in {"file_too_large", "invalid_encoding", "invalid_csv", "invalid_headers", "empty_file"}:
+                raise HTTPException(status_code=500, detail={"code": "analysis_failed"}) from None
+            raise HTTPException(status_code=413 if code == "file_too_large" else 400, detail={"code": code}) from None
+        except Exception:
             raise HTTPException(status_code=500, detail={"code": "analysis_failed"}) from None
-        raise HTTPException(status_code=413 if code == "file_too_large" else 400, detail={"code": code}) from None
-    except Exception:
-        # Do not log exception input, filename, raw rows, or validation objects.
-        raise HTTPException(status_code=500, detail={"code": "analysis_failed"}) from None
+
+        try:
+            await run_in_threadpool(IncidentResultsRepository().save, owner_key(current_user), report)
+        except Exception:
+            raise HTTPException(status_code=500, detail={"code": "analysis_failed"}) from None
+        return AnalysisAPIResponse.model_validate(report.model_dump())
     finally:
-        await file.close()
+        try:
+            await file.close()
+        except OSError:
+            logger.warning("HealthCore could not release an incident upload")
 
 
 @router.get("/results/export")
 def export_incident_summary(current_user: CurrentUser) -> Response:
     try:
         report = IncidentResultsRepository().latest(owner_key(current_user))
-        if report is None:
-            raise HTTPException(status_code=404, detail={"code": "analysis_not_found"})
-        return Response(export_csv(report), media_type="text/csv",
-                        headers={"Content-Disposition": 'attachment; filename="results.csv"', "Cache-Control": "no-store"})
-    except HTTPException:
-        raise
     except Exception:
         raise HTTPException(status_code=500, detail={"code": "export_failed"}) from None
+    if report is None:
+        raise HTTPException(status_code=404, detail={"code": "analysis_not_found"})
+    try:
+        content = export_csv(report)
+    except Exception:
+        raise HTTPException(status_code=500, detail={"code": "export_failed"}) from None
+    return Response(content, media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="results.csv"', "Cache-Control": "no-store"})
 
 
 FILTER_VALUES = {

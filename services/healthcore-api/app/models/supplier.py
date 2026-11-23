@@ -5,6 +5,7 @@ from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 VALID_CATEGORIES = (
     "medical_supplies",
@@ -81,7 +82,7 @@ class SupplierFields(BaseModel):
     def validate_country_currency(self) -> "SupplierFields":
         expected_currency = "USD" if self.country == "USA" else "GBP"
         if self.currency != expected_currency:
-            raise ValueError("country_currency_mismatch")
+            raise PydanticCustomError("country_currency_mismatch", "Currency must match country.")
         return self
 
 

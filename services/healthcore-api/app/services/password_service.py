@@ -14,8 +14,13 @@ from app.core.security import (
 from app.models.user import User
 from app.repositories.password_reset_repository import PasswordResetRepository
 from app.repositories.user_repository import UserRepository
+from app.services.user_service import AccountNotFound
 
 RESET_TOKEN_MINUTES = 30
+
+
+class IncorrectPassword(ValueError):
+    """The current password does not match the stored password."""
 
 
 class PasswordService:
@@ -57,23 +62,19 @@ class PasswordService:
             token_id = claims["jti"]
         except (jwt.InvalidTokenError, KeyError, TypeError, ValueError, RuntimeError):
             return False
-        if not isinstance(token_id, str) or not self.reset_tokens.consume(user_id, token_id):
+        if not isinstance(token_id, str) or not self.reset_tokens.is_valid(user_id, token_id):
             return False
-        user = self.users.get_by_id(user_id)
-        if user is None:
-            return False
-        if self.users.update_password_hash(user_id, hash_password(new_password)) is None:
-            self.reset_tokens.invalidate_for_user(user_id)
-            return False
-        self.reset_tokens.invalidate_for_user(user_id)
-        return True
+        return self.reset_tokens.replace_password(user_id, hash_password(new_password), token_id=token_id)
 
     def change_password(self, user: User, current_password: str, new_password: str) -> None:
-        """Verify the current password before replacing its hash."""
-        if not verify_password(current_password, user.hashed_password):
-            raise ValueError("Current password is incorrect")
+        """Verify the current password before replacing it and invalidating links."""
         if user.id is None:
-            raise LookupError("User not found")
-        if self.users.update_password_hash(user.id, hash_password(new_password)) is None:
-            raise LookupError("User not found")
-        self.reset_tokens.invalidate_for_user(user.id)
+            raise AccountNotFound("User not found")
+        if not verify_password(current_password, user.hashed_password):
+            raise IncorrectPassword("Current password is incorrect")
+        if not self.reset_tokens.replace_password(
+            user.id, hash_password(new_password), expected_hash=user.hashed_password,
+        ):
+            if self.users.get_by_id(user.id) is None:
+                raise AccountNotFound("User not found")
+            raise IncorrectPassword("Current password is incorrect")
