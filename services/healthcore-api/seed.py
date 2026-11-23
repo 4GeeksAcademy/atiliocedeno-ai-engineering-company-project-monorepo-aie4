@@ -1,10 +1,10 @@
 """Idempotently seed the HealthCore supplier directory."""
 
 from datetime import datetime, timezone
+import sys
 
 from tinydb import Query
 
-from app.db.tinydb import get_db, get_db_lock
 from app.models.supplier import Supplier, SupplierCreate
 
 SUPPLIERS_SEED: tuple[dict, ...] = (
@@ -185,6 +185,8 @@ def seed_suppliers() -> int:
     """
     # Validate the entire source block before opening the table or writing data.
     suppliers = [SupplierCreate.model_validate(record) for record in SUPPLIERS_SEED]
+    from app.db.tinydb import get_db, get_db_lock
+
     db = get_db()
     table = db.table("suppliers")
     query = Query()
@@ -205,10 +207,15 @@ def seed_suppliers() -> int:
     return inserted
 
 
-def main() -> None:
-    inserted = seed_suppliers()
+def main() -> int:
+    try:
+        inserted = seed_suppliers()
+    except (OSError, ValueError, TypeError):
+        print("Supplier seed failed: check the supplier data and the HealthCore database.", file=sys.stderr)
+        return 2
     print(f"Inserted {inserted} suppliers.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

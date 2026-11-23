@@ -25,6 +25,3 @@ print("df_columns", list(df.columns))
 before = len(df)
 df = df.drop_duplicates()
 print("rows_dropped_duplicates", before - len(df))
-
-# Sample output
-print("df_head", df.head())
