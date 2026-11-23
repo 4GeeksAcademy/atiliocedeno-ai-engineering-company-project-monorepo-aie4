@@ -33,7 +33,7 @@ test("CSV analysis uses the same-origin API proxy and signed-in token", () => {
 
 test("file limits, aggregate reporting, and privacy-safe errors are present", () => {
   assert.match(analysis, /file\.size > 25_000_000/);
-  assert.match(analysis, /setReport\(await response\.json\(\) as Report\)/);
+  assert.match(analysis, /if \(!isReport\(data\)\)/);
   assert.match(analysis, /report\.invalid_breakdown\.by_rule/);
   assert.match(analysis, /Only aggregate results are stored/);
   assert.match(analysis, /catch \{/);

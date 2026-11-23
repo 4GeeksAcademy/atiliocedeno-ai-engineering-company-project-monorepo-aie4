@@ -33,3 +33,9 @@ The shared private navigation links to the account dashboard, profile, password 
 The incident list, registration form, and CSV upload/export UI live at `/backoffice/incidents`. The supplier directory remains at `/backoffice/suppliers`. FastAPI authorizes and processes these requests. The Tracker keeps its independent API contract. Public patient pages and historical website redirects belong to the [public app](../website/README.md).
 
 El listado y el formulario de registro de incidencias comparten `/backoffice/incidents` con el análisis y la exportación CSV. Cada fila permite cambiar el estado solo a través de las transiciones autorizadas por la API; los filtros activos se conservan al guardar. No introduzcas datos identificativos de pacientes; este prototipo no está aprobado para datos reales de pacientes.
+
+
+The incident save regression can run through the HealthCore API and a temporary TinyDB.
+From the repository root, set `HEALTHCORE_TEST_PYTHON` to the Python executable with
+the dependencies from `services/healthcore-api/requirements-dev.txt` and run
+`npm --prefix uis/talent-pipeline-tracker test`. The other portal tests run without Python.

@@ -39,6 +39,29 @@ type IncidentSummaryData = {
   by_branch: Record<string, number>;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isCountMap(value: unknown): value is Record<string, number> {
+  return isRecord(value) && Object.values(value).every(count => Number.isFinite(count));
+}
+
+function isReport(value: unknown): value is Report {
+  return isRecord(value)
+    && [value.total_records, value.valid_records, value.invalid_records, value.closed_with_valid_satisfaction].every(Number.isFinite)
+    && (value.average_satisfaction === null || Number.isFinite(value.average_satisfaction))
+    && [value.categories, value.statuses, value.countries, value.satisfaction_distribution].every(isCountMap)
+    && isRecord(value.invalid_breakdown) && isCountMap(value.invalid_breakdown.by_rule);
+}
+
+function isIncident(value: unknown): value is Incident {
+  return isRecord(value)
+    && [value.id, value.title, value.description, value.category, value.status,
+      value.origin, value.branch, value.created_at, value.updated_at].every(field => typeof field === "string")
+    && typeof value.status === "string" && Object.prototype.hasOwnProperty.call(STATUS_TRANSITIONS, value.status);
+}
+
 type DirectoryState = "loading" | "ready" | "error";
 
 function IncidentSummary({ token, refreshKey }: { token: string; refreshKey: number }) {
@@ -58,14 +81,16 @@ function IncidentSummary({ token, refreshKey }: { token: string; refreshKey: num
         const response = await fetch("/api/healthcore/api/incidents/summary", {
           headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: controller.signal,
         });
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401) {
           window.location.assign("/login?next=%2Fbackoffice%2Fincidents");
           return;
         }
         if (!response.ok) throw new Error("summary_request_failed");
-        const data = await response.json() as IncidentSummaryData;
-        if (typeof data.total !== "number" || !data.by_status || !data.by_category || !data.by_origin || !data.by_branch) throw new Error("invalid_summary_response");
-        setSummary(data);
+        const data = await response.json() as unknown;
+        if (!isRecord(data) || !Number.isFinite(data.total)
+          || ![data.by_status, data.by_category, data.by_origin, data.by_branch].every(isCountMap)) throw new Error("invalid_summary_response");
+        if (controller.signal.aborted) return;
+        setSummary(data as IncidentSummaryData);
         setState("ready");
       } catch {
         if (controller.signal.aborted) return;
@@ -235,8 +260,10 @@ function IncidentDirectory({ token, isEn, refreshKey, onStatusUpdated }: { token
   const [errorMessage, setErrorMessage] = useState("");
   const [retryKey, setRetryKey] = useState(0);
   const [statusDrafts, setStatusDrafts] = useState<Record<string, string>>({});
-  const [statusErrors, setStatusErrors] = useState<Record<string, boolean>>({});
-  const [retryStatuses, setRetryStatuses] = useState<Record<string, string>>({});
+  const [statusIssues, setStatusIssues] = useState<Record<string, { kind: "retry" | "pending" | "rejected"; proposed: string; rejected: boolean } | undefined>>({});
+  const [statusNotice, setStatusNotice] = useState<{ kind: "saved" | "rejected" | "missing"; title: string } | null>(null);
+  const currentStatus = useRef(status);
+  currentStatus.current = status;
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const savingIdsRef = useRef(new Set<string>());
@@ -264,15 +291,15 @@ function IncidentDirectory({ token, isEn, refreshKey, onStatusUpdated }: { token
           cache: "no-store",
           signal: controller.signal,
         });
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401) {
           window.location.assign("/login?next=%2Fbackoffice%2Fincidents");
           return;
         }
         if (!response.ok) throw new Error("request_failed");
         const data = await response.json() as unknown;
-        if (!Array.isArray(data)) throw new Error("invalid_response");
-        if (requestSequence.current !== requestId) return;
-        setIncidents(data as Incident[]);
+        if (!Array.isArray(data) || !data.every(isIncident)) throw new Error("invalid_response");
+        if (controller.signal.aborted || requestSequence.current !== requestId) return;
+        setIncidents(data);
         setDirectoryState("ready");
       } catch {
         if (controller.signal.aborted || requestSequence.current !== requestId) return;
@@ -350,40 +377,107 @@ function IncidentDirectory({ token, isEn, refreshKey, onStatusUpdated }: { token
     setBranch("");
   }
 
-  async function saveStatus(incident: Incident, nextStatus: string) {
-    if (savingIdsRef.current.has(incident.id)) return;
+  function applyConfirmed(confirmed: Incident) {
+    setIncidents(items => items.flatMap(item => item.id !== confirmed.id ? [item]
+      : !currentStatus.current || confirmed.status === currentStatus.current ? [confirmed] : []));
+  }
+
+  function confirmSaved(confirmed: Incident) {
+    applyConfirmed(confirmed);
+    setStatusDrafts(drafts => ({ ...drafts, [confirmed.id]: confirmed.status }));
+    setStatusIssues(issues => ({ ...issues, [confirmed.id]: undefined }));
+    setStatusNotice({ kind: "saved", title: confirmed.title });
+    onStatusUpdated();
+  }
+
+  async function reconcileStatus(incident: Incident, proposed: string, accessToken: string, rejected: boolean) {
+    const markIssue = (kind: "retry" | "pending" | "rejected") =>
+      setStatusIssues(issues => ({ ...issues, [incident.id]: { kind, proposed, rejected } }));
+    let response: Response;
+    try {
+      response = await fetch("/api/healthcore/api/incidents/" + encodeURIComponent(incident.id), {
+        headers: { Authorization: "Bearer " + accessToken }, cache: "no-store",
+      });
+    } catch {
+      markIssue("pending");
+      return;
+    }
+    const confirmed: unknown = await response.json().catch(() => null);
+    if (response.status === 404 && isRecord(confirmed) && confirmed.detail === "Incident not found.") {
+      setStatusNotice({ kind: "missing", title: incident.title });
+      setStatusIssues(issues => ({ ...issues, [incident.id]: undefined }));
+      onStatusUpdated();
+      return;
+    }
+    if (!response.ok) {
+      markIssue("pending");
+      return;
+    }
+    if (!isIncident(confirmed) || confirmed.id !== incident.id) {
+      markIssue("pending");
+      return;
+    }
+    if (confirmed.status === proposed) {
+      confirmSaved(confirmed);
+      return;
+    }
+
+    applyConfirmed(confirmed);
+    const canRetry = STATUS_TRANSITIONS[confirmed.status]?.includes(proposed);
+    setStatusDrafts(drafts => ({ ...drafts, [incident.id]: canRetry ? proposed : confirmed.status }));
+    markIssue(canRetry ? "retry" : "rejected");
+    if (confirmed.status !== incident.status) {
+      if (!canRetry) setStatusNotice({ kind: "rejected", title: incident.title });
+      onStatusUpdated();
+    }
+  }
+
+  async function saveStatus(incident: Incident, nextStatus: string, checkOnly = false) {
+    if (savingIdsRef.current.has(incident.id)
+      || (!checkOnly && !STATUS_TRANSITIONS[incident.status]?.includes(nextStatus))) return;
     const accessToken = token || window.localStorage.getItem("healthcore_access_token") || "";
     if (!accessToken) {
       window.location.assign("/login?next=%2Fbackoffice%2Fincidents");
       return;
     }
     savingIdsRef.current.add(incident.id);
-    setSavingIds((current) => [...current, incident.id]);
-    setStatusErrors((current) => ({ ...current, [incident.id]: false }));
-    setRetryStatuses((current) => ({ ...current, [incident.id]: nextStatus }));
+    setSavingIds(ids => [...ids, incident.id]);
+    setStatusNotice(null);
+    setStatusIssues(issues => ({ ...issues, [incident.id]: undefined }));
+
     try {
-      const response = await fetch(`/api/healthcore/api/incidents/${incident.id}/status`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-        cache: "no-store",
-      });
-      if (response.status === 401 || response.status === 403) {
+      if (checkOnly) {
+        await reconcileStatus(incident, nextStatus, accessToken, statusIssues[incident.id]?.rejected ?? false);
+        return;
+      }
+
+      let response: Response;
+      try {
+        response = await fetch("/api/healthcore/api/incidents/" + encodeURIComponent(incident.id) + "/status", {
+          method: "PATCH",
+          headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ status: nextStatus }),
+          cache: "no-store",
+        });
+      } catch {
+        await reconcileStatus(incident, nextStatus, accessToken, false);
+        return;
+      }
+      if (response.status === 401) {
         window.location.assign("/login?next=%2Fbackoffice%2Fincidents");
         return;
       }
-      if (!response.ok) throw new Error("status_update_failed");
-      setIncidents((current) => current.map((item) => item.id === incident.id ? { ...item, status: nextStatus } : item)
-        .filter((item) => !status || item.status === status));
-      setStatusDrafts((current) => ({ ...current, [incident.id]: nextStatus }));
-      setStatusErrors((current) => ({ ...current, [incident.id]: false }));
-      onStatusUpdated();
-    } catch {
-      setStatusDrafts((current) => ({ ...current, [incident.id]: incident.status }));
-      setStatusErrors((current) => ({ ...current, [incident.id]: true }));
+      const payload: unknown = await response.json().catch(() => null);
+      if (response.ok && isIncident(payload) && payload.id === incident.id && payload.status === nextStatus) {
+        confirmSaved(payload);
+        return;
+      }
+      const rejected = response.status === 400 && isRecord(payload)
+        && isRecord(payload.detail) && payload.detail.field === "status";
+      await reconcileStatus(incident, nextStatus, accessToken, rejected);
     } finally {
       savingIdsRef.current.delete(incident.id);
-      setSavingIds((current) => current.filter((id) => id !== incident.id));
+      setSavingIds(ids => ids.filter(id => id !== incident.id));
     }
   }
 
@@ -417,6 +511,11 @@ function IncidentDirectory({ token, isEn, refreshKey, onStatusUpdated }: { token
         </button>
       </div>
 
+      {statusNotice && <p className="incident-feedback" role={statusNotice.kind === "saved" ? "status" : "alert"}>
+        {statusNotice.kind === "saved" ? (isEn ? "Status updated" : "Estado actualizado")
+          : statusNotice.kind === "missing" ? (isEn ? "Incident no longer available. Check the refreshed list" : "La incidencia ya no está disponible. Consulta el listado actualizado")
+          : (isEn ? "This transition was rejected. Check the current status" : "La transición fue rechazada. Consulta el estado actual")}{". "}{statusNotice.title}
+      </p>}
       {directoryState === "loading" && <p className="incident-feedback" role="status">{isEn ? "Loading incidents…" : "Cargando incidencias…"}</p>}
       {directoryState === "error" && <div className="incident-feedback incident-feedback-error" role="alert">
         <p>{errorMessage}</p>
@@ -447,21 +546,31 @@ function IncidentDirectory({ token, isEn, refreshKey, onStatusUpdated }: { token
             <td className="incident-status-actions">
               {STATUS_TRANSITIONS[incident.status]?.length > 0 ? <>
                 <label className="sr-only" htmlFor={`incident-status-${incident.id}`}>{isEn ? `New status for ${incident.title}` : `Nuevo estado para ${incident.title}`}</label>
-                <select id={`incident-status-${incident.id}`} value={statusDrafts[incident.id] ?? incident.status} disabled={savingIds.includes(incident.id)} onChange={(event) => {
+                <select id={`incident-status-${incident.id}`} value={statusDrafts[incident.id] ?? incident.status} disabled={savingIds.includes(incident.id) || statusIssues[incident.id]?.kind === "pending"} onChange={(event) => {
                   const value = event.currentTarget.value;
                   setStatusDrafts((current) => ({ ...current, [incident.id]: value }));
                 }}>
                   <option value={incident.status}>{incidentLabel(incident.status, language)}</option>
                   {STATUS_TRANSITIONS[incident.status].map((value) => <option key={value} value={value}>{incidentLabel(value, language)}</option>)}
                 </select>
-                <button type="button" className="button-secondary incident-status-save" disabled={savingIds.includes(incident.id) || (statusDrafts[incident.id] ?? incident.status) === incident.status} onClick={() => void saveStatus(incident, statusDrafts[incident.id] ?? incident.status)}>
+                <button type="button" className="button-secondary incident-status-save" disabled={savingIds.includes(incident.id) || statusIssues[incident.id]?.kind === "pending" || (statusDrafts[incident.id] ?? incident.status) === incident.status} onClick={() => void saveStatus(incident, statusDrafts[incident.id] ?? incident.status)}>
                   {savingIds.includes(incident.id) ? (isEn ? "Saving…" : "Guardando…") : (isEn ? "Save" : "Guardar")}
                 </button>
-                {statusErrors[incident.id] && <div className="incident-status-error" role="alert">
-                  <span>{isEn ? "Couldn’t update the status. Try again." : "No se pudo cambiar el estado. Inténtalo de nuevo."}</span>
-                  <button type="button" className="incident-status-retry" disabled={savingIds.includes(incident.id)} onClick={() => void saveStatus(incident, retryStatuses[incident.id])}>{isEn ? "Retry" : "Reintentar"}</button>
-                </div>}
               </> : <span aria-label={isEn ? "Final status" : "Estado final"}>—</span>}
+              {statusIssues[incident.id] && (() => {
+                const issue = statusIssues[incident.id]!;
+                return <div className="incident-status-error" role="alert">
+                  <span>{issue.kind === "pending"
+                    ? (isEn ? "The result is pending confirmation." : "El resultado está pendiente de confirmación.")
+                    : issue.kind === "rejected"
+                      ? (isEn ? "The transition is unavailable. Check the current status." : "La transición no está disponible. Revisa el estado actual.")
+                      : issue.rejected
+                        ? (isEn ? "The transition was rejected. The current status has been checked." : "Se rechazó la transición. Se comprobó el estado actual.")
+                        : (isEn ? "Couldn’t update the status. Try again." : "No se pudo cambiar el estado. Inténtalo de nuevo.")}</span>
+                  {issue.kind === "pending" && <button type="button" className="incident-status-retry" onClick={() => void saveStatus(incident, issue.proposed, true)}>{isEn ? "Check again" : "Volver a comprobar"}</button>}
+                  {issue.kind === "retry" && <button type="button" className="incident-status-retry" onClick={() => void saveStatus(incident, issue.proposed)}>{isEn ? "Retry" : "Reintentar"}</button>}
+                </div>;
+              })()}
             </td>
           </tr>)}</tbody>
         </table>
@@ -503,7 +612,7 @@ function IncidentCreateForm({ token, onCreated }: { token: string; onCreated: ()
   const isEn = language === "en";
   const [values, setValues] = useState(EMPTY_INCIDENT);
   const [errors, setErrors] = useState<Partial<Record<IncidentField, string>>>({});
-  const [message, setMessage] = useState<"success" | "error" | null>(null);
+  const [message, setMessage] = useState<"success" | "error" | "uncertain" | "checked" | null>(null);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   useEffect(() => {
@@ -526,12 +635,12 @@ function IncidentCreateForm({ token, onCreated }: { token: string; onCreated: ()
   function update(field: IncidentField, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setMessage(null);
+    setMessage(current => current === "uncertain" || current === "checked" ? current : null);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (savingRef.current) return;
+    if (savingRef.current || message === "uncertain" || message === "checked") return;
     const invalid = (Object.keys(EMPTY_INCIDENT) as IncidentField[]).filter((field) => !values[field].trim());
     if (invalid.length) {
       setErrors(Object.fromEntries(invalid.map((field) => [field, missing[field]])));
@@ -551,14 +660,14 @@ function IncidentCreateForm({ token, onCreated }: { token: string; onCreated: ()
         method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify(values), cache: "no-store",
       });
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         window.location.assign("/login?next=%2Fbackoffice%2Fincidents");
         return;
       }
       if (response.status === 400) {
         const payload = await response.json().catch(() => ({})) as { detail?: { field?: string } };
-        const field = payload.detail?.field;
-        if (field && field in EMPTY_INCIDENT) {
+        const field = payload?.detail?.field;
+        if (field && Object.prototype.hasOwnProperty.call(EMPTY_INCIDENT, field)) {
           const invalidField = field as IncidentField;
           setErrors({ [invalidField]: invalidField === "title" && values.title.length > 120
             ? (isEn ? "Use at most 120 characters." : "Usa como máximo 120 caracteres.")
@@ -566,12 +675,24 @@ function IncidentCreateForm({ token, onCreated }: { token: string; onCreated: ()
         } else setMessage("error");
         return;
       }
-      if (response.status !== 201) throw new Error("create_failed");
+      if (response.status >= 500) {
+        setMessage("uncertain");
+        return;
+      }
+      if (response.status !== 201) {
+        setMessage("error");
+        return;
+      }
+      const created: unknown = await response.json().catch(() => null);
+      if (!isIncident(created)) {
+        setMessage("uncertain");
+        return;
+      }
       setValues(EMPTY_INCIDENT);
       setMessage("success");
       onCreated();
     } catch {
-      setMessage("error");
+      setMessage("uncertain");
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -590,6 +711,14 @@ function IncidentCreateForm({ token, onCreated }: { token: string; onCreated: ()
     <div className="panel-heading"><h2 id="incident-create-heading">{isEn ? "Register an incident" : "Registrar una incidencia"}</h2></div>
     {message === "success" && <p className="incident-create-success" role="status">{isEn ? "Incident registered." : "Incidencia registrada."}</p>}
     {message === "error" && <p className="incident-create-error" role="alert">{isEn ? "Unable to save the incident. Please try again." : "No se pudo guardar la incidencia. Inténtalo de nuevo."}</p>}
+    {(message === "uncertain" || message === "checked") && <div className="incident-create-error" role="alert">
+      <p>{isEn ? "HealthCore could not confirm the registration. Check the incident list before sending this form again." : "HealthCore no pudo confirmar el alta. Revisa el listado de incidencias antes de volver a enviar el formulario."}</p>
+      {message === "uncertain" ? <button type="button" className="button-secondary" onClick={() => { onCreated(); setMessage("checked"); }}>
+        {isEn ? "Refresh the incident list" : "Actualizar el listado"}
+      </button> : <button type="button" className="button-secondary" onClick={() => setMessage(null)}>
+        {isEn ? "Enable sending after checking" : "Habilitar el envío tras revisar"}
+      </button>}
+    </div>}
     <form className="incident-create-form" onSubmit={(event) => void save(event)} noValidate>
       <fieldset disabled={saving}>
         <p id="incident-privacy" className="privacy-note">{isEn ? "Do not enter identifying patient information in the title or description." : "No introduzcas datos identificativos de pacientes en el título ni en la descripción."}</p>
@@ -609,12 +738,13 @@ function IncidentCreateForm({ token, onCreated }: { token: string; onCreated: ()
         <select {...fieldProps("branch")} className={values.origin === "branch" ? "incident-branch-highlight" : undefined}><option value="">{isEn ? "Select a clinic" : "Selecciona una sede"}</option>{INCIDENT_BRANCHES.map((value) => <option key={value} value={value}>{incidentLabel(value, language)}</option>)}</select>
         {error("branch")}
       </fieldset>
-      <button type="submit" className="button-primary" disabled={saving}>{saving ? (isEn ? "Saving…" : "Guardando…") : (isEn ? "Save incident" : "Guardar incidencia")}</button>
+      <button type="submit" className="button-primary" disabled={saving || message === "uncertain" || message === "checked"}>{saving ? (isEn ? "Saving…" : "Guardando…") : (isEn ? "Save incident" : "Guardar incidencia")}</button>
     </form>
   </section>;
 }
 
 const ERROR_MESSAGES: Record<string, { en: string; es: string }> = {
+  invalid_upload: { en: "Select the CSV file again and resubmit it.", es: "Vuelve a seleccionar el archivo CSV y envíalo de nuevo." },
   invalid_file_type: { en: "Select a CSV file.", es: "Selecciona un archivo CSV." },
   file_too_large: { en: "The CSV exceeds the 25 MB limit.", es: "El CSV supera el límite de 25 MB." },
   invalid_encoding: { en: "The CSV must use UTF-8 encoding.", es: "El CSV debe utilizar codificación UTF-8." },
@@ -646,7 +776,7 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
   return <article className="incident-stat"><span>{label}</span><strong>{value}</strong></article>;
 }
 
-function IncidentResults({ report, onExport }: { report: Report; onExport: () => void }) {
+function IncidentResults({ report, onExport, busy }: { report: Report; onExport: () => void; busy: boolean }) {
   const { language } = useLanguage();
   const isEn = language === "en";
   const breakdowns = [
@@ -686,7 +816,7 @@ function IncidentResults({ report, onExport }: { report: Report; onExport: () =>
           </section>
         ))}
       </div>
-      <button type="button" className="button-secondary" onClick={onExport}>{isEn ? "Download Results CSV" : "Descargar resultados CSV"}</button>
+      <button type="button" className="button-secondary" disabled={busy} onClick={onExport}>{isEn ? "Download Results CSV" : "Descargar resultados CSV"}</button>
     </div>
   );
 }
@@ -695,7 +825,9 @@ export default function IncidentAnalysis() {
   const { language } = useLanguage();
   const isEn = language === "en";
   const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<"analyze" | "export" | null>(null);
+  const busy = operation !== null;
+  const operationPending = useRef(false);
   const [message, setMessage] = useState<Message | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [token, setToken] = useState("");
@@ -706,7 +838,7 @@ export default function IncidentAnalysis() {
 
   async function submit(event?: FormEvent<HTMLFormElement>, download = false) {
     event?.preventDefault();
-    if (busy) return;
+    if (operationPending.current) return;
     const accessToken = token || window.localStorage.getItem("healthcore_access_token") || "";
     if (!accessToken || (!download && !file)) {
       setReport(null);
@@ -720,7 +852,8 @@ export default function IncidentAnalysis() {
       return;
     }
 
-    setBusy(true);
+    operationPending.current = true;
+    setOperation(download ? "export" : "analyze");
     if (!download) setReport(null);
     setMessage({ text: download ? (isEn ? "Preparing results…" : "Preparando resultados…") : (isEn ? "Analyzing file…" : "Analizando archivo…") });
     try {
@@ -736,11 +869,19 @@ export default function IncidentAnalysis() {
           setMessage({ text: isEn ? "Your access token is invalid or expired. Sign in again." : "Tu token de acceso no es válido o ha caducado. Inicia sesión nuevamente.", error: true });
           return;
         }
-        const errorCode = payload?.detail?.code;
-        setMessage({ text: ERROR_MESSAGES[errorCode]?.[language] ?? (isEn ? "Request failed. Check authorization and file format." : "La solicitud falló. Comprueba la autorización y el formato del archivo."), error: true });
+        const errorCode: unknown = payload?.detail?.code;
+        const message = typeof errorCode === "string" && Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, errorCode)
+          ? ERROR_MESSAGES[errorCode][language] : response.status >= 500
+            ? (isEn ? "The analysis service is temporarily unavailable. Try again." : "El servicio de análisis no está disponible temporalmente. Inténtalo de nuevo.")
+            : (isEn ? "HealthCore could not process this request. Check the file and your access." : "HealthCore no pudo procesar la solicitud. Revisa el archivo y tus permisos.");
+        setMessage({ text: message, error: true });
         return;
       }
       if (download) {
+        if (!response.headers.get("content-type")?.toLowerCase().startsWith("text/csv")) {
+          setMessage({ text: isEn ? "HealthCore returned an unexpected export. Try downloading again." : "HealthCore devolvió una exportación inesperada. Vuelve a descargarla.", error: true });
+          return;
+        }
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -752,13 +893,19 @@ export default function IncidentAnalysis() {
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
         setMessage({ text: isEn ? "Results downloaded. Only aggregate metrics are included." : "Resultados descargados. Solo se incluyen métricas agregadas." });
       } else {
-        setReport(await response.json() as Report);
+        const data: unknown = await response.json().catch(() => null);
+        if (!isReport(data)) {
+          setMessage({ text: isEn ? "HealthCore returned an unexpected analysis. Try again." : "HealthCore devolvió un análisis inesperado. Inténtalo de nuevo.", error: true });
+          return;
+        }
+        setReport(data);
         setMessage(null);
       }
     } catch {
       setMessage({ text: isEn ? "Unable to reach the analysis service. Please try again." : "No se pudo conectar con el servicio de análisis. Inténtalo de nuevo.", error: true });
     } finally {
-      setBusy(false);
+      operationPending.current = false;
+      setOperation(null);
     }
   }
 
@@ -773,11 +920,11 @@ export default function IncidentAnalysis() {
               <label htmlFor="incident-file">{isEn ? "De-identified CSV file" : "Archivo CSV sin datos identificables"}</label>
               <input id="incident-file" type="file" accept=".csv,text/csv" required disabled={busy} onChange={(event) => { setFile(event.currentTarget.files?.[0] ?? null); setReport(null); setMessage(null); }} />
               <p className="privacy-note">{isEn ? "Use synthetic or de-identified data only. Raw uploads are discarded after analysis; only aggregate results are saved for your account. This prototype is not approved for real patient data." : "Utiliza únicamente datos sintéticos o desidentificados. Los archivos originales se descartan tras el análisis; solo se guardan resultados agregados. Este prototipo no está aprobado para datos reales de pacientes."}</p>
-              <button className="button-primary" type="submit" disabled={busy}>{busy ? (isEn ? "Analyzing…" : "Analizando…") : (isEn ? "Analyze incidents" : "Analizar incidentes")}</button>
+              <button className="button-primary" type="submit" disabled={busy}>{operation === "analyze" ? (isEn ? "Analyzing…" : "Analizando…") : (isEn ? "Analyze incidents" : "Analizar incidentes")}</button>
             </form>
             <div className="incident-results" aria-live="polite">
-              {message && <p className={message.error ? "incident-error" : "incident-message"} role="status">{message.text}</p>}
-              {report && <IncidentResults report={report} onExport={() => void submit(undefined, true)} />}
+              {message && <p className={message.error ? "incident-error" : "incident-message"} role={message.error ? "alert" : "status"}>{message.text}</p>}
+              {report && <IncidentResults report={report} busy={busy} onExport={() => void submit(undefined, true)} />}
             </div>
           </section>
   </div></main>;
