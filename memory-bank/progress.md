@@ -1,5 +1,37 @@
 # Progress
 
+## Centralized Incident Manager — incident detail drawer (2026-11-23)
+
+- Added a bilingual right-side detail drawer to the existing incident directory, using the already-loaded incident record; no API, seed, summary calculation, or status behavior changed. It presents the full multiline description, ID, status, title, category, origin, clinic, and timestamps.
+- Rows and explicit title buttons open details; keyboard activation, Escape, focus containment/restoration, close button, backdrop dismissal, internal scrolling, and full-screen mobile CSS are covered. Status controls remain independent, and closing keeps the current list/filter state.
+- Portal tests pass **37/37**, typecheck and production build pass. JSDOM verifies content, keyboard/focus, controls, and mobile CSS contract; no browser visual check was performed.
+
+## Centralized Incident Manager — global summary panel (2026-11-23)
+
+- The authenticated `/api/incidents/summary` aggregates the complete `incidents` TinyDB table (not CSV analysis results) into a global total and catalog-complete counts by status, category, origin, and branch. Backend tests with temporary TinyDB and the real seed verify the empty response, 94 seeded tickets (`open=28`, `in_progress=0`, `resolved=52`, `discarded=14`), and the updated 27/1 status counts after PATCH while total remains 94.
+- Completed and mounted the bilingual `IncidentSummary` panel on `/backoffice/incidents`; it requests the same-origin authenticated proxy without list filters, reuses portal catalogue labels, and refreshes after successful creation and status updates. Its isolated error/retry state leaves the directory and form usable.
+- JSDOM coverage includes summary metrics, authenticated global request, isolated retry, and refresh following PATCH while a list filter remains active. Current validation: backend **124 passed** (2 existing FastAPI deprecation warnings); portal **33 passed**; `npm run typecheck` and `git diff --check` passed. No browser executable or Playwright/Puppeteer package was available; the requested visual PR screenshots remain unverified/unavailable.
+- No commit was made. The existing working tree changes and untracked `tests/incidents.test.cjs` were retained.
+
+## Centralized Incident Manager — phase 3 read endpoints
+
+Authenticated incident list and UUID detail read the seeded TinyDB table. Filters combine status, origin, branch and category. API tests cover empty results, validation errors, missing tickets and exclusion of import metadata.
+
+The private `/backoffice/incidents` page now combines the existing CSV analyzer with a bilingual incident directory. It loads `/api/healthcore/api/incidents`, provides status/origin/branch filters, loading/empty/error states, retry behavior and stale-response protection. JSDOM checks cover 94→28→0→94 filtering, retry with preserved filters, and race protection; backend TinyDB checks pass 15/15 and the portal suite passes 25/25 with a clean typecheck.
+
+## Centralized Incident Manager — incident registration
+
+- Authenticated `POST /api/incidents` validates required fields and catalogues before writing to the same TinyDB table as the list. New incidents receive a generated ID, `open` status and identical UTC creation/update times; field validation returns 400 and unexpected storage failures return a generic 500.
+- The private bilingual registration form keeps the CSV analyzer and list available, validates and focuses missing fields, prevents duplicate pending submissions, retains input on failure and refreshes the filtered list after creation. Its success confirmation remains visible if that refresh fails.
+- Backend tests pass 109/109 (2 existing FastAPI deprecation warnings), including a seeded temporary database from 94 to 95 records; portal tests pass 29/29 and typecheck passes. Form interaction was tested with JSDOM, not a browser; no browser screenshot was available. No production database or commit was created.
+
+## Centralized Incident Manager — status lifecycle
+
+- Added authenticated `PATCH /api/incidents/{id}/status`, accepting only the status property and validating allowed transitions against the locked TinyDB record. Valid updates change only `status` and UTC `updated_at`; terminal `resolved`/`discarded` states cannot transition further. Invalid transitions identify `status` and do not alter the stored record; missing tickets return 404.
+- Added bilingual per-row state selectors and save buttons on `/backoffice/incidents`, with a duplicate-submit guard, localized `Guardando…`/`Saving…` label, rollback to the confirmed state on failure, and an inline retry action. Success updates/filters the visible row and reloads the list with the existing filters.
+- Temporary-TinyDB tests cover all valid paths, PATCH/GET/storage parity, preserved fields/timestamps on rejected paths, strict body, authentication and missing tickets. Portal JSDOM tests cover double-click protection, visual rollback, localized retry and filter preservation.
+- Validation: full backend suite **122 passed, 2 existing FastAPI deprecation warnings**; portal suite **30 passed**; portal typecheck passed. `git diff --check` still pending final review. No commit made.
+
 ## Centralized Incident Manager — phase 2 seed (2026-11-22)
 
 - Added `scripts/seed_incidents.py` to load the real historical CSV into TinyDB. The seed reuses `IncidentRecord`, `transform_incident_record()`, and `TransformedIncident`; no CSV fields are written directly and no original CSV incident ID is stored in `Incident`.
