@@ -1,5 +1,70 @@
 # Progress
 
+## Unified Python setup with uv (2026-11-23)
+
+- The backend now declares API and test dependencies in pyproject.toml and uses uv.lock for installation. The lock includes the bcrypt backend used by administrator setup, and the setup guide uses the same environment for the API, seeds and tests.
+- A clean uv sync passed 124 backend tests and verified administrator creation, login, the health endpoint and the supplier seed against a temporary database.
+
+## Centralized Incident Manager — incident detail drawer (2026-11-23)
+
+- Added a bilingual right-side detail drawer to the existing incident directory, using the already-loaded incident record; no API, seed, summary calculation, or status behavior changed. It presents the full multiline description, ID, status, title, category, origin, clinic, and timestamps.
+- Rows and explicit title buttons open details; keyboard activation, Escape, focus containment/restoration, close button, backdrop dismissal, internal scrolling, and full-screen mobile CSS are covered. Status controls remain independent, and closing keeps the current list/filter state.
+- Portal tests pass **37/37**, typecheck and production build pass. JSDOM verifies content, keyboard/focus, controls, and mobile CSS contract; no browser visual check was performed.
+
+## Centralized Incident Manager — global summary panel (2026-11-23)
+
+- The authenticated `/api/incidents/summary` aggregates the complete `incidents` TinyDB table (not CSV analysis results) into a global total and catalog-complete counts by status, category, origin, and branch. Backend tests with temporary TinyDB and the real seed verify the empty response, 94 seeded tickets (`open=28`, `in_progress=0`, `resolved=52`, `discarded=14`), and the updated 27/1 status counts after PATCH while total remains 94.
+- Completed and mounted the bilingual `IncidentSummary` panel on `/backoffice/incidents`; it requests the same-origin authenticated proxy without list filters, reuses portal catalogue labels, and refreshes after successful creation and status updates. Its isolated error/retry state leaves the directory and form usable.
+- JSDOM coverage includes summary metrics, authenticated global request, isolated retry, and refresh following PATCH while a list filter remains active. Current validation: backend **124 passed** (2 existing FastAPI deprecation warnings); portal **33 passed**; `npm run typecheck` and `git diff --check` passed. No browser executable or Playwright/Puppeteer package was available; the requested visual PR screenshots remain unverified/unavailable.
+- No commit was made. The existing working tree changes and untracked `tests/incidents.test.cjs` were retained.
+
+## Centralized Incident Manager — phase 3 read endpoints
+
+Authenticated incident list and UUID detail read the seeded TinyDB table. Filters combine status, origin, branch and category. API tests cover empty results, validation errors, missing tickets and exclusion of import metadata.
+
+The private `/backoffice/incidents` page now combines the existing CSV analyzer with a bilingual incident directory. It loads `/api/healthcore/api/incidents`, provides status/origin/branch filters, loading/empty/error states, retry behavior and stale-response protection. JSDOM checks cover 94→28→0→94 filtering, retry with preserved filters, and race protection; backend TinyDB checks pass 15/15 and the portal suite passes 25/25 with a clean typecheck.
+
+## Centralized Incident Manager — incident registration
+
+- Authenticated `POST /api/incidents` validates required fields and catalogues before writing to the same TinyDB table as the list. New incidents receive a generated ID, `open` status and identical UTC creation/update times; field validation returns 400 and unexpected storage failures return a generic 500.
+- The private bilingual registration form keeps the CSV analyzer and list available, validates and focuses missing fields, prevents duplicate pending submissions, retains input on failure and refreshes the filtered list after creation. Its success confirmation remains visible if that refresh fails.
+- Backend tests pass 109/109 (2 existing FastAPI deprecation warnings), including a seeded temporary database from 94 to 95 records; portal tests pass 29/29 and typecheck passes. Form interaction was tested with JSDOM, not a browser; no browser screenshot was available. No production database or commit was created.
+
+## Centralized Incident Manager — status lifecycle
+
+- Added authenticated `PATCH /api/incidents/{id}/status`, accepting only the status property and validating allowed transitions against the locked TinyDB record. Valid updates change only `status` and UTC `updated_at`; terminal `resolved`/`discarded` states cannot transition further. Invalid transitions identify `status` and do not alter the stored record; missing tickets return 404.
+- Added bilingual per-row state selectors and save buttons on `/backoffice/incidents`, with a duplicate-submit guard, localized `Guardando…`/`Saving…` label, rollback to the confirmed state on failure, and an inline retry action. Success updates/filters the visible row and reloads the list with the existing filters.
+- Temporary-TinyDB tests cover all valid paths, PATCH/GET/storage parity, preserved fields/timestamps on rejected paths, strict body, authentication and missing tickets. Portal JSDOM tests cover double-click protection, visual rollback, localized retry and filter preservation.
+- Validation: full backend suite **122 passed, 2 existing FastAPI deprecation warnings**; portal suite **30 passed**; portal typecheck passed. `git diff --check` still pending final review. No commit made.
+
+## Centralized Incident Manager — phase 2 seed (2026-11-22)
+
+- Added `scripts/seed_incidents.py` to load the real historical CSV into TinyDB. The seed reuses `IncidentRecord`, `transform_incident_record()`, and `TransformedIncident`; no CSV fields are written directly and no original CSV incident ID is stored in `Incident`.
+- Each new document contains the generated ticket fields plus `_import_key`, a stable SHA-256 derived from `HC-...` source identity. When the fallback is used, the key uses `title + created_at`; existing keys cause a skip without updating the document.
+- Real CSV verification: first run read 100, inserted 94, skipped 0 and rejected 6; second run read 100, inserted 0, skipped 94 and rejected 6. Rejection line numbers were 42, 44, 59, 64, 80 and 86, reported with Pydantic/mapping reasons and no descriptions or patient data.
+- First-load totals matched the briefing: status `open=28`, `resolved=52`, `discarded=14`; category `patient_experience=61`, `billing_error=20`, `other=13`; origin `customer=94`. Branch totals were `central=7`, `austin_north=9`, `houston_med_center=4`, `miami_brickell=8`, `orlando_east=4`, `tampa_bay=7`, `atlanta_midtown=12`, `savannah=10`, `london_city=9`, `london_west=9`, `manchester_central=15`.
+- Between executions, changing one existing open ticket to `in_progress` and rerunning preserved the change and ticket count. Simulating an interruption after the first insert, closing and reopening TinyDB, rerunning added the remaining tickets and preserved 94 tickets and the first ticket ID.
+- Backend validation passed 98 tests with 2 existing FastAPI `on_event` deprecation warnings. No TinyDB production file, endpoint, UI, deployment or commit was created.
+- Added regression tests for the real CSV's complete `_import_key` → ticket `id` mapping (94 entries unchanged on reimport) and for a missing `incident_id` (one insert followed by one skip using the `title + created_at` fallback). The shared `IncidentRecord` schema still rejects a missing ID; the seed supplies a validation-only placeholder and removes it from the import identity, without changing the analyzer contract.
+- Current backend verification: the seed tests pass 2/2 and the full suite passes 100/100 with the same 2 FastAPI `on_event` deprecation warnings. Tests use TinyDB under pytest's temporary directory; no production database was written.
+
+## Centralized Incident Manager — in-memory model phase (2026-11-16)
+
+- Added a manager `Incident` model with the official category, status, origin, and branch catalogues. It is distinct from the historical CSV `IncidentRecord`; generated entity IDs are separate from the CSV import identity.
+- Moved the existing historical-row `IncidentRecord` validator into `packages/shared/incident_record.py` and kept its old schema import path as a re-export, preserving the analyzer contract. Added an in-memory converter with explicit category/status/clinic-to-branch mappings; historical rows use `origin="customer"` and date-derived midnight UTC timestamps.
+- Verified the real `HC-000001` row (`2024-01-13`, `US-TX-02`, `ADMINISTRATIVE`, `CLOSED`) transforms to `other`, `austin_north`, `resolved`, and `customer`; the model received a generated ID and the CSV ID stayed in `source_incident_id`. A real `BILLING` row mapped to `billing_error`; an unknown category raised `invalid_category_mapping`.
+- Historical row validation remained at 100 total / 94 valid / 6 invalid. Targeted transformation, analyzer, and incident API tests passed 64/64. Two existing FastAPI `on_event` deprecation warnings were emitted. Pytest and Starlette's `httpx2` TestClient dependency were installed only into the local service virtualenv; no dependency manifest or lockfile changed. Python compileall, editor diagnostics, and `git diff --check` passed.
+- This phase is in-memory only: no TinyDB writes, seed script, endpoints, or UI were added. No commit was made. Browser or persistence behavior was not part of this verification.
+
+### Phase 1 complete-row and clean-environment verification (2026-11-22)
+
+- Processed the real 100-row CSV through `IncidentRecord` and `transform_incident_record()`: 100 read, 6 validation failures, 94 valid, 94 transformed, and 0 conversion failures.
+- Manager status counts were `open=28`, `resolved=52`, `discarded=14`, matching the briefing's historical CSV state distribution.
+- Manager category counts were `patient_experience=61`, `billing_error=20`, and `other=13`. The briefing's raw category distribution was `APPOINTMENT=30`, `BILLING=20`, `CLINICAL_CARE=14`, `ACCESSIBILITY=17`, and `ADMINISTRATIVE=13`; the 61 patient-experience rows result from combining the first, third, and fourth categories.
+- Manager branch counts for the 94 valid rows were `central=7`, `austin_north=9`, `houston_med_center=4`, `miami_brickell=8`, `orlando_east=4`, `tampa_bay=7`, `atlanta_midtown=12`, `savannah=10`, `london_city=9`, `london_west=9`, and `manchester_central=15`.
+- `httpx2` was installed manually only in the original local virtualenv because FastAPI/Starlette at that time required the newer TestClient package while the environment omitted the declared `httpx` dependency. It is not declared in `requirements.txt`, `requirements-dev.txt`, or `pyproject.toml`, and no dependency manifest was changed.
+- A separate temporary venv installed exactly `requirements-dev.txt` (`pytest`, `httpx`, and the runtime requirements): the full backend suite passed as `98 passed, 3 warnings in 6.28s`. One clean-environment warning says Starlette deprecates the classic `httpx` TestClient path and recommends `httpx2`; the two existing FastAPI `on_event` warnings remain.
+
 > **Current snapshot — 2026-11-16:** The protected Next.js Backoffice now includes `/backoffice/suppliers`, a bilingual supplier directory with country/category API filters. `npm run typecheck` and `npm run build` pass (22 routes). `npm test` remains 11/15 with the same three pre-existing auth test harness resolution failures and proxy-language mock failure. The API's seeded supplier list/filter contracts and Next proxy/protected route were checked over HTTP with a temporary database/session; no browser automation was available, so no visual interaction or screenshot is claimed. No commit or deployment was performed.
 
 ## Supplier directory create-form UX follow-up

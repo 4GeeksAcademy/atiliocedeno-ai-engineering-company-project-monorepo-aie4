@@ -14,6 +14,7 @@ export default function PrivateNavigation({ isAdmin }: { isAdmin: boolean }) {
     ["/backoffice", en ? "Operations" : "Operaciones"],
     [en ? "/talents/en" : "/talents", en ? "Talent pipeline" : "Nuevos talentos"],
     ["/backoffice/incidents", en ? "Incident analysis" : "Análisis de incidentes"],
+    ["/backoffice/incidents#incident-create", en ? "Register incident" : "Registrar incidencia"],
     ["/backoffice/suppliers", en ? "Suppliers" : "Proveedores"],
     ["/account/profile", en ? "My profile" : "Mi perfil"],
     ["/account/change-password", en ? "Change password" : "Cambiar contraseña"],
