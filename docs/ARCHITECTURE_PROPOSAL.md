@@ -172,7 +172,8 @@ services/patients/
 │   ├── main.py
 │   └── startup.py
 ├── tests/
-├── requirements.txt
+├── pyproject.toml
+├── uv.lock
 ├── README.md
 └── .env.example
 ```

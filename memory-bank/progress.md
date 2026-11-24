@@ -1,5 +1,10 @@
 # Progress
 
+## Unified Python setup with uv (2026-11-23)
+
+- The backend now declares API and test dependencies in pyproject.toml and uses uv.lock for installation. The lock includes the bcrypt backend used by administrator setup, and the setup guide uses the same environment for the API, seeds and tests.
+- A clean uv sync passed 124 backend tests and verified administrator creation, login, the health endpoint and the supplier seed against a temporary database.
+
 ## Centralized Incident Manager — incident detail drawer (2026-11-23)
 
 - Added a bilingual right-side detail drawer to the existing incident directory, using the already-loaded incident record; no API, seed, summary calculation, or status behavior changed. It presents the full multiline description, ID, status, title, category, origin, clinic, and timestamps.
