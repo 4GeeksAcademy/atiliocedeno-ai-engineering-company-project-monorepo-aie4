@@ -1,9 +1,22 @@
 # Progress
 
+
 ## Unified Python setup with uv (2026-11-23)
 
-- The backend now declares API and test dependencies in pyproject.toml and uses uv.lock for installation. The lock includes the bcrypt backend used by administrator setup, and the setup guide uses the same environment for the API, seeds and tests.
-- A clean uv sync passed 124 backend tests and verified administrator creation, login, the health endpoint and the supplier seed against a temporary database.
+- Moved the API, authentication, and development dependencies to the backend's pyproject.toml and regenerated uv.lock. Removed the duplicate requirements manifests and updated the startup, administration, seeds, CLI, and test commands.
+- Verified a clean sync from the lockfile, bcrypt, administrator creation and login, the health endpoint, CSV analysis and both seeds against temporary data. FastAPI passed 148 tests and the portal passed 50 tests with the locked Python environment.
+
+## Backend installation and administrator setup (2026-11-23)
+
+- A fresh installation reproduced the missing bcrypt backend after libpass 1.9.5.post0 became an alias without extras. The API requirements now name Passlib and bcrypt explicitly. The backend setup guide verifies the hash backend and identifies the seed-only uv lockfile.
+- Verified administrator creation and password verification on the incident manager baseline with bcrypt installed, and on the audit branch in a new environment installed from the corrected requirements. The backend suite passed 148 tests in that environment.
+
+## Error handling audit corrections (2026-11-23)
+
+- Added atomic TinyDB snapshots, sanitized input validation and failure responses, and safe Resend diagnostics. Password validation counts UTF-8 bytes. Password resets update the hash and invalidate the link together.
+- The portal checks incident outcomes before retrying a PATCH and retains the registration draft when its result is uncertain. It distinguishes session outages, unavailable profiles, failed list reads, and malformed payloads. Account selection and supplier mutations handle delayed responses. Talent notes recover independently from the candidate.
+- The incident and supplier seeds, administrator command, and analysis CLI report operational errors on stderr with a nonzero exit. Historical row rejection and reimport semantics remain covered by regression tests.
+- Validation: FastAPI 148 passed, portal 50 passed, public website 2 passed, and Backoffice contracts 6 passed. Both Next.js builds and typechecks and git diff --check passed. The full incident journey uses the Next.js route handler, FastAPI TestClient and reopened temporary TinyDB. Local Chrome confirmed password recovery after a 502 using the production portal build and a temporary FastAPI environment.
 
 ## Centralized Incident Manager — incident detail drawer (2026-11-23)
 

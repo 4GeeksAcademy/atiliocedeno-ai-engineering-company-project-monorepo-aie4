@@ -18,10 +18,10 @@ SERVICE_ROOT = Path(__file__).resolve().parents[1]
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
-from app.models.user import UserRole
-from app.repositories.user_repository import UserRepository
-from app.schemas.user import UserUpdate
-from app.services.user_service import UserService
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.services.user_service import UserService
 
 
 def show_users_and_profiles(service: UserService) -> None:
@@ -32,18 +32,15 @@ def show_users_and_profiles(service: UserService) -> None:
         print("No hay usuarios todavía.")
     for user in users:
         status = "activa" if user.is_active else "inactiva"
-        print(f"ID {user.id} | {user.email} | rol: {user.role.value} | {status}")
+        print(f"ID {user.id} | rol: {user.role.value} | {status}")
         profile = service.get_profile(user.id or 0)
-        if profile is None:
-            print("  Perfil: sin crear")
-        else:
-            print(f"  Nombre: {profile.name or '—'}")
-            print(f"  Teléfono: {profile.phone or '—'}")
-            print(f"  Dirección: {profile.address or '—'}")
+        print("  Perfil: creado" if profile is not None else "  Perfil: sin crear")
     print("-" * 72)
 
 
 def prompt_password() -> str:
+    from app.core.security import BCRYPT_MAX_BYTES
+
     while True:
         password = getpass.getpass("Contraseña nueva para el administrador (mínimo 12 caracteres): ")
         confirmation = getpass.getpass("Confirma la contraseña: ")
@@ -53,8 +50,8 @@ def prompt_password() -> str:
         if len(password) < 12:
             print("La contraseña debe tener al menos 12 caracteres.")
             continue
-        if len(password) > 128:
-            print("La contraseña no puede superar 128 caracteres.")
+        if len(password.encode("utf-8")) > BCRYPT_MAX_BYTES:
+            print("La contraseña no puede superar 72 bytes en UTF-8.")
             continue
         return password
 
@@ -64,6 +61,21 @@ def main() -> int:
         description="List HealthCore users/profiles and provision the initial administrator."
     )
     parser.parse_args()
+
+    try:
+        return provision_admin()
+    except (EOFError, KeyboardInterrupt):
+        print("Operación interrumpida. Vuelve a ejecutar el comando con una terminal interactiva.", file=sys.stderr)
+    except (OSError, ValueError, TypeError, RuntimeError):
+        print("No se pudo completar la operación. Revisa el correo y el acceso a la base HealthCore.", file=sys.stderr)
+    return 2
+
+
+def provision_admin() -> int:
+    from app.models.user import UserRole
+    from app.repositories.user_repository import UserRepository
+    from app.schemas.user import UserUpdate
+    from app.services.user_service import UserService
 
     service = UserService()
     show_users_and_profiles(service)
@@ -82,7 +94,7 @@ def main() -> int:
 
     if existing is not None:
         confirmation = input(
-            f"El correo pertenece a {existing.email} (ID {existing.id}). "
+            f"El correo pertenece a la cuenta {existing.id}. "
             "¿Promover esa cuenta a admin y reemplazar su contraseña? Escribe 'si' para confirmar: "
         ).strip().lower()
         if confirmation != "si":
@@ -94,15 +106,11 @@ def main() -> int:
             role=UserRole.ADMIN,
             is_active=True,
         )
-        print(f"La cuenta {existing.email} ahora tiene rol admin y una contraseña nueva.")
+        print(f"La cuenta {existing.id} ahora tiene rol admin y una contraseña nueva.")
         return 0
 
-    try:
-        service.bootstrap_admin(email, password)
-    except (ValueError, RuntimeError) as exc:
-        print(f"No se pudo crear la cuenta administradora: {exc}", file=sys.stderr)
-        return 1
-    print(f"Cuenta administradora creada para {email}.")
+    service.bootstrap_admin(email, password)
+    print("Cuenta administradora creada.")
     print("Inicia sesión en el portal y administra las demás cuentas y perfiles desde allí.")
     return 0
 

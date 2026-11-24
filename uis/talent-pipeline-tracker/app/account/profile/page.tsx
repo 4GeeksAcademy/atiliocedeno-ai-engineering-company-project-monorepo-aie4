@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "../../components/language-context";
 import { PhoneInput } from "../../components/phone-input";
 import { phoneError, normalizePhone } from "../../auth/phone";
 
@@ -12,11 +13,14 @@ type ProfileForm = { name: string; phone: string; address: string };
 const emptyForm: ProfileForm = { name: "", phone: "", address: "" };
 
 export default function AccountProfilePage() {
+  const { language } = useLanguage();
+  const en = language === "en";
   const router = useRouter();
   const [form, setForm] = useState<ProfileForm>(emptyForm);
-  const [hasProfile, setHasProfile] = useState(false);
+  const [profileState, setProfileState] = useState<"loading" | "ready" | "missing" | "error">("loading");
+  const [retry, setRetry] = useState(0);
+  const hasProfile = profileState === "ready";
   const [userId, setUserId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -27,33 +31,36 @@ export default function AccountProfilePage() {
       router.replace("/login");
       return () => controller.abort();
     }
+    setProfileState("loading");
+    setError("");
     apiRequest<Profile>("/profiles/me", { signal: controller.signal })
       .then((profile) => {
+        if (controller.signal.aborted) return;
         setForm({ name: profile.name ?? "", phone: profile.phone ?? "", address: profile.address ?? "" });
         setUserId(profile.user_id);
-        setHasProfile(true);
+        setProfileState("ready");
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
-        const text = cause instanceof Error ? cause.message : "No se pudo cargar el perfil.";
+        const text = cause instanceof Error ? cause.message : (en ? "Unable to load your profile." : "No se pudo cargar el perfil.");
         if (isUnauthorized(cause)) {
           clearAccessToken();
           router.replace("/login");
           return;
         }
         if (hasStatus(cause, 404)) {
-          setHasProfile(false);
+          setProfileState("missing");
           return;
         }
         setError(text);
-      })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+        setProfileState("error");
+      });
     return () => controller.abort();
-  }, [router]);
+  }, [router, retry]);
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || phoneError(form.phone)) return;
+    if (busy || (profileState !== "ready" && profileState !== "missing") || phoneError(form.phone, language)) return;
     setBusy(true);
     setError("");
     setMessage("");
@@ -65,10 +72,10 @@ export default function AccountProfilePage() {
       });
       setForm({ name: profile.name ?? "", phone: profile.phone ?? "", address: profile.address ?? "" });
       setUserId(profile.user_id);
-      setHasProfile(true);
+      setProfileState("ready");
       router.replace("/dashboard");
     } catch (cause) {
-      const text = cause instanceof Error ? cause.message : "No se pudo guardar el perfil.";
+      const text = cause instanceof Error ? cause.message : (en ? "Unable to save the profile. Try again." : "No se pudo guardar el perfil.");
       if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
@@ -81,19 +88,20 @@ export default function AccountProfilePage() {
   }
 
   async function deleteProfile() {
-    if (!window.confirm("¿Eliminar los datos de tu perfil? Esta acción no elimina tu cuenta.")) return;
+    if (busy || !hasProfile || !window.confirm((en ? "Delete your profile information? Your account will remain active." : "¿Eliminar los datos de tu perfil? Esta acción no elimina tu cuenta."))) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      if (userId === null) throw new Error("No se pudo determinar la cuenta del perfil.");
+      if (userId === null) throw new Error((en ? "Unable to identify the profile account. Reload and try again." : "No se pudo determinar la cuenta del perfil."));
       await apiRequest<void>(`/profiles/${userId}`, { method: "DELETE" });
       setForm(emptyForm);
       setUserId(null);
-      setHasProfile(false);
-      setMessage("Perfil eliminado. Puedes crear uno nuevo cuando quieras.");
+      setProfileState("loading");
+      setRetry(value => value + 1);
+      setMessage((en ? "Profile deleted. You can create another one." : "Perfil eliminado. Puedes crear uno nuevo cuando quieras."));
     } catch (cause) {
-      const text = cause instanceof Error ? cause.message : "No se pudo eliminar el perfil.";
+      const text = cause instanceof Error ? cause.message : (en ? "Unable to delete the profile. Try again." : "No se pudo eliminar el perfil.");
       if (isUnauthorized(cause)) {
         clearAccessToken();
         router.replace("/login");
@@ -109,22 +117,27 @@ export default function AccountProfilePage() {
   return <main className="min-h-screen bg-[#f4f8fc] px-5 py-10 text-slate-800 sm:px-8">
     <div className="mx-auto max-w-3xl">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-9">
-        <p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-600">Mi cuenta</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900">Mi perfil</h1>
-        <p className="mt-2 text-slate-500">Mantén actualizados tus datos de contacto.</p>
-        {loading ? <p role="status" className="mt-8 text-slate-500">Cargando perfil…</p> : <form onSubmit={saveProfile} className="mt-8 grid gap-5">
-          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-name">Nombre<input id="profile-name" autoComplete="name" maxLength={200} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={inputClass} /></label>
-          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-phone">Teléfono<PhoneInput id="profile-phone" type="tel" autoComplete="tel" maxLength={40} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className={inputClass} /></label>
-          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-address">Dirección<input id="profile-address" autoComplete="street-address" maxLength={500} value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className={inputClass} /></label>
+        <p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-600">{en ? "My account" : "Mi cuenta"}</p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-900">{en ? "My profile" : "Mi perfil"}</h1>
+        <p className="mt-2 text-slate-500">{en ? "Keep your contact details up to date." : "Mantén actualizados tus datos de contacto."}</p>
+        {profileState === "loading" && <p role="status" className="mt-8 text-slate-500">{en ? "Loading profile…" : "Cargando perfil…"}</p>}
+        {profileState === "error" && <div role="alert" className="mt-8">
+          <p>{error}</p>
+          <button type="button" className="text-blue-700 underline" onClick={() => setRetry(value => value + 1)}>{en ? "Reload profile" : "Volver a cargar el perfil"}</button>
+        </div>}
+        {(profileState === "ready" || profileState === "missing") && <form onSubmit={saveProfile} className="mt-8 grid gap-5">
+          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-name">{en ? "Name" : "Nombre"}<input id="profile-name" autoComplete="name" maxLength={200} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={inputClass} /></label>
+          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-phone">{en ? "Phone" : "Teléfono"}<PhoneInput id="profile-phone" type="tel" autoComplete="tel" maxLength={40} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className={inputClass} /></label>
+          <label className="grid gap-2 text-sm font-semibold" htmlFor="profile-address">{en ? "Address" : "Dirección"}<input id="profile-address" autoComplete="street-address" maxLength={500} value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className={inputClass} /></label>
           {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           {message && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
           <div className="flex flex-wrap gap-3">
-            <button disabled={busy} className="rounded-xl bg-[#2563EB] px-5 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? "Guardando…" : hasProfile ? "Guardar cambios" : "Crear perfil"}</button>
-            {hasProfile && <button type="button" disabled={busy} onClick={() => void deleteProfile()} className="rounded-xl border border-red-200 px-5 py-3 font-bold text-red-700 hover:bg-red-50 disabled:opacity-60">Eliminar perfil</button>}
+            <button disabled={busy} className="rounded-xl bg-[#2563EB] px-5 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? (en ? "Saving…" : "Guardando…") : hasProfile ? (en ? "Save changes" : "Guardar cambios") : (en ? "Create profile" : "Crear perfil")}</button>
+            {hasProfile && <button type="button" disabled={busy} onClick={() => void deleteProfile()} className="rounded-xl border border-red-200 px-5 py-3 font-bold text-red-700 hover:bg-red-50 disabled:opacity-60">{en ? "Delete profile" : "Eliminar perfil"}</button>}
           </div>
         </form>}
       </section>
-      <Link href="/dashboard" className="mt-6 inline-flex text-sm font-semibold text-blue-700 hover:underline">← Volver al panel</Link>
+      <Link href="/dashboard" className="mt-6 inline-flex text-sm font-semibold text-blue-700 hover:underline">{en ? "← Back to dashboard" : "← Volver al panel"}</Link>
     </div>
   </main>;
 }

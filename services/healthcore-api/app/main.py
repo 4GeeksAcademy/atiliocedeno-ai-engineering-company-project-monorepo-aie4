@@ -3,8 +3,10 @@
 import os
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.errors import unexpected_request_error, validation_error
 from app.api.routes import auth, incidents, profiles, suppliers, users
 from app.services.user_service import UserService
 
@@ -13,12 +15,14 @@ app = FastAPI(
     description="Centralized backend service for HealthCore.",
     version="0.1.0",
 )
+app.add_exception_handler(RequestValidationError, validation_error)
+app.middleware("http")(unexpected_request_error)
 frontend_origin = os.getenv("HEALTHCORE_FRONTEND_URL", "http://localhost:3000").rstrip("/")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[frontend_origin],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(auth.router)

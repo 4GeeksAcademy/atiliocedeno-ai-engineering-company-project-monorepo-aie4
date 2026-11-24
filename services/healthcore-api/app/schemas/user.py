@@ -2,9 +2,10 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.models.user import UserRole
+from app.schemas.auth import NewPassword
 from app.schemas.profile import ProfileCreate, ProfileRead
 
 
@@ -14,7 +15,7 @@ class UserCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    password: NewPassword
     profile: ProfileCreate | None = None
 
 
@@ -24,7 +25,7 @@ class UserUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr | None = None
-    password: str | None = Field(default=None, min_length=8, max_length=128)
+    password: NewPassword | None = None
 
 
 class UserRead(BaseModel):

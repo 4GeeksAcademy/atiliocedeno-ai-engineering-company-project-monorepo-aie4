@@ -8,7 +8,7 @@ from app.api.deps import AdminUser, CurrentUser, get_user_service
 from app.models.user import User, UserRole
 from app.schemas.user import UserAdminUpdate, UserCreate, UserRead, UserUpdate
 from app.services.email_service import send_auth_notification
-from app.services.user_service import UserService
+from app.services.user_service import AccountConflict, UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -23,7 +23,7 @@ def create_user(payload: UserCreate, background_tasks: BackgroundTasks) -> UserR
     service = UserService()
     try:
         user = service.create_user(payload)
-    except ValueError as exc:
+    except AccountConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     background_tasks.add_task(send_auth_notification, user.email, "registered")
     return _read_user(user, service)
@@ -74,7 +74,7 @@ def update_user(
             role=payload.role if is_admin else None,
             is_active=payload.is_active if is_admin else None,
         )
-    except ValueError as exc:
+    except AccountConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if updated is None:
         raise HTTPException(status_code=404, detail="User not found")

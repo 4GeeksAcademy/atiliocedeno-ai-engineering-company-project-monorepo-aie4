@@ -73,17 +73,6 @@ def send_auth_notification(recipient: str, event: EmailEvent, reset_url: str | N
             if not 200 <= response.status < 300:
                 logger.warning("Resend rejected %s notification (HTTP %s)", event, response.status)
     except HTTPError as exc:
-        # Resend's response explains common setup issues (invalid key, unverified
-        # sender, or restricted test recipient); never log request headers/API key.
-        try:
-            response_detail = exc.read().decode("utf-8", errors="replace")[:1000]
-        except OSError:
-            response_detail = "<response body unavailable>"
-        logger.warning(
-            "Resend %s notification failed (HTTP %s): %s",
-            event,
-            exc.code,
-            response_detail,
-        )
-    except (URLError, TimeoutError, OSError) as exc:
+        logger.warning("Resend %s notification failed (HTTP %s)", event, exc.code)
+    except (URLError, TimeoutError, OSError, ValueError) as exc:
         logger.warning("Resend %s notification failed (%s)", event, type(exc).__name__)

@@ -27,39 +27,43 @@ test('document language follows routes and retains preference on auth pages',asy
 });
 
 test('proxy supplies initial language for all Tracker routes',async()=>{
- const {proxy,config}=load('proxy.ts',{Headers,process:{env:{}},fetch:async()=>({ok:true,json:async()=>({role:'user'})})},{'next/server':{NextResponse:{next:options=>options}}});
+ const {proxy,config}=load('proxy.ts',{Headers,process:{env:{}},fetch:async()=>({ok:true,json:async()=>({email:'fixture@example.com',role:'user',profile:null})})},{'next/server':{NextResponse:{next:options=>options}}});
  assert.ok(config.matcher.includes('/talents/:path*'));
  for(const [pathname,expected] of [['/talents','es'],['/talents/en','en'],['/talents/new','es'],['/talents/en/new','en'],['/talents/test-123','es'],['/talents/en/test-123','en']]){
   const result=await proxy({cookies:{get:()=>({value:'synthetic'})},headers:new Headers({'x-healthcore-language':'wrong'}),nextUrl:{pathname}});
   assert.equal(result.request.headers.get('x-healthcore-language'),expected);
  }
 });
-// Execute the original operation bodies with an in-memory fetch double; no network.
-for(const english of [false,true]) for(const configured of [false,true]) test(`Tracker operation contracts: ${english?'EN':'ES'}, configured=${configured}`,async()=>{
- const payload={full_name:'Test Person',email:'test@example.com',phone:'123',position:'QA',linkedin_url:'https://example.test/link',cv_url:'https://example.test/cv',status:'received',stage:'pending',experience_years:'3'};
- const cases=[
-  ['app/talents/talent-pipeline.tsx','fetchAllRecords','GET','/records?page=1&limit=1000',undefined],
-  ['app/talents/new/new-talent.tsx','createRecord','POST','/records',{...payload,experience_years:3}],
-  ['app/talents/[id]/talent-detail.tsx','loadDetail','GET','/records/test%2F123',undefined],
-  ['app/talents/[id]/talent-detail.tsx','saveRecord','PUT','/records/test%2F123',{...payload,experience_years:3}],
-  ['app/talents/[id]/talent-detail.tsx','addNote','POST','/records/test%2F123/notes',{content:'Test note'}],
-  ['app/talents/[id]/talent-detail.tsx','deleteNote','DELETE','/records/test%2F123/notes/n%2F1',undefined],
-  ['app/talents/[id]/talent-detail.tsx','deleteRecord','DELETE','/records/test%2F123',undefined],
- ];
- for(const [file,name,method,path,body] of cases){
-  const calls=[],errors=[];
-  const env={NEXT_PUBLIC_API_URL:configured?'https://example.test/api/':undefined};
-  const {trackerApiUrl}=load('app/talents/api-url.ts',{process:{env},Error});
-  const noop=()=>{};
-  const globals={Error,DOMException,URLSearchParams,trackerApiUrl,isEnglish:english,id:'test/123',form:payload,noteText:' Test note ',record:{full_name:'Test Person'},RECORDS_PAGE_SIZE:1000,
-   setSaving:noop,setError:value=>{if(value)errors.push(value)},setMessage:noop,setRecord:noop,setForm:noop,setNotes:noop,setNoteText:noop,invalidateRecordsCache:noop,router:{push:noop},window:{confirm:()=>true},
-   createdRecordFromPayload:x=>x,recordFromPayload:x=>x,recordsFromPayload:()=>[],parseRecords:()=>[],loadDetail:async()=>{},
-   fetch:async(url,options={})=>{calls.push({url,method:options.method??'GET',body:options.body});return {ok:true,json:async()=>({id:'test/123',experience_years:3})}},
-   transformSource:source=>{const start=source.indexOf(`async function ${name}(`);assert.ok(start>=0);const ending=name==='fetchAllRecords'?'\n}':'\n  }';const end=source.indexOf(ending,start)+ending.length;return 'export '+source.slice(start,end);}
-  };
-  const operation=load(file,globals)[name];
-  try {await operation(name==='fetchAllRecords'?undefined:name==='deleteNote'?{id:'n/1'}:{preventDefault:noop},english);}catch(error){errors.push(error.message);}
-  if(!configured){assert.equal(calls.length,0,name);assert.equal(errors.length,1,name);assert.match(errors[0],english?/not configured/:/no está configurado/);}
-  else {assert.equal(errors.length,0,name);assert.equal(calls[0].url,'/api/tracker'+path,name);assert.equal(calls[0].method,method,name);assert.deepEqual(calls[0].body?JSON.parse(calls[0].body):undefined,body,name);if(name==='loadDetail')assert.equal(calls[1].url,'/api/tracker/records/test%2F123/notes');}
- }
-});
+
+for (const english of [false, true]) for (const configured of [false, true]) {
+ test("Tracker request contracts: " + (english ? "EN" : "ES") + ", configured=" + configured, async () => {
+  const calls = [];
+  const api = load('app/talents/api-url.ts', {
+   process: { env: { NEXT_PUBLIC_API_URL: configured ? 'https://example.test/api/' : undefined } },
+   fetch: async (url, options = {}) => {
+    calls.push({ url, method: options.method ?? 'GET', body: options.body });
+    return { ok: true, json: async () => ({ data: [{ _id: 'test/123' }] }) };
+   },
+  });
+  const operations = [
+   ['GET', '/records?page=1&limit=1000'],
+   ['POST', '/records', { full_name: 'Test Person' }],
+   ['GET', '/records/test%2F123'],
+   ['PUT', '/records/test%2F123', { experience_years: 3 }],
+   ['GET', '/records/test%2F123/notes'],
+   ['POST', '/records/test%2F123/notes', { content: 'Test note' }],
+   ['DELETE', '/records/test%2F123/notes/n%2F1'],
+   ['DELETE', '/records/test%2F123'],
+  ];
+  for (const [method, path, body] of operations) {
+   const request = () => api.trackerRequest(path, english, { method, body: body && JSON.stringify(body) });
+   if (!configured) {
+    await assert.rejects(request, english ? /not configured/ : /no está configurado/);
+    assert.equal(calls.length, 0);
+   } else {
+    await request();
+    assert.deepEqual(calls.at(-1), { url: '/api/tracker' + path, method, body: body && JSON.stringify(body) });
+   }
+  }
+ });
+}

@@ -10,6 +10,14 @@ from app.schemas.profile import ProfileCreate, ProfileUpdate
 from app.schemas.user import UserCreate, UserUpdate
 
 
+class AccountConflict(ValueError):
+    """A duplicate email or profile confirmed by the repository."""
+
+
+class AccountNotFound(LookupError):
+    """The requested account no longer exists."""
+
+
 class UserService:
     def __init__(
         self,
@@ -22,7 +30,7 @@ class UserService:
     def create_user(self, payload: UserCreate) -> User:
         email = str(payload.email).lower()
         if self.users.email_exists(email):
-            raise ValueError("A user with this email already exists")
+            raise AccountConflict("A user with this email already exists")
         user = self.users.create(
             User(email=email, hashed_password=hash_password(payload.password), role=UserRole.USER)
         )
@@ -73,7 +81,7 @@ class UserService:
         if email is not None:
             normalized_email = str(TypeAdapter(EmailStr).validate_python(email)).lower()
             if self.users.email_exists(normalized_email, exclude_user_id=user_id):
-                raise ValueError("A user with this email already exists")
+                raise AccountConflict("A user with this email already exists")
             changes["email"] = normalized_email
         if password is not None:
             changes["hashed_password"] = hash_password(password)
@@ -99,9 +107,9 @@ class UserService:
 
     def create_profile(self, user_id: int, payload: ProfileCreate):
         if self.users.get_by_id(user_id) is None:
-            raise LookupError("User not found")
+            raise AccountNotFound("User not found")
         if self.profiles.get_by_user_id(user_id) is not None:
-            raise ValueError("A profile already exists for this user")
+            raise AccountConflict("A profile already exists for this user")
         return self.profiles.create(payload_to_profile(payload, user_id))
 
     def update_profile(self, user_id: int, payload: ProfileUpdate):

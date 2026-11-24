@@ -8,7 +8,7 @@ import { invalidateRecordsCache } from "../talent-pipeline";
 import { STAGE_LABELS, STAGE_LABELS_EN, STATUS_LABELS, STATUS_LABELS_EN } from "../labels";
 import { useLanguage } from "../../components/language-context";
 
-import { trackerApiUrl } from "../api-url";
+import { trackerJson, trackerRecord } from "../api-url";
 
 type TalentForm = {
   full_name: string;
@@ -21,14 +21,6 @@ type TalentForm = {
   status: string;
   stage: string;
 };
-
-function createdRecordFromPayload(payload: unknown): { id?: string | number; _id?: string | number } {
-  if (typeof payload !== "object" || payload === null) return {};
-  if ("data" in payload && typeof payload.data === "object" && payload.data !== null) {
-    return payload.data as { id?: string | number; _id?: string | number };
-  }
-  return payload as { id?: string | number; _id?: string | number };
-}
 
 const initialForm: TalentForm = {
   full_name: "",
@@ -54,6 +46,7 @@ export default function NewTalent() {
 
   async function createRecord(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     try {
       setSaving(true);
       setError("");
@@ -66,15 +59,15 @@ export default function NewTalent() {
         throw new Error(isEnglish ? "Experience must be a valid number." : "Los años de experiencia deben ser un número válido.");
       }
 
-      const response = await fetch(trackerApiUrl(`/records`, isEnglish), {
+      const createdId = await trackerJson("/records", isEnglish, value => {
+        const record = trackerRecord(value);
+        const id = record?.id ?? record?._id;
+        return typeof id === "string" || typeof id === "number" ? id : undefined;
+      }, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error(isEnglish ? `The API returned status ${response.status}.` : `La API respondió con estado ${response.status}.`);
-      const created = createdRecordFromPayload(await response.json());
-      const createdId = created.id ?? created._id;
-      if (createdId === undefined) throw new Error(isEnglish ? "The API did not return the talent identifier." : "La API no devolvió el identificador del talento.");
       invalidateRecordsCache();
       router.push(`${isEnglish ? "/talents/en" : "/talents"}/${createdId}`);
     } catch (requestError) {
@@ -98,7 +91,9 @@ export default function NewTalent() {
         <h1 className="mt-2 text-4xl font-bold leading-tight text-slate-800 sm:text-5xl">{isEnglish ? "Create record" : "Crear registro"}</h1>
         <p className="mt-3 max-w-2xl text-slate-500">{isEnglish ? "Complete the talent information. The application will send the record to the API automatically." : "Completa los datos del talento. La aplicación enviará el registro a la API automáticamente."}</p>
       </header>
-      {error && <p className="mx-auto mb-4 w-full max-w-5xl rounded-lg border border-red-200 bg-red-50 p-4 text-red-700" role="alert">{error}</p>}
+      {error && <p className="mx-auto mb-4 w-full max-w-5xl rounded-lg border border-red-200 bg-red-50 p-4 text-red-700" role="alert">
+        {error} <Link className="underline" href={isEnglish ? "/talents/en" : "/talents"}>{isEnglish ? "Check the talent list before submitting again." : "Revisa el listado de talentos antes de volver a enviar."}</Link>
+      </p>}
       <form className="mx-auto grid w-full max-w-5xl gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-2 sm:p-8" onSubmit={createRecord}>
         <label className="grid gap-2 text-sm font-bold text-slate-700" htmlFor="full_name">
           {isEnglish ? "Full name" : "Nombre completo"}

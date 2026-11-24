@@ -14,36 +14,63 @@ export async function proxy(request: NextRequest) {
 
   if (requiresSession) {
     const accessToken = request.cookies.get("healthcore_access_token")?.value;
-    let isAuthenticated = false;
+    let role: "admin" | "user" | undefined;
+    let unavailable = false;
     if (accessToken) {
+      let token: string | undefined;
       try {
-        const apiBaseUrl = (process.env.HEALTHCORE_API_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
-        const token = decodeURIComponent(accessToken);
-        const response = await fetch(`${apiBaseUrl}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (response.ok) {
-          const account = await response.json();
-          isAuthenticated = true;
-          requestHeaders.set("x-healthcore-role", account.role === "admin" ? "admin" : "user");
-          if (pathname.startsWith("/admin/") && account.role !== "admin") {
-            return NextResponse.redirect(new URL("/dashboard", request.url));
-          }
-        }
+        token = decodeURIComponent(accessToken);
       } catch {
-        // Fail closed: talent information should not be served if the session
-        // cannot be verified against the authentication API.
+        // A malformed local cookie cannot identify a session.
+      }
+      if (token) {
+        const apiBaseUrl = (process.env.HEALTHCORE_API_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
+        let response: Response | undefined;
+        try {
+          response = await fetch(apiBaseUrl + "/auth/me", {
+            headers: { Authorization: "Bearer " + token },
+            cache: "no-store",
+          });
+        } catch {
+          unavailable = true;
+        }
+        if (response?.ok) {
+          const account: unknown = await response.json().catch(() => null);
+          if (typeof account === "object" && account !== null && "email" in account
+              && typeof account.email === "string" && "profile" in account
+              && (account.profile === null || (typeof account.profile === "object" && account.profile !== null
+                  && "id" in account.profile && Number.isInteger(account.profile.id)
+                  && "user_id" in account.profile && Number.isInteger(account.profile.user_id)))
+              && "role" in account && (account.role === "admin" || account.role === "manager" || account.role === "user")) {
+            role = account.role === "admin" ? "admin" : "user";
+          } else {
+            unavailable = true;
+          }
+        } else if (response?.status === 401) {
+          const rejection: unknown = await response.json().catch(() => null);
+          unavailable = typeof rejection !== "object" || rejection === null
+            || !("detail" in rejection) || typeof rejection.detail !== "string";
+        } else if (response) {
+          unavailable = true;
+        }
       }
     }
 
-    if (!isAuthenticated) {
-      if (trackerRequest) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!role) {
+      if (trackerRequest) return NextResponse.json(
+        { error: unavailable ? "HealthCore session verification is unavailable" : "Unauthorized" },
+        { status: unavailable ? 503 : 401 },
+      );
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+      loginUrl.searchParams.set("next", pathname + request.nextUrl.search);
+      if (unavailable) loginUrl.searchParams.set("session", "unavailable");
       const response = NextResponse.redirect(loginUrl);
-      if (accessToken) response.cookies.delete("healthcore_access_token");
+      if (accessToken && !unavailable) response.cookies.delete("healthcore_access_token");
       return response;
+    }
+    requestHeaders.set("x-healthcore-role", role);
+    if (pathname.startsWith("/admin/") && role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 

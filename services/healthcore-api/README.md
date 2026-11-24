@@ -78,7 +78,7 @@ La forma recomendada es la herramienta de terminal. Detén temporalmente el serv
 uv run --locked python -m scripts.manage_admin
 ```
 
-La herramienta muestra primero las cuentas y perfiles existentes, sin revelar hashes ni contraseñas. Si aún no hay admin, pide el correo y solicita la contraseña de forma oculta (mínimo 12 caracteres). Si el correo ya pertenece a una cuenta, pide confirmación antes de promoverla y cambiar la contraseña. Si ya existe cualquier administrador, termina sin modificar cuentas ni credenciales. Al terminar, vuelve a iniciar la API con `uv run --locked uvicorn app.main:app --reload` y entra al portal con esa cuenta.
+La herramienta muestra primero los identificadores, roles y estados de las cuentas, y si tienen perfil. Si aún no hay admin, pide el correo y solicita la contraseña de forma oculta (mínimo 12 caracteres). Si el correo ya pertenece a una cuenta, pide confirmación antes de promoverla y cambiar la contraseña. Si ya existe cualquier administrador, termina sin modificar cuentas ni credenciales. Al terminar, vuelve a iniciar la API con `uv run --locked uvicorn app.main:app --reload` y entra al portal con esa cuenta.
 
 El registro público siempre crea usuarios regulares. Los usuarios regulares solo pueden gestionar su propio perfil; únicamente un administrador puede consultar y administrar las cuentas y perfiles de otras personas. También existe un bootstrap opcional al iniciar la API mediante variables de entorno; no lo combines con secretos guardados en el repositorio.
 

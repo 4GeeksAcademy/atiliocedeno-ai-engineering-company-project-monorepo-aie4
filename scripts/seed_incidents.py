@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from tinydb import Query, TinyDB
 
 from app.schemas.incidents import IncidentRecord
+from app.services.incident_analysis import REQUIRED_COLUMNS
 from app.services.incident_transform import (
     InvalidIncidentMapping,
     TransformedIncident,
@@ -26,6 +27,10 @@ from app.services.incident_transform import (
 )
 
 DEFAULT_CSV = REPO_ROOT / "scripts" / "incidents-healthcore.csv"
+
+
+class InvalidSeedFile(ValueError):
+    """The input cannot be imported as a HealthCore incident CSV."""
 
 
 @dataclass
@@ -51,9 +56,14 @@ def import_key(transformed: TransformedIncident) -> str:
 
 def seed_incidents(db: TinyDB, csv_path: Path = DEFAULT_CSV) -> SeedResult:
     result = SeedResult()
-    table = db.table("incidents")
+    planned: list[tuple[str, dict]] = []
     with csv_path.open(encoding="utf-8-sig", newline="") as source:
-        reader = csv.DictReader(source)
+        reader = csv.DictReader(source, strict=True)
+        headers = reader.fieldnames
+        if not headers:
+            raise InvalidSeedFile("The CSV is empty.")
+        if len(headers) != len(REQUIRED_COLUMNS) or set(headers) != set(REQUIRED_COLUMNS):
+            raise InvalidSeedFile("Use the nine HealthCore incident CSV headers.")
         for row in reader:
             result.read += 1
             source_incident_id = (row.get("incident_id") or "").strip()
@@ -79,13 +89,19 @@ def seed_incidents(db: TinyDB, csv_path: Path = DEFAULT_CSV) -> SeedResult:
                 continue
 
             key = import_key(transformed)
-            if table.contains(Query()._import_key == key):
-                result.skipped += 1
-                continue
             document = transformed.incident.model_dump(mode="json")
             document["_import_key"] = key
-            table.insert(document)
-            result.inserted += 1
+            planned.append((key, document))
+
+    if not result.read:
+        raise InvalidSeedFile("The CSV has headers but no incident rows.")
+    table = db.table("incidents")
+    for key, document in planned:
+        if table.contains(Query()._import_key == key):
+            result.skipped += 1
+            continue
+        table.insert(document)
+        result.inserted += 1
     return result
 
 
@@ -94,30 +110,40 @@ def main() -> int:
     parser.add_argument("--csv", type=Path, default=DEFAULT_CSV)
     parser.add_argument("--db", type=Path, help="Override HEALTHCORE_DB_PATH for this run")
     args = parser.parse_args()
-    load_dotenv(SERVICE_ROOT / ".env")
-    if args.db is not None:
-        import os
-
-        os.environ["HEALTHCORE_DB_PATH"] = str(args.db.resolve())
-
-    from app.db.tinydb import get_db, get_db_lock
-
-    db = get_db()
     try:
-        with get_db_lock():
+        load_dotenv(SERVICE_ROOT / ".env")
+        if args.db is not None:
+            import os
+
+            os.environ["HEALTHCORE_DB_PATH"] = str(args.db.resolve())
+
+        from app.db.tinydb import get_db, get_db_lock
+
+        with get_db() as db, get_db_lock():
             result = seed_incidents(db, args.csv)
-        for line_number, reason in result.rejections:
-            print(f"Rejected row {line_number}: {reason}")
-        print(
-            f"Read: {result.read} | Inserted: {result.inserted} | "
-            f"Skipped: {result.skipped} | Rejected: {result.rejected}"
-        )
-        return 0
-    except (OSError, csv.Error):
-        print("Seed failed: database or CSV I/O error", file=sys.stderr)
+    except InvalidSeedFile as error:
+        print(f"Seed failed: {error}", file=sys.stderr)
         return 2
-    finally:
-        db.close()
+    except UnicodeDecodeError:
+        print("Seed failed: use a UTF-8 CSV and a valid HealthCore database.", file=sys.stderr)
+        return 2
+    except csv.Error:
+        print("Seed failed: correct the CSV quoting or structure.", file=sys.stderr)
+        return 2
+    except FileNotFoundError:
+        print("Seed failed: check that the input CSV exists.", file=sys.stderr)
+        return 2
+    except (OSError, ValueError, TypeError):
+        print("Seed failed: check CSV access and HealthCore database integrity and permissions.", file=sys.stderr)
+        return 2
+
+    for line_number, reason in result.rejections:
+        print(f"Rejected row {line_number}: {reason}", file=sys.stderr)
+    print(
+        f"Read: {result.read} | Inserted: {result.inserted} | "
+        f"Skipped: {result.skipped} | Rejected: {result.rejected}"
+    )
+    return 0
 
 
 if __name__ == "__main__":

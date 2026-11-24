@@ -132,6 +132,7 @@ test('supplier creation posts only selected/filled fields and refreshes the list
     currency: 'USD',
     compliance_agreement: null,
     status: 'active',
+    updated_at: '2026-01-01T00:00:00Z',
   }));
   const created = {
     id: 16,
@@ -142,6 +143,7 @@ test('supplier creation posts only selected/filled fields and refreshes the list
     currency: 'USD',
     compliance_agreement: null,
     status: 'active',
+    updated_at: '2026-01-01T00:00:00Z',
   };
   let getCount = 0;
   let createdFlag = false;
@@ -416,4 +418,51 @@ test('status update failure retains the confirmed status, displays localized err
   assert.equal(dom.window.document.querySelector('[data-testid="supplier-status-action-14"]').textContent, 'Suspender');
   await act(async () => root.unmount());
   dom.window.close();
+});
+
+test('supplier GET rejects null categories and recovers to a real empty list', async () => {
+  const supplier = {
+    id: 1, name: 'Fixture', country: 'USA', currency: 'USD',
+    categories: null, monthly_rate: 100, status: 'active', updated_at: '2026-01-01T00:00:00Z',
+  };
+  let loads = 0;
+  const { dom, root } = await mount('en', async () => Response.json(++loads === 1 ? [supplier] : []));
+  try {
+    const error = dom.window.document.querySelector('[role=alert]');
+    assert.match(error.textContent, /unable to load suppliers/i);
+    assert.doesNotMatch(dom.window.document.body.textContent, /No suppliers match/);
+    await act(async () => error.querySelector('button').click());
+    assert.match(dom.window.document.body.textContent, /No suppliers match/);
+    assert.equal(dom.window.document.querySelector('[role=alert]'), null);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test('an older rate PATCH response preserves the independently confirmed status', async () => {
+  const supplier = {
+    id: 1, name: 'Fixture', country: 'USA', currency: 'USD', categories: ['medical_supplies'],
+    monthly_rate: 100, status: 'active', updated_at: '2026-01-01T00:00:00Z',
+  };
+  let finishRate;
+  const { dom, root } = await mount('en', async (url, init) => {
+    if (init.method !== 'PATCH') return Response.json([supplier]);
+    if (url.endsWith('/rate')) return new Promise(resolve => {
+      finishRate = () => resolve(Response.json({ ...supplier, monthly_rate: 125 }));
+    });
+    return Response.json({ ...supplier, monthly_rate: 125, status: 'suspended' });
+  });
+  try {
+    const { document } = dom.window;
+    await act(async () => document.querySelector('.supplier-edit-rate').click());
+    change(dom, '#supplier-rate-edit-1', '125');
+    await act(async () => document.querySelector('.supplier-rate-buttons .button-primary').click());
+    await act(async () => document.querySelector('.supplier-toggle-status').click());
+    assert.match(document.querySelector('[data-testid=supplier-status-1]').textContent, /Suspended/);
+    await act(async () => finishRate());
+    assert.match(document.querySelector('[data-testid=supplier-status-1]').textContent, /Suspended/);
+    assert.match(document.querySelector('[data-testid=supplier-rate-1]').textContent, /125/);
+  } finally {
+    await act(async () => root.unmount());
+  }
 });

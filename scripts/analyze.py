@@ -18,30 +18,55 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Machine-readable aggregate output")
     parser.add_argument("--max-bytes", type=int, default=25_000_000, help="Maximum input bytes (default: 25000000)")
     args = parser.parse_args()
+    if args.max_bytes < 1:
+        print("Analysis error: invalid_size_limit", file=sys.stderr)
+        return 2
     try:
-        if args.max_bytes < 1:
-            raise ValueError("invalid_size_limit")
         with args.csv_path.open("rb") as source:
             report = analyze_incident_stream(source, max_bytes=args.max_bytes)
-        print(report.model_dump_json(indent=2) if args.json else console_report(report))
-        target = args.export
-        if target is None and not args.no_prompt and not args.json and sys.stdin.isatty():
-            try:
-                answer = input("¿Deseas exportar los resultados a CSV? [s / n] ").strip().lower()
-            except EOFError:
-                answer = "n"
-            if answer == "s":
-                target = Path("results.csv")
-        if target:
-            # Exclusive creation protects the original dataset and existing reports.
-            with target.open("x", encoding="utf-8", newline="") as output:
-                output.write(export_csv(report))
-        return 0
-    except (OSError, ValueError) as exc:
-        safe_codes = {"file_too_large", "invalid_encoding", "invalid_csv", "invalid_headers", "empty_file", "invalid_size_limit"}
-        code = str(exc) if str(exc) in safe_codes else "file_operation_failed"
+    except FileNotFoundError:
+        print("Analysis error: input_missing. Provide an existing CSV file.", file=sys.stderr)
+        return 2
+    except OSError:
+        print("Analysis error: input_read_failed. Check the CSV permissions.", file=sys.stderr)
+        return 2
+    except ValueError as error:
+        safe_codes = {"file_too_large", "invalid_encoding", "invalid_csv", "invalid_headers", "empty_file"}
+        code = str(error) if str(error) in safe_codes else "invalid_input"
         print(f"Analysis error: {code}", file=sys.stderr)
         return 2
+
+    print(report.model_dump_json(indent=2) if args.json else console_report(report))
+    target = args.export
+    if target is None and not args.no_prompt and not args.json and sys.stdin.isatty():
+        try:
+            answer = input("¿Deseas exportar los resultados a CSV? [s / n] ").strip().lower()
+        except EOFError:
+            answer = "n"
+        if answer == "s":
+            target = Path("results.csv")
+    if target is None:
+        return 0
+
+    try:
+        output = target.open("x", encoding="utf-8", newline="")
+    except FileExistsError:
+        print("Analysis error: export_exists. Choose a new destination.", file=sys.stderr)
+        return 2
+    except OSError:
+        print("Analysis error: export_write_failed. Check the destination and permissions.", file=sys.stderr)
+        return 2
+    try:
+        with output:
+            output.write(export_csv(report))
+    except (OSError, ValueError):
+        try:
+            target.unlink()
+        except OSError:
+            pass
+        print("Analysis error: export_write_failed. Check the destination and available space.", file=sys.stderr)
+        return 2
+    return 0
 
 
 if __name__ == "__main__":

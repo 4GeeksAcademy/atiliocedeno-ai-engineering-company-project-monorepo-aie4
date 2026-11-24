@@ -13,6 +13,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 load_dotenv()
 _JWT_SECRET = os.getenv("HEALTHCORE_JWT_SECRET", os.getenv("SECRET_KEY", ""))
 _JWT_ALGORITHM = "HS256"
+BCRYPT_MAX_BYTES = 72
 _ACCESS_TOKEN_MINUTES = int(
     os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", os.getenv("HEALTHCORE_ACCESS_TOKEN_MINUTES", "30"))
 )
@@ -25,7 +26,16 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed_password: str) -> bool:
     """Verify a plaintext password against its bcrypt hash."""
+    try:
+        if len(password.encode("utf-8")) > BCRYPT_MAX_BYTES:
+            return False
+    except UnicodeEncodeError:
+        return False
     return bcrypt.verify(password, hashed_password)
+
+
+def is_auth_configured() -> bool:
+    return bool(_JWT_SECRET)
 
 
 def create_access_token(subject: str) -> str:

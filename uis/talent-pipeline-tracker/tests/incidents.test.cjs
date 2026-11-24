@@ -40,6 +40,7 @@ function loadComponent(dom, language, fetchImpl) {
     fetch: fetchImpl,
     AbortController,
     URLSearchParams,
+    FormData: dom.window.FormData,
     Intl,
     Number,
     Array,
@@ -50,9 +51,9 @@ function loadComponent(dom, language, fetchImpl) {
   return module.exports.default;
 }
 
-async function mount(language, fetchImpl) {
+async function mount(language, fetchImpl, token = "temporary-component-token") {
   baseDom.window.document.body.innerHTML = '<div id="root"></div>';
-  baseDom.window.localStorage.setItem('healthcore_access_token', 'temporary-component-token');
+  baseDom.window.localStorage.setItem('healthcore_access_token', token);
   const Page = loadComponent(baseDom, language, fetchImpl);
   const root = createRoot(baseDom.window.document.querySelector('#root'));
   await act(async () => {
@@ -320,7 +321,7 @@ test('missing branch prevents POST and focuses the accessible error', async () =
   await act(async () => root.unmount());
 });
 
-test('server error retains input; retry sends once and success survives list reload failure', async () => {
+test('uncertain creation retains input and requires checking before resubmission', async () => {
   let posts = 0;
   let resolveSave;
   let failList = false;
@@ -329,7 +330,7 @@ test('server error retains input; retry sends once and success survives list rel
     if (options.method === 'POST') {
       posts += 1;
       assert.equal(options.headers.Authorization, 'Bearer temporary-component-token');
-      if (posts === 1) return { ok: false, status: 500 };
+      if (posts === 1) throw new TypeError("Synthetic lost registration response");
       return new Promise((resolve) => { resolveSave = resolve; });
     }
     urls.push(url);
@@ -340,15 +341,20 @@ test('server error retains input; retry sends once and success survives list rel
   fillIncident(dom);
   change(dom, '#incident-create-branch', 'central');
   await act(async () => submitIncident(dom));
-  assert.match(dom.window.document.querySelector('.incident-create-error').textContent, /No se pudo guardar/);
+  assert.match(dom.window.document.querySelector('.incident-create-error').textContent, /no pudo confirmar el alta/i);
   assert.equal(dom.window.document.querySelector('#incident-create-title').value, 'Synthetic equipment issue');
   assert.equal(dom.window.document.querySelector('#incident-create-description').value, 'Device needs review');
+  await act(async () => { submitIncident(dom); submitIncident(dom); });
+  assert.equal(posts, 1);
+  await act(async () => dom.window.document.querySelector('.incident-create-error button').click());
+  assert.equal(posts, 1);
+  await act(async () => dom.window.document.querySelector('.incident-create-error button').click());
   await act(async () => { submitIncident(dom); submitIncident(dom); });
   assert.equal(posts, 2);
   assert.equal(dom.window.document.querySelector('.incident-create-form button').disabled, true);
   assert.match(dom.window.document.querySelector('.incident-create-form button').textContent, /Guardando/);
   failList = true;
-  await act(async () => resolveSave({ ok: true, status: 201 }));
+  await act(async () => resolveSave({ ok: true, status: 201, json: async () => incident(95) }));
   await wait(dom);
   assert.equal(dom.window.document.querySelector('#incident-create-title').value, '');
   assert.equal(dom.window.document.querySelector('#incident-create-description').value, '');
@@ -380,7 +386,7 @@ test('successful creation refreshes the directory while retaining filters', asyn
     requests.push({ url, method: options.method, body: options.body });
     if (options.method === 'POST') {
       created = true;
-      return { ok: true, status: 201 };
+      return { ok: true, status: 201, json: async () => incident(95) };
     }
     return { ok: true, status: 200, json: async () => created ? [incident(95, { title: 'Synthetic equipment issue', branch: 'central' })] : [] };
   });
@@ -399,7 +405,7 @@ test('successful creation refreshes the directory while retaining filters', asyn
   await act(async () => root.unmount());
 });
 
-test('status update prevents double-click, restores prior status on failure, and offers retry', async () => {
+test('status update prevents double-click, confirms prior status and preserves the draft for retry', async () => {
   const original = incident(1, { status: 'open' });
   let patches = 0;
   let resolvePatch;
@@ -409,12 +415,12 @@ test('status update prevents double-click, restores prior status on failure, and
     requests.push({ url, method: options.method, body: options.body });
     if (options.method === 'PATCH') {
       patches += 1;
-      if (patches === 1) return new Promise((resolve) => { resolvePatch = () => resolve({ ok: false, status: 500 }); });
+      if (patches === 1) return new Promise((resolve) => { resolvePatch = () => resolve({ ok: false, status: 500, json: async () => ({ detail: "Write failed" }) }); });
       return new Promise((resolve) => {
         resolveRetry = () => resolve({ ok: true, status: 200, json: async () => ({ ...original, status: 'in_progress' }) });
       });
     }
-    return { ok: true, status: 200, json: async () => [original] };
+    return { ok: true, status: 200, json: async () => url.endsWith(original.id) ? original : [original] };
   });
   await wait(dom);
   change(dom, '#incident-filter-status', 'open');
@@ -430,7 +436,7 @@ test('status update prevents double-click, restores prior status on failure, and
   await act(async () => resolvePatch());
   await wait(dom);
 
-  assert.equal(selector.value, 'open');
+  assert.equal(selector.value, 'in_progress');
   assert.match(row.querySelector('.incident-status').textContent, /Abierta/);
   const alert = row.querySelector('[role="alert"]');
   assert.match(alert.textContent, /No se pudo cambiar el estado/);
@@ -534,3 +540,211 @@ test('summary refreshes globally after a successful status change despite active
   assert.equal(dom.window.document.querySelector('#incident-filter-status').value, 'open');
   await act(async () => root.unmount());
 });
+
+test('CSV analysis distinguishes invalid response and invalid upload, then recovers', async () => {
+  const replies = [
+    new Response('<html>'),
+    Response.json({ total_records: 1 }),
+    Response.json({ detail: { code: 'invalid_upload' } }, { status: 422 }),
+    Response.json({
+      total_records: 1, valid_records: 1, invalid_records: 0, average_satisfaction: null,
+      categories: {}, statuses: {}, countries: {}, satisfaction_distribution: {},
+      closed_with_valid_satisfaction: 0, invalid_breakdown: { by_rule: {} },
+    }),
+  ];
+  const { dom, root } = await mount('es', async url => url.endsWith('/summary')
+    ? Response.json(summary()) : url.endsWith('/analyze') ? replies.shift() : Response.json([]));
+  try {
+    const input = dom.window.document.querySelector('#incident-file');
+    Object.defineProperty(input, 'files', { value: [new dom.window.File(['fixture'], 'fixture.csv')] });
+    await act(async () => input.dispatchEvent(new dom.window.Event('change', { bubbles: true })));
+    for (const text of [/análisis inesperado/, /análisis inesperado/, /Vuelve a seleccionar/, /Análisis completado/]) {
+      await act(async () => input.form.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
+      assert.match(dom.window.document.querySelector('.incident-results').textContent, text);
+      assert.equal(input.form.querySelector('button').disabled, false);
+    }
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test('an unconfirmed status offers a read-only check until the saved result can be confirmed', async () => {
+  const original = incident(1, { status: 'open' });
+  let patches = 0;
+  let consultations = 0;
+  let persisted = original;
+  const { dom, root } = await mount('es', async (url, options = {}) => {
+    if (options.method === 'PATCH') {
+      patches++;
+      persisted = { ...original, status: 'in_progress' };
+      throw new TypeError('Synthetic network failure');
+    }
+    if (url.endsWith(original.id)) {
+      if (++consultations === 1) return Response.json({}, { status: 502 });
+      return Response.json(persisted);
+    }
+    return Response.json(url.endsWith('/summary') ? summary() : [persisted]);
+  });
+  try {
+    const { document } = dom.window;
+    change(dom, '#incident-status-' + original.id, 'in_progress');
+    await act(async () => document.querySelector('.incident-status-save').click());
+    assert.equal(patches, 1);
+    assert.match(document.querySelector('.incident-status-error').textContent, /pendiente de confirmación/);
+    assert.equal(document.querySelector('.incident-status-save').disabled, true);
+    await act(async () => document.querySelector('.incident-status-retry').click());
+    assert.equal(patches, 1);
+    assert.equal(consultations, 2);
+    assert.match(document.querySelector('.incident-table .incident-status').textContent, /En curso/);
+    assert.match(document.querySelector('.incident-directory').textContent, /Estado actualizado/);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test('incident save reconciles real proxy and FastAPI outcomes against reopened TinyDB',
+  { skip: !process.env.HEALTHCORE_TEST_PYTHON, timeout: 30_000 }, async () => {
+    const { spawn } = require('node:child_process');
+    const { createInterface } = require('node:readline');
+    const child = spawn(process.env.HEALTHCORE_TEST_PYTHON, ['tests/incident-api-fixture.py'], {
+      stdio: ['pipe', 'pipe', 'inherit'], env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+    });
+    const lines = createInterface({ input: child.stdout });
+    const messages = lines[Symbol.asyncIterator]();
+    let pipeline = Promise.resolve();
+    const receive = async () => {
+      const message = await messages.next();
+      assert.equal(message.done, false, 'FastAPI fixture is running');
+      return JSON.parse(message.value);
+    };
+    const send = command => {
+      const result = pipeline.then(async () => {
+        child.stdin.write(JSON.stringify(command) + '\n');
+        return receive();
+      });
+      pipeline = result.catch(() => {});
+      return result;
+    };
+    let root;
+    try {
+      const { token, records } = await receive();
+      let mode = 'normal';
+      let releasePatch;
+      let holdPatch = false;
+      const patchReplies = [];
+      const patchRequests = [];
+      const proxyFile = 'app/api/healthcore/[...path]/route.ts';
+      const module = { exports: {} };
+      const source = swc.transformSync(fs.readFileSync(proxyFile, 'utf8'), {
+        filename: proxyFile, jsc: { parser: { syntax: 'typescript' } }, module: { type: 'commonjs' },
+      }).code;
+      vm.runInNewContext(source, {
+        module, exports: module.exports, require, URL, Headers, Response, process: {env:{}},
+        fetch: async (url, options) => {
+          const patch = options.method === 'PATCH';
+          if (patch && holdPatch) await new Promise(resolve => { releasePatch = resolve; });
+          const target = new URL(url);
+          const result = await send({
+            mode: patch && mode !== 'lost' ? mode : 'normal',
+            method: options.method, path: target.pathname + target.search,
+            headers: Object.fromEntries(options.headers), body: Buffer.from(options.body ?? '').toString('utf8'),
+          });
+          if (patch && mode === 'lost') {
+            assert.equal(result.status, 200);
+            throw new TypeError('Synthetic transport failure after commit');
+          }
+          return new Response(result.body, { status: result.status, headers: result.headers });
+        },
+      }, { filename: proxyFile });
+      const routes = module.exports;
+      const mounted = await mount('es', async (url, options) => {
+        const request = new Request(new URL(url, 'http://localhost'), options);
+        const segments = new URL(request.url).pathname.split('/').slice(3);
+        if (request.method === 'PATCH') patchRequests.push(url);
+        const response = await routes[request.method](request, { params: Promise.resolve({ path: segments }) });
+        if (request.method === 'PATCH') patchReplies.push(response.status);
+        return response;
+      }, token);
+      root = mounted.root;
+      const { dom } = mounted;
+      const { document } = dom.window;
+      const rows = () => [...document.querySelectorAll('.incident-table tbody tr')];
+      const row = record => rows().find(item => item.textContent.includes(record.title));
+      const read = record => send({ mode: 'read', id: record.id });
+      const choose = record => change(dom, '#incident-status-' + record.id, 'in_progress');
+      const save = record => act(async () => row(record).querySelector('.incident-status-save').click());
+      async function until(check) {
+        for (let count = 0; count < 80 && !check(); count++) await wait(dom);
+        assert.ok(check(), 'Expected incident state became visible');
+      }
+      await until(() => rows().length === 4);
+      change(dom, '#incident-filter-origin', 'internal');
+      await until(() => rows().length === 4);
+      const [success, rejected, failed, uncertain] = records;
+
+      choose(success);
+      holdPatch = true;
+      await save(success);
+      assert.match(row(success).textContent, /Guardando/);
+      assert.equal(row(success).querySelector('.incident-status-save').disabled, true);
+      await save(success);
+      assert.equal(patchRequests.length, 1);
+      holdPatch = false;
+      await act(async () => releasePatch());
+      await until(() => row(success)?.querySelector('.incident-status').textContent === 'En curso');
+      const confirmed = await read(success);
+      assert.equal(confirmed.id, success.id);
+      assert.equal(confirmed.created_at, success.created_at);
+      assert.ok(confirmed.updated_at > success.updated_at);
+      assert.equal(confirmed.status, 'in_progress');
+      assert.equal(patchReplies.at(-1), 200);
+
+      await send({
+        mode: 'normal', method: 'PATCH', path: '/api/incidents/' + rejected.id + '/status',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: '{"status":"discarded"}',
+      });
+      const discarded = await read(rejected);
+      choose(rejected);
+      await save(rejected);
+      await until(() => row(rejected)?.querySelector('.incident-status').textContent === 'Descartada');
+      assert.equal(patchReplies.at(-1), 400);
+      assert.deepEqual(await read(rejected), discarded);
+      assert.equal(row(rejected).querySelector('.incident-status-retry'), null);
+      assert.match(document.querySelector('.incident-directory').textContent, /transición fue rechazada/);
+
+      mode = 'prewrite';
+      choose(failed);
+      await save(failed);
+      await until(() => row(failed)?.querySelector('.incident-status-retry'));
+      assert.equal(patchReplies.at(-1), 500);
+      assert.deepEqual(await read(failed), failed);
+      assert.equal(row(failed).querySelector('select').value, 'in_progress');
+      mode = 'normal';
+      await act(async () => row(failed).querySelector('.incident-status-retry').click());
+      await until(() => row(failed)?.querySelector('.incident-status').textContent === 'En curso');
+      assert.equal((await read(failed)).status, 'in_progress');
+
+      mode = 'lost';
+      choose(uncertain);
+      await save(uncertain);
+      await until(() => row(uncertain)?.querySelector('.incident-status').textContent === 'En curso');
+      assert.equal(patchReplies.at(-1), 502);
+      assert.equal((await read(uncertain)).status, 'in_progress');
+      assert.equal(row(uncertain).querySelector('.incident-status-retry'), null);
+
+      mode = 'postwrite';
+      change(dom, '#incident-status-' + uncertain.id, 'resolved');
+      await save(uncertain);
+      await until(() => row(uncertain)?.querySelector('.incident-status').textContent === 'Resuelta');
+      assert.equal(patchReplies.at(-1), 500);
+      assert.equal((await read(uncertain)).status, 'resolved');
+      assert.equal(document.querySelector('#incident-filter-origin').value, 'internal');
+      await until(() => /Resueltas1/.test(document.querySelector('.incident-summary').textContent));
+    } finally {
+      if (root) await act(async () => root.unmount());
+      child.stdin.end();
+      lines.close();
+      if (child.exitCode === null) await new Promise(resolve => child.once('close', resolve));
+    }
+  });

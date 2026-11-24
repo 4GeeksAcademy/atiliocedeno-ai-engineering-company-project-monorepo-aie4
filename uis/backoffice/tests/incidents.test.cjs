@@ -33,7 +33,7 @@ test("CSV analysis uses the same-origin API proxy and signed-in token", () => {
 
 test("file limits, aggregate reporting, and privacy-safe errors are present", () => {
   assert.match(analysis, /file\.size > 25_000_000/);
-  assert.match(analysis, /setReport\(await response\.json\(\) as Report\)/);
+  assert.match(analysis, /if \(!isReport\(data\)\)/);
   assert.match(analysis, /report\.invalid_breakdown\.by_rule/);
   assert.match(analysis, /Only aggregate results are stored/);
   assert.match(analysis, /catch \{/);
@@ -52,6 +52,6 @@ test("Backoffice and Talent Tracker routes are protected by cookie verification"
   assert.match(proxy, /pathname\.startsWith\("\/backoffice\/"\)/);
   assert.match(proxy, /"\/backoffice", "\/backoffice\/:path\*"/);
   assert.match(proxy, /request\.cookies\.get\("healthcore_access_token"\)/);
-  assert.match(proxy, /fetch\(`\$\{apiBaseUrl\}\/auth\/me`/);
+  assert.match(proxy, /fetch\(apiBaseUrl \+ "\/auth\/me"/);
   assert.match(proxy, /NextResponse\.redirect\(loginUrl\)/);
 });

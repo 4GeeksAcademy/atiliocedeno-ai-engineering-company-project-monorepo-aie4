@@ -161,3 +161,18 @@ The seeder is required to load exactly the 15 suppliers in the official briefing
 ## Current frontend boundaries
 
 Two independently built Next.js applications share the monorepo. The bilingual patient landing and demonstration care form live in `uis/website`. The staff portal in `uis/talent-pipeline-tracker` owns authentication, accounts, talents, suppliers, domain lab and the dedicated incident analysis route. FastAPI checks the staff session and governs its own resources. Tracker operations retain the external Tracker API.
+
+
+## HealthCore error handling
+
+TinyDB opens the database by path for each read. A write serializes a complete
+snapshot to a temporary file in the same directory, flushes and synchronizes it,
+then atomically replaces the previous snapshot. The existing JSON representation
+and document IDs are compatible. The process-wide lock still governs concurrent
+operations. Password replacement and reset-link invalidation share one snapshot
+write under that lock.
+
+FastAPI validation errors retain field locations with safe public messages.
+Unexpected request and storage failures use sanitized JSON. The incident
+manager preserves its existing PATCH contract. The portal reconciles an
+uncertain update by reading the incident before offering another write.
