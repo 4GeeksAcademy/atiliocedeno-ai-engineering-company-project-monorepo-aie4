@@ -1,7 +1,7 @@
 """Show HealthCore accounts/profiles and provision the initial administrator.
 
 Run from services/healthcore-api with:
-    python -m scripts.manage_admin
+    uv run --locked python -m scripts.manage_admin
 
 This is a local operator tool. It never prints password hashes or secrets.
 """

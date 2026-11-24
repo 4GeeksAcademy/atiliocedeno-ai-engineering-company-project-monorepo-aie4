@@ -24,15 +24,13 @@ See the [historical frontend inventory](./docs/FRONTEND_HISTORY_INVENTORY.md) fo
 
 ### HealthCore API
 
-Use Python 3.11+ and follow [`services/healthcore-api/README.md`](./services/healthcore-api/README.md). From the repository root:
+Use [uv](https://docs.astral.sh/uv/getting-started/installation/) with Python 3.11+ and follow [`services/healthcore-api/README.md`](./services/healthcore-api/README.md). From the repository root:
 
 ```bash
 cd services/healthcore-api
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
+uv sync --locked
 # Before starting, configure HEALTHCORE_JWT_SECRET in the service .env (see the API guide).
-uvicorn app.main:app --reload
+uv run --locked uvicorn app.main:app --reload
 ```
 
 The API is available at `http://127.0.0.1:8000`; interactive API docs are at `/docs`. The default TinyDB file is local application data and should not be committed if it contains real information.
@@ -74,7 +72,7 @@ With FastAPI running, sign in at `/login`. Open `/talents` for the pipeline, `/b
 After installing the dependencies above, run these commands from the repository root:
 
 ```bash
-services/healthcore-api/.venv/bin/python -m pytest services/healthcore-api/tests -q
+uv run --locked --project services/healthcore-api python -m pytest services/healthcore-api/tests -q
 npm --prefix uis/backoffice test
 npm --prefix uis/website test
 npm --prefix uis/talent-pipeline-tracker test

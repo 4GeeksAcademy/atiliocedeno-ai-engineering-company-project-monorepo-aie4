@@ -16,6 +16,7 @@ The four permanent Next redirects preserve `/index.html`→`/`, `/index.en.html`
 
 ### Local configuration and security boundaries
 
+- The backend uses uv and a single project environment in `services/healthcore-api/.venv`. `pyproject.toml` declares API and development dependencies and `uv.lock` pins them for reproducible setup.
 - Backend local configuration: `services/healthcore-api/.env`; frontend local configuration: `uis/talent-pipeline-tracker/.env.local`. `.env.example` files are templates only. Do not read or commit actual secrets; use Codespaces secret/environment settings or runtime environment variables for Codespaces.
 - `NEXT_PUBLIC_*` values are browser-visible and must not contain credentials. Resend is optional; without configured credentials and sender, email delivery is not available.
 - TinyDB is local, single-process persistence. Aggregate retention/purge, production deployment controls, and regulatory/security approval remain gaps. The application is not approved for real patient data.
@@ -145,7 +146,7 @@ These paths represent the responsibilities of Milestone 4. The implementation st
 
 This section supersedes earlier historical statements that no backend exists for this feature. The existing FastAPI service is `services/healthcore-api`; its JWT/TinyDB authentication remains unchanged. `IncidentRecord` field validators collect independent HealthCore field/cross-field violations; typed `SatisfactionSummary`, `ValidationSummary` and `AnalysisResult` describe aggregate output. Streaming CSV parsing and hash-based duplicate detection remain in `incident_analysis.py`; `incident_reporting.py` provides the common CLI/HTTP export representation.
 
-`POST /api/incidents/analyze` stores one aggregate in TinyDB per authenticated account incarnation (numeric ID + creation timestamp). `GET /api/incidents/results/export` exports that same account's latest aggregate. No raw rows are stored in that table. The static backoffice consumes these contracts without recalculating business metrics. CLI exports use exclusive file creation. Development test dependencies are isolated in `requirements-dev.txt` and a backoffice package with jsdom/Node tests; no frontend framework or production build was added.
+`POST /api/incidents/analyze` stores one aggregate in TinyDB per authenticated account incarnation (numeric ID + creation timestamp). `GET /api/incidents/results/export` exports that same account's latest aggregate. No raw rows are stored in that table. The static backoffice consumes these contracts without recalculating business metrics. CLI exports use exclusive file creation. Python test dependencies now live in the backend's uv development group. The Backoffice has a separate package with Node tests; no frontend framework or production build was added.
 
 Local backoffice origin is 4174; use the existing `HEALTHCORE_FRONTEND_URL` setting for CORS. Deployment infrastructure was not added. Duplicate-ID detection uses O(n) hash memory; TinyDB still requires a single-process deployment and a separate retention strategy before production use.
 

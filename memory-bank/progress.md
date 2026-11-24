@@ -1,6 +1,11 @@
 # Progress
 
 
+## Unified Python setup with uv (2026-11-23)
+
+- Moved the API, authentication, and development dependencies to the backend's pyproject.toml and regenerated uv.lock. Removed the duplicate requirements manifests and updated the startup, administration, seeds, CLI, and test commands.
+- Verified a clean sync from the lockfile, bcrypt, administrator creation and login, the health endpoint, CSV analysis and both seeds against temporary data. FastAPI passed 148 tests and the portal passed 50 tests with the locked Python environment.
+
 ## Backend installation and administrator setup (2026-11-23)
 
 - A fresh installation reproduced the missing bcrypt backend after libpass 1.9.5.post0 became an alias without extras. The API requirements now name Passlib and bcrypt explicitly. The backend setup guide verifies the hash backend and identifies the seed-only uv lockfile.

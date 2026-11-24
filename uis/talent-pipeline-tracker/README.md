@@ -36,6 +36,11 @@ El listado y el formulario de registro de incidencias comparten `/backoffice/inc
 
 
 The incident save regression can run through the HealthCore API and a temporary TinyDB.
-From the repository root, set `HEALTHCORE_TEST_PYTHON` to the Python executable with
-the dependencies from `services/healthcore-api/requirements-dev.txt` and run
-`npm --prefix uis/talent-pipeline-tracker test`. The other portal tests run without Python.
+From the repository root, sync the backend's locked environment and use it for the portal suite.
+
+```bash
+uv sync --locked --project services/healthcore-api
+HEALTHCORE_TEST_PYTHON="$PWD/services/healthcore-api/.venv/bin/python" npm --prefix uis/talent-pipeline-tracker test
+```
+
+The other portal tests run without Python.
