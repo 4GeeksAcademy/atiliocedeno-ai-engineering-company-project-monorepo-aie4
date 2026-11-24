@@ -32,7 +32,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -c "from passlib.hash import bcrypt; print(bcrypt.get_backend())"
 ```
+
+La comprobación del hash debe imprimir `bcrypt`. Usa este mismo entorno para arrancar la API y crear la cuenta administradora. El `uv.lock` corresponde al paquete de seed y cubre solo un subconjunto de las dependencias de la API.
 
 Crea `services/healthcore-api/.env` (junto a `requirements.txt`) y añade la configuración indicada en [Variables de entorno](#variables-de-entorno). El archivo `.env` contiene secretos: no lo subas al repositorio ni compartas su contenido.
 

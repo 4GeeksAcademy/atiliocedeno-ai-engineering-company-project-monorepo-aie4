@@ -1,6 +1,11 @@
 # Progress
 
 
+## Backend installation and administrator setup (2026-11-23)
+
+- A fresh installation reproduced the missing bcrypt backend after libpass 1.9.5.post0 became an alias without extras. The API requirements now name Passlib and bcrypt explicitly. The backend setup guide verifies the hash backend and identifies the seed-only uv lockfile.
+- Verified administrator creation and password verification on the incident manager baseline with bcrypt installed, and on the audit branch in a new environment installed from the corrected requirements. The backend suite passed 148 tests in that environment.
+
 ## Error handling audit corrections (2026-11-23)
 
 - Added atomic TinyDB snapshots, sanitized input validation and failure responses, and safe Resend diagnostics. Password validation counts UTF-8 bytes. Password resets update the hash and invalidate the link together.
